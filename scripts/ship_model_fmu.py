@@ -58,23 +58,23 @@ class ShipModel(Fmi2Slave):
         self.rudder_force_v                                 = 0.0
         self.rudder_force_r                                 = 0.0
         self.wind_speed                                     = 0.0
-        self.wind_dir                                       = 0.0
+        self.wind_dir_rad                                   = 0.0
         self.current_speed                                  = 0.0
-        self.current_dir                                    = 0.0
+        self.current_dir_rad                                = 0.0
         
         # Output variables
         self.north                                          = 0.0
         self.east                                           = 0.0
-        self.yaw_angle                                      = 0.0
+        self.yaw_angle_rad                                  = 0.0
         self.forward_speed                                  = 0.0
         self.sideways_speed                                 = 0.0
         self.yaw_rate                                       = 0.0
         
-        self.measured_speed                                 = 0.0
+        self.total_speed                                     = 0.0
         
         self.d_north                                        = 0.0
         self.d_east                                         = 0.0
-        self.d_yaw_angle                                    = 0.0
+        self.d_yaw_angle_rad                                = 0.0
         self.d_forward_speed                                = 0.0
         self.d_sideways_speed                               = 0.0
         self.d_yaw_rate                                     = 0.0
@@ -127,25 +127,25 @@ class ShipModel(Fmi2Slave):
         self.register_variable(Real("rudder_force_v", causality=Fmi2Causality.input))
         self.register_variable(Real("rudder_force_r", causality=Fmi2Causality.input))
         self.register_variable(Real("wind_speed", causality=Fmi2Causality.input))
-        self.register_variable(Real("wind_dir", causality=Fmi2Causality.input))
+        self.register_variable(Real("wind_dir_rad", causality=Fmi2Causality.input))
         self.register_variable(Real("current_speed", causality=Fmi2Causality.input))
-        self.register_variable(Real("current_dir", causality=Fmi2Causality.input))
+        self.register_variable(Real("current_dir_rad", causality=Fmi2Causality.input))
 
         # =========================
         # Output Variables
         # =========================
         self.register_variable(Real("north", causality=Fmi2Causality.output))
         self.register_variable(Real("east", causality=Fmi2Causality.output))
-        self.register_variable(Real("yaw_angle", causality=Fmi2Causality.output))
+        self.register_variable(Real("yaw_angle_rad", causality=Fmi2Causality.output))
         self.register_variable(Real("forward_speed", causality=Fmi2Causality.output))
         self.register_variable(Real("sideways_speed", causality=Fmi2Causality.output))
         self.register_variable(Real("yaw_rate", causality=Fmi2Causality.output))
         
-        self.register_variable(Real("measured_speed", causality=Fmi2Causality.output))
+        self.register_variable(Real("total_speed", causality=Fmi2Causality.output))
         
         self.register_variable(Real("d_north", causality=Fmi2Causality.output))
         self.register_variable(Real("d_east", causality=Fmi2Causality.output))
-        self.register_variable(Real("d_yaw_angle", causality=Fmi2Causality.output))
+        self.register_variable(Real("d_yaw_angle_rad", causality=Fmi2Causality.output))
         self.register_variable(Real("d_forward_speed", causality=Fmi2Causality.output))
         self.register_variable(Real("d_sideways_speed", causality=Fmi2Causality.output))
         self.register_variable(Real("d_yaw_rate", causality=Fmi2Causality.output))
@@ -194,12 +194,12 @@ class ShipModel(Fmi2Slave):
         n_dr = self.i_z * yaw_coeff
         return x_du, y_dv, n_dr
         
-    def rotation(self, yaw_angle):
+    def rotation(self, yaw_angle_rad):
         ''' Specifies the rotation matrix for rotations about the z-axis, such that
             "body-fixed coordinates" = rotation x "North-east-down-fixed coordinates" .
         '''
-        return np.array([[np.cos(yaw_angle), -np.sin(yaw_angle), 0],
-                         [np.sin(yaw_angle), np.cos(yaw_angle), 0],
+        return np.array([[np.cos(yaw_angle_rad), -np.sin(yaw_angle_rad), 0],
+                         [np.sin(yaw_angle_rad), np.cos(yaw_angle_rad), 0],
                          [0, 0, 1]])
         
 
@@ -234,7 +234,7 @@ class ShipModel(Fmi2Slave):
                        [0, 0, self.kr * yaw_rate]])
         
 
-    def get_wind_force(self, wind_speed, wind_dir, yaw_angle, forward_speed, sideways_speed):
+    def get_wind_force(self, wind_speed, wind_dir_rad, yaw_angle_rad, forward_speed, sideways_speed):
         ''' This method calculates the forces due to the relative
             wind speed, acting on the ship in surge, sway and yaw
             direction.
@@ -242,8 +242,8 @@ class ShipModel(Fmi2Slave):
             :return: Wind force acting in surge, sway and yaw
         '''
         # Unpack wind_args
-        uw = wind_speed * np.sin(wind_dir - yaw_angle)
-        vw = wind_speed * np.cos(wind_dir - yaw_angle)
+        uw = wind_speed * np.sin(wind_dir_rad - yaw_angle_rad)
+        vw = wind_speed * np.cos(wind_dir_rad - yaw_angle_rad)
         u_rw = uw - forward_speed
         v_rw = vw - sideways_speed
         gamma_rw = -np.arctan2(v_rw, u_rw)
@@ -258,21 +258,21 @@ class ShipModel(Fmi2Slave):
         return np.array([tau_u, tau_v, tau_n])
 
         
-    def three_dof_kinematics(self, yaw_angle, forward_speed, sideways_speed, yaw_rate):
+    def three_dof_kinematics(self, yaw_angle_rad, forward_speed, sideways_speed, yaw_rate):
         ''' Updates the time differientials of the north position, east
             position and yaw angle. Should be called in the simulation
             loop before the integration step.
         '''
         vel = np.array([forward_speed, sideways_speed, yaw_rate])
-        dx = np.dot(self.rotation(yaw_angle), vel)
+        dx = np.dot(self.rotation(yaw_angle_rad), vel)
         d_north = dx[0]
         d_east = dx[1]
-        d_yaw_angle = dx[2]
-        return d_north, d_east, d_yaw_angle
+        d_yaw_angle_rad = dx[2]
+        return d_north, d_east, d_yaw_angle_rad
     
     
     def three_dof_kinetics(self, 
-                           yaw_angle,
+                           yaw_angle_rad,
                            forward_speed,
                            sideways_speed,
                            yaw_rate,
@@ -294,7 +294,7 @@ class ShipModel(Fmi2Slave):
         vel = np.array([forward_speed, sideways_speed, yaw_rate])
 
         # Transforming current velocity to ship frame
-        v_c = np.dot(np.linalg.inv(self.rotation(yaw_angle)), current_velocity)
+        v_c = np.dot(np.linalg.inv(self.rotation(yaw_angle_rad)), current_velocity)
         u_r = forward_speed - v_c[0]
         v_r = sideways_speed - v_c[1]
 
@@ -317,7 +317,7 @@ class ShipModel(Fmi2Slave):
         ## Get current ship states
         north               = self.initial_north_position_m
         east                = self.initial_east_position_m
-        yaw_angle           = self.initial_yaw_angle_rad
+        yaw_angle_rad       = self.initial_yaw_angle_rad
         forward_speed       = self.initial_forward_speed_m_per_s
         sideways_speed      = self.initial_sideways_speed_m_per_s
         yaw_rate            = self.initial_yaw_rate_rad_per_s
@@ -329,25 +329,25 @@ class ShipModel(Fmi2Slave):
         
         # Get environment load arguments
         wind_speed          = self.wind_speed
-        wind_dir            = self.wind_dir
+        wind_dir_rad        = self.wind_dir_rad
         current_speed       = self.current_speed
-        current_dir         = self.current_dir
+        current_dir_rad     = self.current_dir_rad
         
         # Get force
-        wind_force          = self.get_wind_force(wind_speed, wind_dir, yaw_angle, forward_speed, sideways_speed)
-        current_velocity    = np.array([current_speed * np.cos(current_dir),
-                                        current_speed * np.sin(current_dir),
+        wind_force          = self.get_wind_force(wind_speed, wind_dir_rad, yaw_angle_rad, forward_speed, sideways_speed)
+        current_velocity    = np.array([current_speed * np.cos(current_dir_rad),
+                                        current_speed * np.sin(current_dir_rad),
                                         0.0])
         
         ## Pre-compute initial variables
         self.pre_compute_initial_variables()
         
         # Compute the kinematics and kinetics
-        d_north, d_east, d_yaw_angle                    = self.three_dof_kinematics(yaw_angle,
+        d_north, d_east, d_yaw_angle_rad          = self.three_dof_kinematics(yaw_angle_rad,
                                                                                     forward_speed, 
                                                                                     sideways_speed, 
                                                                                     yaw_rate)
-        d_forward_speed, d_sideways_speed, d_yaw_rate   = self.three_dof_kinetics(yaw_angle,
+        d_forward_speed, d_sideways_speed, d_yaw_rate   = self.three_dof_kinetics(yaw_angle_rad,
                                                                                 forward_speed, 
                                                                                 sideways_speed, 
                                                                                 yaw_rate,
@@ -361,7 +361,7 @@ class ShipModel(Fmi2Slave):
         # Compute d_x
         self.d_north                        = d_north
         self.d_east                         = d_east
-        self.d_yaw_angle                    = d_yaw_angle
+        self.d_yaw_angle_rad                = d_yaw_angle_rad
         self.d_forward_speed                = d_forward_speed
         self.d_sideways_speed               = d_sideways_speed
         self.d_yaw_rate                     = d_yaw_rate
@@ -369,18 +369,18 @@ class ShipModel(Fmi2Slave):
         # Integrate d_x (Euler integration)
         self.north                          = north          + step_size * d_north
         self.east                           = east           + step_size * d_east
-        self.yaw_angle                      = yaw_angle      + step_size * d_yaw_angle
+        self.yaw_angle_rad                  = yaw_angle_rad  + step_size * d_yaw_angle_rad
         self.forward_speed                  = forward_speed  + step_size * d_forward_speed
         self.sideways_speed                 = sideways_speed + step_size * d_sideways_speed
         self.yaw_rate                       = yaw_rate       + step_size * d_yaw_rate
         
         # Get the measured speed
-        self.measured_speed                 = np.sqrt(self.forward_speed ** 2 + self.sideways_speed ** 2)
+        self.total_speed                    = np.sqrt(self.forward_speed ** 2 + self.sideways_speed ** 2)
         
         # Re-assigns the final states to the previous states
         self.initial_north_position_m       = self.north
         self.initial_east_position_m        = self.east
-        self.initial_yaw_angle_rad          = self.yaw_angle
+        self.initial_yaw_angle_rad          = self.yaw_angle_rad
         self.initial_forward_speed_m_per_s  = self.forward_speed
         self.initial_sideways_speed_m_per_s = self.sideways_speed
         self.initial_yaw_rate_rad_per_s     = self.yaw_rate

@@ -110,75 +110,76 @@ throttle_controller_params = {
 instance.SetInitialValues(slaveName="THROTTLE_CONTROLLER", 
                          params=throttle_controller_params)
 
-# # Machinery System
-# machinery_system_params = {
-#     "hotel_load": 200000,
-#     "rated_speed_main_engine_rpm": 1000,
-#     "linear_friction_main_engine": 68,
-#     "linear_friction_hybrid_shaft_generator": 57,
-#     "gear_ratio_between_main_engine_and_propeller": 0.6,
-#     "gear_ratio_between_hybrid_shaft_generator_and_propeller": 0.6,
-#     "propeller_inertia": 6000,
-#     "propeller_speed_to_torque_coefficient": 7.5,
-#     "propeller_diameter": 3.1,
-#     "propeller_speed_to_thrust_force_coefficient": 1.7,
-#     "specific_fuel_consumption_coefficients_me_a_coeff": 128.89,
-#     "specific_fuel_consumption_coefficients_me_b_coeff": -168.93,
-#     "specific_fuel_consumption_coefficients_me_c_coeff": 246.76,
-#     "specific_fuel_consumption_coefficients_dg_a_coeff": 180.71,
-#     "specific_fuel_consumption_coefficients_dg_b_coeff": -289.90,
-#     "specific_fuel_consumption_coefficients_dg_c_coeff": 324.90,
-#     "omega": 0.0,
-#     "d_omega": 0.0,
-#     "main_engine_capacity_spec": 2160e3,
-#     "diesel_gen_capacity_spec": 510e3,
-# }
-# instance.SetInitialValues(slaveName="MACHINERY_SYSTEM", 
-#                          params=machinery_system_params)
+# Machinery System
+machinery_system_params = {
+    "hotel_load": 200000,
+    "rated_speed_main_engine_rpm": 1000,
+    "linear_friction_main_engine": 68,
+    "linear_friction_hybrid_shaft_generator": 57,
+    "gear_ratio_between_main_engine_and_propeller": 0.6,
+    "gear_ratio_between_hybrid_shaft_generator_and_propeller": 0.6,
+    "propeller_inertia": 6000,
+    "propeller_speed_to_torque_coefficient": 7.5,
+    "propeller_diameter": 3.1,
+    "propeller_speed_to_thrust_force_coefficient": 1.7,
+    "specific_fuel_consumption_coefficients_me_a_coeff": 128.89,
+    "specific_fuel_consumption_coefficients_me_b_coeff": -168.93,
+    "specific_fuel_consumption_coefficients_me_c_coeff": 246.76,
+    "specific_fuel_consumption_coefficients_dg_a_coeff": 180.71,
+    "specific_fuel_consumption_coefficients_dg_b_coeff": -289.90,
+    "specific_fuel_consumption_coefficients_dg_c_coeff": 324.90,
+    "omega": 0.0,
+    "d_omega": 0.0,
+    "main_engine_capacity_spec": 2160e3,
+    "diesel_gen_capacity_spec": 510e3,
+    "mso_mode": 0 ,
+}
+instance.SetInitialValues(slaveName="MACHINERY_SYSTEM", 
+                         params=machinery_system_params)
 
-# # Rudder
-# rudder_params = {
-#     "rudder_angle_to_sway_force_coefficient": 50e3,
-#     "rudder_angle_to_yaw_force_coefficient": 500e3,
-#     "max_rudder_angle_degrees_negative": np.deg2rad(-35),
-#     "max_rudder_angle_degrees_positive": np.deg2rad(35)
-# }
-# instance.SetInitialValues(slaveName="RUDDER", 
-#                          params=rudder_params)
+# Rudder
+rudder_params = {
+    "rudder_angle_to_sway_force_coefficient": 50e3,
+    "rudder_angle_to_yaw_force_coefficient": 500e3,
+    "max_rudder_angle_negative_deg": np.deg2rad(-35),
+    "max_rudder_angle_positive_deg": np.deg2rad(35)
+}
+instance.SetInitialValues(slaveName="RUDDER", 
+                         params=rudder_params)
 
-# # Ship Model
-# ship_model_params = {
-#     "dead_weight_tonnage": 3850000,
-#     "coefficient_of_deadweight_to_displacement": 0.7,
-#     "bunkers": 200000,
-#     "ballast": 200000,
-#     "length_of_ship": 80,
-#     "width_of_ship": 16,
-#     "added_mass_coefficient_in_surge": 0.4,
-#     "added_mass_coefficient_in_sway": 0.4,
-#     "added_mass_coefficient_in_yaw": 0.4,
-#     "mass_over_linear_friction_coefficient_in_surge": 130,
-#     "mass_over_linear_friction_coefficient_in_sway": 18,
-#     "mass_over_linear_friction_coefficient_in_yaw": 90,
-#     "nonlinear_friction_coefficient_in_surge": 2400,
-#     "nonlinear_friction_coefficient_in_sway": 4000,
-#     "nonlinear_friction_coefficient_in_yaw": 400,
-#     "rho_seawater": 1025,
-#     "rho_air": 1.2,
-#     "front_above_water_height": 8,
-#     "side_above_water_height": 8,
-#     "cx": 0.5,
-#     "cy": 0.7,
-#     "cn": 0.08,
-#     "initial_north_position_m": 0.0,
-#     "initial_east_position_m": 0.0,
-#     "initial_yaw_angle_rad": np.deg2rad(45),
-#     "initial_forward_speed_m_per_s": 0.0,
-#     "initial_sideways_speed_m_per_s": 0.0,
-#     "initial_yaw_rate_rad_per_s": 0.0 
-# }
-# instance.SetInitialValues(slaveName="SHIP_MODEL", 
-#                          params=ship_model_params)
+# Ship Model
+ship_model_params = {
+    "dead_weight_tonnage": 3850000,
+    "coefficient_of_deadweight_to_displacement": 0.7,
+    "bunkers": 200000,
+    "ballast": 200000,
+    "length_of_ship": 80,
+    "width_of_ship": 16,
+    "added_mass_coefficient_in_surge": 0.4,
+    "added_mass_coefficient_in_sway": 0.4,
+    "added_mass_coefficient_in_yaw": 0.4,
+    "mass_over_linear_friction_coefficient_in_surge": 130,
+    "mass_over_linear_friction_coefficient_in_sway": 18,
+    "mass_over_linear_friction_coefficient_in_yaw": 90,
+    "nonlinear_friction_coefficient_in_surge": 2400,
+    "nonlinear_friction_coefficient_in_sway": 4000,
+    "nonlinear_friction_coefficient_in_yaw": 400,
+    "rho_seawater": 1025,
+    "rho_air": 1.2,
+    "front_above_water_height": 8,
+    "side_above_water_height": 8,
+    "cx": 0.5,
+    "cy": 0.7,
+    "cn": 0.08,
+    "initial_north_position_m": 0.0,
+    "initial_east_position_m": 0.0,
+    "initial_yaw_angle_rad": np.deg2rad(45),
+    "initial_forward_speed_m_per_s": 0.0,
+    "initial_sideways_speed_m_per_s": 0.0,
+    "initial_yaw_rate_rad_per_s": 0.0 
+}
+instance.SetInitialValues(slaveName="SHIP_MODEL", 
+                         params=ship_model_params)
 
 # # Surface Current
 # surface_current_params = {
@@ -215,28 +216,28 @@ instance.SetInitialValues(slaveName="THROTTLE_CONTROLLER",
 # instance.SetInitialValues(slaveName="WIND", 
 #                          params=wind_params)
 
-# # Set Points Manager
-# set_points_manager_params = {
-#     "ra": 300,
-#     "max_inter_wp": 3,
-#     "wp_start_north": 0.0,
-#     "wp_start_east": 0.0,
-#     "wp_start_speed": 5.0,
-#     "wp_1_north": 2500.0,
-#     "wp_1_east": 2500.0,
-#     "wp_1_speed": 5.0,
-#     "wp_2_north": 5000.0,
-#     "wp_2_east": 3750.0,
-#     "wp_2_speed": 5.0,
-#     "wp_3_north": 5000.0,
-#     "wp_3_east": 8750.0,
-#     "wp_3_speed": 5.0,
-#     "wp_end_north": 10000.0,
-#     "wp_end_east": 10000.0,
-#     "wp_end_speed": 5.0,
-# }
-# instance.SetInitialValues(slaveName="SET_POINTS_MANAGER", 
-#                          params=set_points_manager_params)
+# Set Points Manager
+set_points_manager_params = {
+    "ra": 300,
+    "max_inter_wp": 3,
+    "wp_start_north": 0.0,
+    "wp_start_east": 0.0,
+    "wp_start_speed": 5.0,
+    "wp_1_north": 2500.0,
+    "wp_1_east": 2500.0,
+    "wp_1_speed": 5.0,
+    "wp_2_north": 5000.0,
+    "wp_2_east": 3750.0,
+    "wp_2_speed": 5.0,
+    "wp_3_north": 5000.0,
+    "wp_3_east": 8750.0,
+    "wp_3_speed": 5.0,
+    "wp_end_north": 10000.0,
+    "wp_end_east": 10000.0,
+    "wp_end_speed": 5.0,
+}
+instance.SetInitialValues(slaveName="SET_POINTS_MANAGER", 
+                         params=set_points_manager_params)
 
 # # =========================
 # # Add Model Connections
