@@ -68,32 +68,32 @@ instance.SetInitalValues(slaveName="MACHINERY_SYSTEM",
 # =========================
 # Setup Observer – Outputs
 # =========================
-instance.AddObserverTimeSeriesWithLable(name="thrust_force", slaveName="MACHINERY_SYSTEM", variable="thrust_force", var_lable="Force [N]")
-instance.AddObserverTimeSeriesWithLable(name="shaft_speed_rpm", slaveName="MACHINERY_SYSTEM", variable="shaft_speed_rpm", var_lable="Shaft Speed [RPM]")
-instance.AddObserverTimeSeriesWithLable(name="cmd_load_fraction_me", slaveName="MACHINERY_SYSTEM", variable="cmd_load_fraction_me", var_lable="Load Fraction [-]")
-instance.AddObserverTimeSeriesWithLable(name="cmd_load_fraction_hsg", slaveName="MACHINERY_SYSTEM", variable="cmd_load_fraction_hsg", var_lable="Load Fraction [-]")
-instance.AddObserverTimeSeriesWithLable(name="power_me", slaveName="MACHINERY_SYSTEM", variable="power_me", var_lable="Power [W]")
-instance.AddObserverTimeSeriesWithLable(name="available_power_me", slaveName="MACHINERY_SYSTEM", variable="available_power_me", var_lable="Power [W]")
-instance.AddObserverTimeSeriesWithLable(name="power_electrical", slaveName="MACHINERY_SYSTEM", variable="power_electrical", var_lable="Power [W]")
-instance.AddObserverTimeSeriesWithLable(name="available_power_electrical", slaveName="MACHINERY_SYSTEM", variable="available_power_electrical", var_lable="Power [W]")
-instance.AddObserverTimeSeriesWithLable(name="power", slaveName="MACHINERY_SYSTEM", variable="power", var_lable="Power [W]")
-instance.AddObserverTimeSeriesWithLable(name="propulsion_power", slaveName="MACHINERY_SYSTEM", variable="propulsion_power", var_lable="Power [W]")
-instance.AddObserverTimeSeriesWithLable(name="fuel_rate_me", slaveName="MACHINERY_SYSTEM", variable="fuel_rate_me", var_lable="Fuel Rate [-]")
-instance.AddObserverTimeSeriesWithLable(name="fuel_rate_hsg", slaveName="MACHINERY_SYSTEM", variable="fuel_rate_hsg", var_lable="Fuel Rate [-]")
-instance.AddObserverTimeSeriesWithLable(name="fuel_rate", slaveName="MACHINERY_SYSTEM", variable="fuel_rate", var_lable="Fuel Rate [-]")
-instance.AddObserverTimeSeriesWithLable(name="fuel_consumption_me", slaveName="MACHINERY_SYSTEM", variable="fuel_consumption_me", var_lable="Fuel Rate [-]")
-instance.AddObserverTimeSeriesWithLable(name="fuel_consumption_hsg", slaveName="MACHINERY_SYSTEM", variable="fuel_consumption_hsg", var_lable="Fuel Rate [-]")
-instance.AddObserverTimeSeriesWithLable(name="fuel_consumption", slaveName="MACHINERY_SYSTEM", variable="fuel_consumption", var_lable="Fuel Rate [-]")
-instance.AddObserverTimeSeriesWithLable(name="motor_torque", slaveName="MACHINERY_SYSTEM", variable="motor_torque", var_lable="Torque [Nm]")
-instance.AddObserverTimeSeriesWithLable(name="hybrid_shaft_generator_torque", slaveName="MACHINERY_SYSTEM", variable="hybrid_shaft_generator_torque", var_lable="Torque [Nm]")
+instance.AddObserverTimeSeriesWithLabel(name="thrust_force", slaveName="MACHINERY_SYSTEM", variable="thrust_force", var_lable="Force [kN]")
+instance.AddObserverTimeSeriesWithLabel(name="shaft_speed_rpm", slaveName="MACHINERY_SYSTEM", variable="shaft_speed_rpm", var_lable="Shaft Speed [RPM]")
+instance.AddObserverTimeSeriesWithLabel(name="cmd_load_fraction_me", slaveName="MACHINERY_SYSTEM", variable="cmd_load_fraction_me", var_lable="Load Fraction [-]")
+instance.AddObserverTimeSeriesWithLabel(name="cmd_load_fraction_hsg", slaveName="MACHINERY_SYSTEM", variable="cmd_load_fraction_hsg", var_lable="Load Fraction [-]")
+instance.AddObserverTimeSeriesWithLabel(name="power_me", slaveName="MACHINERY_SYSTEM", variable="power_me", var_lable="Power [kW]")
+instance.AddObserverTimeSeriesWithLabel(name="available_power_me", slaveName="MACHINERY_SYSTEM", variable="available_power_me", var_lable="Power [kW]")
+instance.AddObserverTimeSeriesWithLabel(name="power_electrical", slaveName="MACHINERY_SYSTEM", variable="power_electrical", var_lable="Power [kW]")
+instance.AddObserverTimeSeriesWithLabel(name="available_power_electrical", slaveName="MACHINERY_SYSTEM", variable="available_power_electrical", var_lable="Power [kW]")
+instance.AddObserverTimeSeriesWithLabel(name="power", slaveName="MACHINERY_SYSTEM", variable="power", var_lable="Power [kW]")
+instance.AddObserverTimeSeriesWithLabel(name="propulsion_power", slaveName="MACHINERY_SYSTEM", variable="propulsion_power", var_lable="Power k[W]")
+instance.AddObserverTimeSeriesWithLabel(name="fuel_rate_me", slaveName="MACHINERY_SYSTEM", variable="fuel_rate_me", var_lable="Fuel Rate [kg/s]")
+instance.AddObserverTimeSeriesWithLabel(name="fuel_rate_hsg", slaveName="MACHINERY_SYSTEM", variable="fuel_rate_hsg", var_lable="Fuel Rate [kg/s]")
+instance.AddObserverTimeSeriesWithLabel(name="fuel_rate", slaveName="MACHINERY_SYSTEM", variable="fuel_rate", var_lable="Fuel Rate [kg/s]")
+instance.AddObserverTimeSeriesWithLabel(name="fuel_consumption_me", slaveName="MACHINERY_SYSTEM", variable="fuel_consumption_me", var_lable="Fuel Mass [kg]")
+instance.AddObserverTimeSeriesWithLabel(name="fuel_consumption_hsg", slaveName="MACHINERY_SYSTEM", variable="fuel_consumption_hsg", var_lable="Fuel Mass [kg]")
+instance.AddObserverTimeSeriesWithLabel(name="fuel_consumption", slaveName="MACHINERY_SYSTEM", variable="fuel_consumption", var_lable="Fuel Mass [kg]")
+instance.AddObserverTimeSeriesWithLabel(name="motor_torque", slaveName="MACHINERY_SYSTEM", variable="motor_torque", var_lable="Torque [Nm]")
+instance.AddObserverTimeSeriesWithLabel(name="hybrid_shaft_generator_torque", slaveName="MACHINERY_SYSTEM", variable="hybrid_shaft_generator_torque", var_lable="Torque [Nm]")
 
 # =========================
 # Input Metadata
 # =========================
-engine_index = instance.slaves_index["MACHINERY_SYSTEM"]
-engine_variables = instance.slaves_variables["MACHINERY_SYSTEM"]
-load_perc_vr = GetVariableIndex(engine_variables, 'load_perc')
-mso_mode_vr = GetVariableIndex(engine_variables, 'mso_mode')
+engine_index        = instance.slaves_index["MACHINERY_SYSTEM"]
+engine_variables    = instance.slaves_variables["MACHINERY_SYSTEM"]
+load_perc_vr        = GetVariableIndex(engine_variables, 'load_perc')
+mso_mode_vr         = GetVariableIndex(engine_variables, 'mso_mode')
 
 # =========================
 # Simulate

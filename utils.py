@@ -54,7 +54,7 @@ class CoSimInstance:
         self.time = 0
 
         self.observer_time_series_struct = {}
-        self.observer_time_series_lable = {}
+        self.observer_time_series_label = {}
 
         self.slaves = {}
         self.slaves_index = {}
@@ -97,7 +97,7 @@ class CoSimInstance:
             print("An error occured while adding an observer: ", name, "-",slaveName, "-",variable,": ", type(error).__name__, "-", error)
             sys.exit(1)
             
-    def AddObserverTimeSeriesWithLable(self, name: str, slaveName: str, variable: str, var_lable: str=None):
+    def AddObserverTimeSeriesWithLabel(self, name: str, slaveName: str, variable: str, var_lable: str=None):
         try:
             self.observer_time_series_struct[name]             = ObserverStruct()
             self.observer_time_series_struct[name].slave       = slaveName
@@ -107,7 +107,7 @@ class CoSimInstance:
             self.observer_time_series.start_time_series(self.slaves_index[slaveName],
                                                                    value_reference=self.observer_time_series_struct[name].var_vr,
                                                                    variable_type=self.observer_time_series_struct[name].var_type)
-            self.observer_time_series_lable[name]               = var_lable
+            self.observer_time_series_label[name]               = var_lable
         except Exception as error:
             print("An error occured while adding an observer: ", name, "-",slaveName, "-",variable,": ", type(error).__name__, "-", error)
             sys.exit(1)
@@ -163,7 +163,7 @@ class CoSimInstance:
                         plt.legend()
                         plt.grid()
                         plt.xlabel("Time [s]")
-                        plt.ylabel(self.observer_time_series_lable[key])
+                        plt.ylabel(self.observer_time_series_label[key])
                         if create_title:
                             plt.title("Time series form co-simulation instance \"%s\"" %(self.instanceName))
                         plt.figure()
@@ -176,7 +176,7 @@ class CoSimInstance:
         if legend:
             plt.legend()
         plt.xlabel("Time [s]")
-        plt.ylabel(self.observer_time_series_lable[key])
+        plt.ylabel(self.observer_time_series_label[key])
         if create_title:
             plt.title("Time series form co-simulation instance \"%s\"" %(self.instanceName))
         plt.grid(True)
@@ -200,17 +200,19 @@ class CoSimInstance:
                     lable = self.instanceName + ": " + str(key)
                 struct_lables.append(lable)
             
-            plt.figure()
+            plt.figure(figsize=(9,7))
             for i in range(len(key_group)):
                 plt.plot(struct_time_points[i], struct_samples[i], label=struct_lables[i])
             if legend:
-                plt.legend()
+                plt.legend(fontsize=8)
             plt.grid()
-            plt.xlabel("Time [s]")
-            plt.ylabel(self.observer_time_series_lable[key_group[0]])
+            plt.xticks(fontsize=8)
+            plt.yticks(fontsize=8)
+            plt.xlabel("Time [s]", fontsize=9)
+            plt.ylabel(self.observer_time_series_lable[key_group[0]], fontsize=9)
             if create_title:
                 plt.title("Time series form co-simulation instance \"%s\"" %(self.instanceName))
-            plt.tight_layout()
+            # plt.tight_layout()
             if show_separately:
                 plt.show()
 
