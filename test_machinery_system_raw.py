@@ -49,6 +49,13 @@ engine_variables = execution.slave_variables(slave_index=engine_index)
 # =========================
 # Machinery System Configuration
 # =========================
+mso_mode_val = 0
+mso_mode_vr = GetVariableIndex(engine_variables, 'mso_mode')
+execution.integer_initial_value(
+    slave_index=engine_index,
+    variable_reference=mso_mode_vr,
+    value=mso_mode_val
+)
 
 hotel_load_val = 200000
 hotel_load_vr = GetVariableIndex(engine_variables, 'hotel_load')
@@ -402,26 +409,23 @@ observe_time_series.start_time_series(
 
 # Input Metadata
 load_perc_vr = GetVariableIndex(engine_variables, 'load_perc')
-mso_mode_vr = GetVariableIndex(engine_variables, 'mso_mode')
 
 time = 0
 while time < stopTime:
      # Get values
-    load_perc = 0.5
-    mso_mode = 2
+    load_perc = 0.25
     
-    # if time > stopTime/4:
-    #     load_perc=0.5
+    if time > stopTime/4:
+        load_perc=0.5
     
     if time > stopTime/2:
-        mso_mode = 1
+        load_perc = 1
     
     if time > stopTime*3/4:
-        mso_mode = 0
+        load_perc = 0.75
     
     # Set values
     manipulator.slave_real_values(engine_index, [load_perc_vr], [load_perc])
-    manipulator.slave_integer_values(engine_index, [mso_mode_vr], [mso_mode])
     
     # Step
     execution.step()

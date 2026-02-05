@@ -29,7 +29,7 @@ class ShaftSpeedController(Fmi2Slave):
         self.measured_ship_speed    = 0.0
         
         ## Output
-        self.shaft_speed_cmd        = 0.0
+        self.shaft_speed_cmd_rpm    = 0.0
         
         ## Registration
         # PI Parameters
@@ -41,14 +41,7 @@ class ShaftSpeedController(Fmi2Slave):
         self.register_variable(Real("measured_ship_speed", causality=Fmi2Causality.input))
 
         # Output
-        self.register_variable(Real("shaft_speed_cmd", causality=Fmi2Causality.output))
-        
-    
-    def sat(val, low, hi):
-        ''' Saturate the input val such that it remains
-        between "low" and "hi"
-        '''
-        return max(low, min(val, hi))
+        self.register_variable(Real("shaft_speed_cmd_rpm", causality=Fmi2Causality.output))
     
     
     def pi_ctrl(self, setpoint, measurement, step_size, *args):
@@ -66,10 +59,10 @@ class ShaftSpeedController(Fmi2Slave):
     
     
     def do_step(self, current_time: float, step_size: float) -> bool:
-        desired_shaft_speed = self.pi_ctrl(setpoint=self.desired_ship_speed, 
-                                           measurement=self.measured_ship_speed,
-                                           step_size=step_size)
-        
-        self.shaft_speed_cmd = self.sat(val=desired_shaft_speed, low=0, hi=self.max_shaft_speed)
+        desired_shaft_speed_rpm = self.pi_ctrl(setpoint=self.desired_ship_speed, 
+                                               measurement=self.measured_ship_speed,
+                                               step_size=step_size)
+                
+        self.shaft_speed_cmd_rpm = desired_shaft_speed_rpm
         
         return True

@@ -42,10 +42,10 @@ class MachinerySystem(Fmi2Slave):
         # Engine Parameters
         self.main_engine_capacity_spec                                  = 0.0
         self.diesel_gen_capacity_spec                                   = 0.0
+        self.mso_mode                                                   = 0 # 0:MEC, 1:PTO, 2:PTI
         
         ## Input Variables
         self.load_perc                                                  = 0.0
-        self.mso_mode                                                   = 0 # 0:MEC, 1:PTO, 2:PTI
         
         ## Output Variables
         self.thrust_force                                               = 0.0
@@ -108,10 +108,10 @@ class MachinerySystem(Fmi2Slave):
         # Engine Parameters
         self.register_variable(Real("main_engine_capacity_spec", causality=Fmi2Causality.parameter,variability=Fmi2Variability.fixed))
         self.register_variable(Real("diesel_gen_capacity_spec", causality=Fmi2Causality.parameter,variability=Fmi2Variability.fixed))
+        self.register_variable(Integer("mso_mode", causality=Fmi2Causality.parameter,variability=Fmi2Variability.tunable))
             
         # Input Variables
         self.register_variable(Real("load_perc", causality=Fmi2Causality.input))
-        self.register_variable(Integer("mso_mode", causality=Fmi2Causality.input))
         
         # Output Variables
         self.register_variable(Real("thrust_force", causality=Fmi2Causality.output))

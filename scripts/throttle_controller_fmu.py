@@ -27,8 +27,8 @@ class ThrottleController(Fmi2Slave):
         self.prev_error             = 0.0
         
         ## Input
-        self.desired_shaft_speed    = 0.0
-        self.measured_shaft_speed   = 0.0 
+        self.desired_shaft_speed_rpm    = 0.0
+        self.measured_shaft_speed_rpm   = 0.0 
         
         ## Registration
         # PI Parameters
@@ -36,8 +36,8 @@ class ThrottleController(Fmi2Slave):
         self.register_variable(Real("ki", causality=Fmi2Causality.parameter,variability=Fmi2Variability.fixed))
         
         # Input
-        self.register_variable(Real("desired_shaft_speed", causality=Fmi2Causality.input))
-        self.register_variable(Real("measured_shaft_speed", causality=Fmi2Causality.input))
+        self.register_variable(Real("desired_shaft_speed_rpm", causality=Fmi2Causality.input))
+        self.register_variable(Real("measured_shaft_speed_rpm", causality=Fmi2Causality.input))
 
         # Output
         self.register_variable(Real("throttle_cmd", causality=Fmi2Causality.output))
@@ -66,8 +66,8 @@ class ThrottleController(Fmi2Slave):
     
     
     def do_step(self, current_time: float, step_size: float) -> bool:
-        throttle = self.pi_ctrl(setpoint=self.desired_shaft_speed, 
-                                measurement=self.measured_shaft_speed,
+        throttle = self.pi_ctrl(setpoint=self.desired_shaft_speed_rpm, 
+                                measurement=self.measured_shaft_speed_rpm,
                                 step_size=step_size)
         
         self.throttle_cmd = self.sat(val=throttle, low=0, hi=1.1)

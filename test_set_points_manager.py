@@ -59,7 +59,7 @@ set_points_manager_params = {
     "wp_end_east": 10000.0,
     "wp_end_speed": 9.0,
 }
-instance.SetInitalValues(slaveName="SET_POINTS_MANAGER", 
+instance.SetInitialValues(slaveName="SET_POINTS_MANAGER", 
                          params=set_points_manager_params)
 
 # =========================
@@ -72,13 +72,13 @@ instance.AddObserverTimeSeriesWithLabel(name="next_wp_north", slaveName="SET_POI
 instance.AddObserverTimeSeriesWithLabel(name="next_wp_east", slaveName="SET_POINTS_MANAGER", variable="next_wp_east", var_lable="Waypoint [-]")
 instance.AddObserverTimeSeriesWithLabel(name="next_wp_speed", slaveName="SET_POINTS_MANAGER", variable="next_wp_speed", var_lable="Speed [m/s]")
 
-# =========================
-# Input Metadata
-# =========================
-spm_index       = instance.slaves_index["SET_POINTS_MANAGER"]
-spm_variables   = instance.slaves_variables["SET_POINTS_MANAGER"]
-north_vr        = GetVariableIndex(spm_variables, 'north')
-east_vr         = GetVariableIndex(spm_variables, 'east')
+# # =========================
+# # Input Metadata
+# # =========================
+# spm_index       = instance.slaves_index["SET_POINTS_MANAGER"]
+# spm_variables   = instance.slaves_variables["SET_POINTS_MANAGER"]
+# north_vr        = GetVariableIndex(spm_variables, 'north')
+# east_vr         = GetVariableIndex(spm_variables, 'east')
 
 # =========================
 # Simulate
@@ -92,8 +92,10 @@ for step in range(len(north_list)):
     north = north_list[step]
     east  = east_list[step]
     
-    instance.manipulator.slave_real_values(spm_index, [north_vr], [north])
-    instance.manipulator.slave_real_values(spm_index, [east_vr], [east])
+    instance.SingleVariableManipulation(slaveName="SET_POINTS_MANAGER", slaveVar="north", value=north)
+    instance.SingleVariableManipulation(slaveName="SET_POINTS_MANAGER", slaveVar="east", value=east)
+    # instance.manipulator.slave_real_values(spm_index, [north_vr], [north])
+    # instance.manipulator.slave_real_values(spm_index, [east_vr], [east])
     
     instance.execution.step()
 

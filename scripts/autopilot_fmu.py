@@ -18,40 +18,40 @@ class Autopilot(Fmi2Slave):
         super().__init__(**kwargs)
         
         ## LOS Guidance Parameters
-        self.ra                 = 0.0       # Radius of Acceptance
-        self.r                  = 0.0       # Lookahead Distance
-        self.ki_ct              = 0.0       # Integral Gain
-        self.integrator_limit   = 0.0       # Integrator Windup Limit
+        self.ra                             = 0.0       # Radius of Acceptance
+        self.r                              = 0.0       # Lookahead Distance
+        self.ki_ct                          = 0.0       # Integral Gain
+        self.integrator_limit               = 0.0       # Integrator Windup Limit
         
         ## Autopilot Parameters
-        self.kp                 = 0.0
-        self.ki                 = 0.0
-        self.kd                 = 0.0
+        self.kp                             = 0.0
+        self.ki                             = 0.0
+        self.kd                             = 0.0
         
-        self.max_rudder_rate    = 0.0
-        self.max_rudder_angle   = 0.0
+        self.max_rudder_rate_deg_per_sec    = 0.0
+        self.max_rudder_angle_deg           = 0.0
         
         # Internal Variables
-        self.e_ct_int           = 0.0       # Cross Track Error Integral Value
-        self.error_i            = 0.0
-        self.prev_error         = 0.0
-        self.prev_rudder_angle  = 0.0       # Previous Rudder Angle Command, initiated at zero degree
+        self.e_ct_int                       = 0.0       # Cross Track Error Integral Value
+        self.error_i                        = 0.0
+        self.prev_error                     = 0.0
+        self.prev_rudder_angle_rad          = 0.0       # Previous Rudder Angle Command, initiated at zero degree
         
         ## Input
-        self.east               = 0.0
-        self.north              = 0.0
-        self.heading_mea        = 0.0
+        self.north                          = 0.0
+        self.east                           = 0.0
+        self.yaw_angle_rad                  = 0.0
         
-        self.next_wp_east       = np.nan
-        self.next_wp_north      = np.nan
+        self.next_wp_north                  = np.nan
+        self.next_wp_east                   = np.nan
         
-        self.prev_wp_east       = np.nan
-        self.prev_wp_north      = np.nan
+        self.prev_wp_north                  = np.nan
+        self.prev_wp_east                   = np.nan
         
         ## Output
-        self.heading_ref        = 0.0       # Heading Reference
-        self.rudder_angle       = 0.0       # Rudder Angle
-        self.e_ct               = 0.0       # Cross-Track Error
+        self.yaw_angle_ref_rad              = 0.0       # Heading Reference
+        self.rudder_angle_deg               = 0.0       # Rudder Angle
+        self.e_ct                           = 0.0       # Cross-Track Error
         
         ## Registration
         # LOS Guidance Parameters
@@ -64,23 +64,23 @@ class Autopilot(Fmi2Slave):
         self.register_variable(Real("kp", causality=Fmi2Causality.parameter,variability=Fmi2Variability.tunable))
         self.register_variable(Real("ki", causality=Fmi2Causality.parameter,variability=Fmi2Variability.tunable))
         self.register_variable(Real("kd", causality=Fmi2Causality.parameter,variability=Fmi2Variability.tunable))
-        self.register_variable(Real("max_rudder_rate", causality=Fmi2Causality.parameter,variability=Fmi2Variability.fixed))
-        self.register_variable(Real("max_rudder_angle", causality=Fmi2Causality.parameter,variability=Fmi2Variability.fixed))
+        self.register_variable(Real("max_rudder_rate_deg_per_sec", causality=Fmi2Causality.parameter,variability=Fmi2Variability.fixed))
+        self.register_variable(Real("max_rudder_angle_deg", causality=Fmi2Causality.parameter,variability=Fmi2Variability.fixed))
         
         # Input
-        self.register_variable(Real("east", causality=Fmi2Causality.input))
         self.register_variable(Real("north", causality=Fmi2Causality.input))
-        self.register_variable(Real("heading_mea", causality=Fmi2Causality.input))
+        self.register_variable(Real("east", causality=Fmi2Causality.input))
+        self.register_variable(Real("yaw_angle_rad", causality=Fmi2Causality.input))
         
-        self.register_variable(Real("next_wp_east", causality=Fmi2Causality.input))
         self.register_variable(Real("next_wp_north", causality=Fmi2Causality.input))
+        self.register_variable(Real("next_wp_east", causality=Fmi2Causality.input))
         
-        self.register_variable(Real("prev_wp_east", causality=Fmi2Causality.input))
         self.register_variable(Real("prev_wp_north", causality=Fmi2Causality.input))
+        self.register_variable(Real("prev_wp_east", causality=Fmi2Causality.input))
         
         # Output
-        self.register_variable(Real("heading_ref", causality=Fmi2Causality.output))
-        self.register_variable(Real("rudder_angle", causality=Fmi2Causality.output))
+        self.register_variable(Real("yaw_angle_ref_rad", causality=Fmi2Causality.output))
+        self.register_variable(Real("rudder_angle_deg", causality=Fmi2Causality.output))
         self.register_variable(Real("e_ct", causality=Fmi2Causality.output))
         
     
@@ -126,7 +126,7 @@ class Autopilot(Fmi2Slave):
         return self.sat(u_cmd, -self.max_rudder_angle, +self.max_rudder_angle)  
     
     
-    def los_guidance(self, east, north, next_wp_east, next_wp_north, prev_wp_east, prev_wp_north):
+    def los_guidance(self, north, east, next_wp_north, next_wp_east, prev_wp_north, prev_wp_east):
         dx = next_wp_east - prev_wp_east
         dy = next_wp_north - prev_wp_north
         
@@ -144,30 +144,30 @@ class Autopilot(Fmi2Slave):
             
         chi_r = np.atan2(-e_ct, delta - self.e_ct_int*self.ki_ct)
         
-        heading_ref = self._wrap_to_pi(alpha_k + chi_r)
+        yaw_angle_ref_rad = self._wrap_to_pi(alpha_k + chi_r)
         
-        return heading_ref, e_ct
+        return yaw_angle_ref_rad, e_ct
     
     
     def do_step(self, current_time: float, step_size: float) -> bool:
         # Get the heading reference and the measured heading using input
-        heading_ref, e_ct = self.los_guidance(self.east, self.north, 
-                                              self.next_wp_east, self.next_wp_north, 
-                                              self.prev_wp_east, self.prev_wp_north)
+        yaw_angle_ref_rad, e_ct = self.los_guidance(self.north, self.east, 
+                                              self.next_wp_north, self.next_wp_east, 
+                                              self.prev_wp_north, self.prev_wp_east)
         
         # Compute the control signal
-        rudder_angle_des = self.pid_ctrl(setpoint=heading_ref, measurement=self.heading_mea, step_size=step_size) # self.heading_mea is input
+        rudder_angle_des_rad = self.pid_ctrl(setpoint=yaw_angle_ref_rad, measurement=self.yaw_angle_rad, step_size=step_size) # self.heading_mea is input
         
         # Apply slew limiter around the previous rudder command
-        rudder_angle = self._apply_slew_limit(rudder_angle_des, self.prev_rudder_angle, step_size=step_size)
+        rudder_angle_rad = self._apply_slew_limit(rudder_angle_des_rad, self.prev_rudder_angle_rad, step_size=step_size)
         
         # Store current to previous rudder angle command
-        self.prev_rudder_angle = rudder_angle
+        self.prev_rudder_angle_rad = rudder_angle_rad
         
         # Outputs
-        self.heading_ref    = heading_ref
-        self.e_ct           = e_ct
-        self.rudder_angle   = rudder_angle
+        self.yaw_angle_ref_rad  = yaw_angle_ref_rad
+        self.e_ct               = e_ct
+        self.rudder_angle_deg   = np.rad2deg(rudder_angle_rad)
         
         return True
         

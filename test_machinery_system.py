@@ -41,6 +41,7 @@ instance.AddSlave(name="MACHINERY_SYSTEM",
 # =========================
 # Machinery System
 machinery_system_params = {
+    "mso_mode": 2,
     "hotel_load": 200000,
     "rated_speed_main_engine_rpm": 1000,
     "linear_friction_main_engine": 68,
@@ -62,7 +63,7 @@ machinery_system_params = {
     "main_engine_capacity_spec": 2160e3,
     "diesel_gen_capacity_spec": 510e3,
 }
-instance.SetInitalValues(slaveName="MACHINERY_SYSTEM", 
+instance.SetInitialValues(slaveName="MACHINERY_SYSTEM", 
                          params=machinery_system_params)
 
 # =========================
@@ -87,34 +88,37 @@ instance.AddObserverTimeSeriesWithLabel(name="fuel_consumption", slaveName="MACH
 instance.AddObserverTimeSeriesWithLabel(name="motor_torque", slaveName="MACHINERY_SYSTEM", variable="motor_torque", var_lable="Torque [Nm]")
 instance.AddObserverTimeSeriesWithLabel(name="hybrid_shaft_generator_torque", slaveName="MACHINERY_SYSTEM", variable="hybrid_shaft_generator_torque", var_lable="Torque [Nm]")
 
-# =========================
-# Input Metadata
-# =========================
-engine_index        = instance.slaves_index["MACHINERY_SYSTEM"]
-engine_variables    = instance.slaves_variables["MACHINERY_SYSTEM"]
-load_perc_vr        = GetVariableIndex(engine_variables, 'load_perc')
-mso_mode_vr         = GetVariableIndex(engine_variables, 'mso_mode')
+# # =========================
+# # Input Metadata
+# # =========================
+# engine_index        = instance.slaves_index["MACHINERY_SYSTEM"]
+# engine_variables    = instance.slaves_variables["MACHINERY_SYSTEM"]
+# load_perc_vr        = GetVariableIndex(engine_variables, 'load_perc')
+# mso_mode_vr         = GetVariableIndex(engine_variables, 'mso_mode')
 
 # =========================
 # Simulate
 # =========================
 while instance.time < instance.stopTime:
      # Get values
-    load_perc = 0.5
-    mso_mode = 2
+    load_perc = 0.25
     
-    # if time > stopTime/4:
-    #     load_perc=0.5
+    if instance.time > instance.stopTime/4:
+        load_perc=0.5
     
     if instance.time > instance.stopTime/2:
-        mso_mode = 1
+        load_perc = 1
+        instance.SingleVariableManipulation(slaveName="MACHINERY_SYSTEM", slaveVar="mso_mode", value=0)
+        # instance.manipulator.slave_integer_values(slave_index=engine_index, variable_references=[mso_mode_vr], values=[0])
     
     if instance.time > instance.stopTime*3/4:
-        mso_mode = 0
+        load_perc = 0.75
+        instance.SingleVariableManipulation(slaveName="MACHINERY_SYSTEM", slaveVar="mso_mode", value=1)
+        # instance.manipulator.slave_integer_values(slave_index=engine_index, variable_references=[mso_mode_vr], values=[1])
     
     # Set values
-    instance.manipulator.slave_real_values(engine_index, [load_perc_vr], [load_perc])
-    instance.manipulator.slave_integer_values(engine_index, [mso_mode_vr], [mso_mode])
+    instance.SingleVariableManipulation(slaveName="MACHINERY_SYSTEM", slaveVar="load_perc", value=load_perc)
+    # instance.manipulator.slave_real_values(engine_index, [load_perc_vr], [load_perc])
     
     # Step
     instance.execution.step()

@@ -209,7 +209,7 @@ class CoSimInstance:
             plt.xticks(fontsize=8)
             plt.yticks(fontsize=8)
             plt.xlabel("Time [s]", fontsize=9)
-            plt.ylabel(self.observer_time_series_lable[key_group[0]], fontsize=9)
+            plt.ylabel(self.observer_time_series_label[key_group[0]], fontsize=9)
             if create_title:
                 plt.title("Time series form co-simulation instance \"%s\"" %(self.instanceName))
             # plt.tight_layout()
@@ -257,7 +257,6 @@ class CoSimInstance:
             print("An error occured while obtaing last value: ", slaveName, ".", slaveVar, ": ", type(error).__name__, "-", error)
             sys.exit(1)
 
-
     def CoSimManipulate(self):
         for i in range(0,len(self.slave_input_name)):
             try:
@@ -284,6 +283,28 @@ class CoSimInstance:
             except Exception as error:
                 print("An error occured during signal manipulation: ", self.slave_input_name[i],".",self.slave_input_var[i]," = ",self.slave_output_name[i],".", self.slave_output_var[i], " :", type(error).__name__, "-", error)
                 sys.exit(1)
+    
+    def SingleVariableManipulation(self, slaveName: str, slaveVar: str, value):    
+        try:
+            var_vr, var_type = GetVariableInfo(self.slaves_variables[slaveName], slaveVar)
+            if var_type == CosimVariableType.REAL:
+                self.manipulator.slave_real_values(slave_index=self.slaves_index[slaveName], 
+                                                   variable_references=[var_vr], values=[value])
+
+            if var_type == CosimVariableType.BOOLEAN:
+                self.manipulator.slave_boolean_values(slave_index=self.slaves_index[slaveName], 
+                                                      variable_references=[var_vr], values=[value])
+
+            if var_type == CosimVariableType.INTEGER:
+                self.manipulator.slave_integer_values(slave_index=self.slaves_index[slaveName], 
+                                                      variable_references=[var_vr], values=[value])
+
+            if var_type == CosimVariableType.STRING:
+                self.manipulator.slave_string_values(slave_index=self.slaves_index[slaveName], 
+                                                     variable_references=[var_vr], values=[value])
+        except Exception as error:
+            print("An error occured during single variable manipulation: ", slaveName,".", slaveVar, " = ", value, ": ", type(error).__name__, "-", error)
+            sys.exit(1)
 
     def AddInputFromExternal(self, slaveName: str, slaveVar: str, func):    
         try:
@@ -294,7 +315,6 @@ class CoSimInstance:
         except Exception as error:
             print("An error occured while setting an external input: ", slaveName, ".", slaveVar, ": ", type(error).__name__, "-", error)
             sys.exit(1)
-
 
     def SetInputFromExternal(self):    
         for i in range(0,len(self.fromExternalSlaveName)):
@@ -338,7 +358,7 @@ class CoSimInstance:
             print("An error occured while setting an initial value: ", slaveName, ".", slaveVar, " = ", initValue, ": ", type(error).__name__, "-", error)
             sys.exit(1)
             
-    def SetInitalValues(self, slaveName: str, params: dict):
+    def SetInitialValues(self, slaveName: str, params: dict):
         for var_name, value in params.items():
             self.SetInitialValue(slaveName, var_name, value)
 
