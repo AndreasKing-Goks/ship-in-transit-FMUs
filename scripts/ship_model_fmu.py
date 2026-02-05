@@ -70,7 +70,7 @@ class ShipModel(Fmi2Slave):
         self.sideways_speed                                 = 0.0
         self.yaw_rate                                       = 0.0
         
-        self.total_speed                                     = 0.0
+        self.measured_ship_speed                            = 0.0
         
         self.d_north                                        = 0.0
         self.d_east                                         = 0.0
@@ -141,7 +141,7 @@ class ShipModel(Fmi2Slave):
         self.register_variable(Real("sideways_speed", causality=Fmi2Causality.output))
         self.register_variable(Real("yaw_rate", causality=Fmi2Causality.output))
         
-        self.register_variable(Real("total_speed", causality=Fmi2Causality.output))
+        self.register_variable(Real("measured_ship_speed", causality=Fmi2Causality.output))
         
         self.register_variable(Real("d_north", causality=Fmi2Causality.output))
         self.register_variable(Real("d_east", causality=Fmi2Causality.output))
@@ -375,7 +375,7 @@ class ShipModel(Fmi2Slave):
         self.yaw_rate                       = yaw_rate       + step_size * d_yaw_rate
         
         # Get the measured speed
-        self.total_speed                    = np.sqrt(self.forward_speed ** 2 + self.sideways_speed ** 2)
+        self.measured_ship_speed            = np.sqrt(self.forward_speed ** 2 + self.sideways_speed ** 2)
         
         # Re-assigns the final states to the previous states
         self.initial_north_position_m       = self.north

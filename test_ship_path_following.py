@@ -239,64 +239,64 @@ set_points_manager_params = {
 instance.SetInitialValues(slaveName="SET_POINTS_MANAGER", 
                          params=set_points_manager_params)
 
-# # =========================
-# # Add Model Connections
-# # =========================
-# # Input to Autopilot
-# instance.AddSlaveConnection(slaveInputName="AUTOPILOT", slaveInputVar="north", 
-#                             slaveOutputName="SHIP_MODEL", slaveOutputVar="north")
-# instance.AddSlaveConnection(slaveInputName="AUTOPILOT", slaveInputVar="east", 
-#                             slaveOutputName="SHIP_MODEL", slaveOutputVar="east")
-# instance.AddSlaveConnection(slaveInputName="AUTOPILOT", slaveInputVar="heading_mea", 
-#                             slaveOutputName="SHIP_MODEL", slaveOutputVar="yaw_angle")
-# instance.AddSlaveConnection(slaveInputName="AUTOPILOT", slaveInputVar="prev_wp_north", 
-#                             slaveOutputName="SET_POINTS_MANAGER", slaveOutputVar="prev_wp_north")
-# instance.AddSlaveConnection(slaveInputName="AUTOPILOT", slaveInputVar="prev_wp_east", 
-#                             slaveOutputName="SET_POINTS_MANAGER", slaveOutputVar="prev_wp_east")
-# instance.AddSlaveConnection(slaveInputName="AUTOPILOT", slaveInputVar="next_wp_north", 
-#                             slaveOutputName="SET_POINTS_MANAGER", slaveOutputVar="next_wp_north")
-# instance.AddSlaveConnection(slaveInputName="AUTOPILOT", slaveInputVar="next_wp_east", 
-#                             slaveOutputName="SET_POINTS_MANAGER", slaveOutputVar="next_wp_east")
+# =========================
+# Add Model Connections
+# =========================
+# Input to Autopilot
+instance.AddSlaveConnection(slaveInputName="AUTOPILOT", slaveInputVar="north", 
+                            slaveOutputName="SHIP_MODEL", slaveOutputVar="north")
+instance.AddSlaveConnection(slaveInputName="AUTOPILOT", slaveInputVar="east", 
+                            slaveOutputName="SHIP_MODEL", slaveOutputVar="east")
+instance.AddSlaveConnection(slaveInputName="AUTOPILOT", slaveInputVar="yaw_angle_rad", 
+                            slaveOutputName="SHIP_MODEL", slaveOutputVar="yaw_angle_rad")
+instance.AddSlaveConnection(slaveInputName="AUTOPILOT", slaveInputVar="prev_wp_north", 
+                            slaveOutputName="SET_POINTS_MANAGER", slaveOutputVar="prev_wp_north")
+instance.AddSlaveConnection(slaveInputName="AUTOPILOT", slaveInputVar="prev_wp_east", 
+                            slaveOutputName="SET_POINTS_MANAGER", slaveOutputVar="prev_wp_east")
+instance.AddSlaveConnection(slaveInputName="AUTOPILOT", slaveInputVar="next_wp_north", 
+                            slaveOutputName="SET_POINTS_MANAGER", slaveOutputVar="next_wp_north")
+instance.AddSlaveConnection(slaveInputName="AUTOPILOT", slaveInputVar="next_wp_east", 
+                            slaveOutputName="SET_POINTS_MANAGER", slaveOutputVar="next_wp_east")
 
-# # Input to Shaft Speed Controller
-# instance.AddSlaveConnection(slaveInputName="SHAFT_SPEED_CONTROLLER", slaveInputVar="desired_ship_speed", 
-#                             slaveOutputName="SET_POINTS_MANAGER", slaveOutputVar="prev_wp_speed")
-# instance.AddSlaveConnection(slaveInputName="SHAFT_SPEED_CONTROLLER", slaveInputVar="measured_ship_speed", 
-#                             slaveOutputName="SHIP_MODEL", slaveOutputVar="measured_speed")
+# Input to Shaft Speed Controller
+instance.AddSlaveConnection(slaveInputName="SHAFT_SPEED_CONTROLLER", slaveInputVar="desired_ship_speed", 
+                            slaveOutputName="SET_POINTS_MANAGER", slaveOutputVar="prev_wp_speed")
+instance.AddSlaveConnection(slaveInputName="SHAFT_SPEED_CONTROLLER", slaveInputVar="measured_ship_speed", 
+                            slaveOutputName="SHIP_MODEL", slaveOutputVar="measured_ship_speed")
 
-# # Input to Throttle Controller
-# instance.AddSlaveConnection(slaveInputName="THROTTLE_CONTROLLER", slaveInputVar="desired_shaft_speed", 
-#                             slaveOutputName="SHAFT_SPEED_CONTROLLER", slaveOutputVar="shaft_speed_cmd")
-# instance.AddSlaveConnection(slaveInputName="THROTTLE_CONTROLLER", slaveInputVar="measured_shaft_speed", 
-#                             slaveOutputName="MACHINERY_SYSTEM", slaveOutputVar="shaft_speed_rpm")
+# Input to Throttle Controller
+instance.AddSlaveConnection(slaveInputName="THROTTLE_CONTROLLER", slaveInputVar="desired_shaft_speed_rpm", 
+                            slaveOutputName="SHAFT_SPEED_CONTROLLER", slaveOutputVar="shaft_speed_cmd_rpm")
+instance.AddSlaveConnection(slaveInputName="THROTTLE_CONTROLLER", slaveInputVar="measured_shaft_speed_rpm", 
+                            slaveOutputName="MACHINERY_SYSTEM", slaveOutputVar="shaft_speed_rpm")
 
-# # Input to Machinery System
-# instance.AddSlaveConnection(slaveInputName="MACHINERY_SYSTEM", slaveInputVar="load_perc",
-#                             slaveOutputName="THROTTLE_CONTROLLER", slaveOutputVar="throttle_cmd")
+# Input to Machinery System
+instance.AddSlaveConnection(slaveInputName="MACHINERY_SYSTEM", slaveInputVar="load_perc",
+                            slaveOutputName="THROTTLE_CONTROLLER", slaveOutputVar="throttle_cmd")
 
-# # Input to Rudder
-# instance.AddSlaveConnection(slaveInputName="RUDDER", slaveInputVar="rudder_angle_deg",
-#                             slaveOutputName="AUTOPILOT", slaveOutputVar="rudder_angle")
-# instance.AddSlaveConnection(slaveInputName="RUDDER", slaveInputVar="yaw_angle_rad",
-#                             slaveOutputName="SHIP_MODEL", slaveOutputVar="yaw_angle")
-# instance.AddSlaveConnection(slaveInputName="RUDDER", slaveInputVar="forward_speed",
-#                             slaveOutputName="SHIP_MODEL", slaveOutputVar="forward_speed")
+# Input to Rudder
+instance.AddSlaveConnection(slaveInputName="RUDDER", slaveInputVar="rudder_angle_deg",
+                            slaveOutputName="AUTOPILOT", slaveOutputVar="rudder_angle_deg")
+instance.AddSlaveConnection(slaveInputName="RUDDER", slaveInputVar="yaw_angle_rad",
+                            slaveOutputName="SHIP_MODEL", slaveOutputVar="yaw_angle_rad")
+instance.AddSlaveConnection(slaveInputName="RUDDER", slaveInputVar="forward_speed",
+                            slaveOutputName="SHIP_MODEL", slaveOutputVar="forward_speed")
 
-# # Input to Ship Model
-# instance.AddSlaveConnection(slaveInputName="SHIP_MODEL", slaveInputVar="thrust_force",
-#                             slaveOutputName="MACHINERY_SYSTEM", slaveOutputVar="thrust_force")
-# instance.AddSlaveConnection(slaveInputName="SHIP_MODEL", slaveInputVar="rudder_force_v",
-#                             slaveOutputName="RUDDER", slaveOutputVar="rudder_force_v")
-# instance.AddSlaveConnection(slaveInputName="SHIP_MODEL", slaveInputVar="rudder_force_r",
-#                             slaveOutputName="RUDDER", slaveOutputVar="rudder_force_r")
+# Input to Ship Model
+instance.AddSlaveConnection(slaveInputName="SHIP_MODEL", slaveInputVar="thrust_force",
+                            slaveOutputName="MACHINERY_SYSTEM", slaveOutputVar="thrust_force")
+instance.AddSlaveConnection(slaveInputName="SHIP_MODEL", slaveInputVar="rudder_force_v",
+                            slaveOutputName="RUDDER", slaveOutputVar="rudder_force_v")
+instance.AddSlaveConnection(slaveInputName="SHIP_MODEL", slaveInputVar="rudder_force_r",
+                            slaveOutputName="RUDDER", slaveOutputVar="rudder_force_r")
 
-# # Input to Set Points Manager
-# instance.AddSlaveConnection(slaveInputName="SET_POINTS_MANAGER", slaveInputVar="north", 
-#                             slaveOutputName="SHIP_MODEL", slaveOutputVar="north")
-# instance.AddSlaveConnection(slaveInputName="SET_POINTS_MANAGER", slaveInputVar="east", 
-#                             slaveOutputName="SHIP_MODEL", slaveOutputVar="east")
+# Input to Set Points Manager
+instance.AddSlaveConnection(slaveInputName="SET_POINTS_MANAGER", slaveInputVar="north", 
+                            slaveOutputName="SHIP_MODEL", slaveOutputVar="north")
+instance.AddSlaveConnection(slaveInputName="SET_POINTS_MANAGER", slaveInputVar="east", 
+                            slaveOutputName="SHIP_MODEL", slaveOutputVar="east")
 
-# # =========================
-# # Simulate
-# # =========================
-# instance.Simulate()
+# =========================
+# Simulate
+# =========================
+instance.Simulate()
