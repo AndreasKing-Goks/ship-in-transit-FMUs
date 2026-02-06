@@ -22,8 +22,8 @@ from utils import *
 # =========================
 # Instantiate CoSimInstance
 # =========================
-stopTime = 1e11 # Number of steps in nano seconds (int)
-stepSize = 1e7 # Number of nano seconds (int)
+stopTime = 100 # Number of steps in seconds (int)
+stepSize = 0.01 # Number of seconds (int)
 
 name        = "Ship Path-Following Test"
 instance    = CoSimInstance(instanceName= name, stopTime=stopTime, stepSize=stepSize)
@@ -91,7 +91,7 @@ autopilot_params = {
     "max_rudder_rate_deg_per_sec": 2.3,
     "max_rudder_angle_deg": 35
 }
-instance.SetInitalValues(slaveName="AUTOPILOT", 
+instance.SetInitialValues(slaveName="AUTOPILOT", 
                          params=autopilot_params)
 
 # Shaft Speed Controller
@@ -99,7 +99,7 @@ shaft_speed_controller_params = {
     "kp": 2.50,
     "ki": 0.025
 }
-instance.SetInitalValues(slaveName="SHAFT_SPEED_CONTROLLER", 
+instance.SetInitialValues(slaveName="SHAFT_SPEED_CONTROLLER", 
                          params=shaft_speed_controller_params)
 
 # Throttle Controller
@@ -240,6 +240,67 @@ instance.SetInitialValues(slaveName="SET_POINTS_MANAGER",
                          params=set_points_manager_params)
 
 # =========================
+# Setup Observer – Outputs
+# =========================
+# Autopilot
+instance.AddObserverTimeSeriesWithLabel(name="yaw_angle_ref_rad", slaveName="AUTOPILOT", variable="yaw_angle_ref_rad", var_label="Angle [rad]")
+instance.AddObserverTimeSeriesWithLabel(name="rudder_angle_deg", slaveName="AUTOPILOT", variable="rudder_angle_deg", var_label="Angle [deg]")
+instance.AddObserverTimeSeriesWithLabel(name="cross_track_error", slaveName="AUTOPILOT", variable="e_ct", var_label="Error [m]")
+
+# Shaft Speed Controller
+instance.AddObserverTimeSeriesWithLabel(name="shaft_speed_cmd_rpm", slaveName="SHAFT_SPEED_CONTROLLER", variable="shaft_speed_cmd_rpm", var_label="Shaft Speed [rpm]")
+
+# Throttle Controller
+instance.AddObserverTimeSeriesWithLabel(name="throttle_cmd", slaveName="THROTTLE_CONTROLLER", variable="throttle_cmd", var_label="Throttle [-]")
+
+# Machinery System
+instance.AddObserverTimeSeriesWithLabel(name="thrust_force", slaveName="MACHINERY_SYSTEM", variable="thrust_force", var_label="Force [kN]")
+instance.AddObserverTimeSeriesWithLabel(name="shaft_speed_rpm", slaveName="MACHINERY_SYSTEM", variable="shaft_speed_rpm", var_label="Shaft Speed [RPM]")
+instance.AddObserverTimeSeriesWithLabel(name="cmd_load_fraction_me", slaveName="MACHINERY_SYSTEM", variable="cmd_load_fraction_me", var_label="Load Fraction [-]")
+instance.AddObserverTimeSeriesWithLabel(name="cmd_load_fraction_hsg", slaveName="MACHINERY_SYSTEM", variable="cmd_load_fraction_hsg", var_label="Load Fraction [-]")
+instance.AddObserverTimeSeriesWithLabel(name="power_me", slaveName="MACHINERY_SYSTEM", variable="power_me", var_label="Power [kW]")
+instance.AddObserverTimeSeriesWithLabel(name="available_power_me", slaveName="MACHINERY_SYSTEM", variable="available_power_me", var_label="Power [kW]")
+instance.AddObserverTimeSeriesWithLabel(name="power_electrical", slaveName="MACHINERY_SYSTEM", variable="power_electrical", var_label="Power [kW]")
+instance.AddObserverTimeSeriesWithLabel(name="available_power_electrical", slaveName="MACHINERY_SYSTEM", variable="available_power_electrical", var_label="Power [kW]")
+instance.AddObserverTimeSeriesWithLabel(name="power", slaveName="MACHINERY_SYSTEM", variable="power", var_label="Power [kW]")
+instance.AddObserverTimeSeriesWithLabel(name="propulsion_power", slaveName="MACHINERY_SYSTEM", variable="propulsion_power", var_label="Power k[W]")
+instance.AddObserverTimeSeriesWithLabel(name="fuel_rate_me", slaveName="MACHINERY_SYSTEM", variable="fuel_rate_me", var_label="Fuel Rate [kg/s]")
+instance.AddObserverTimeSeriesWithLabel(name="fuel_rate_hsg", slaveName="MACHINERY_SYSTEM", variable="fuel_rate_hsg", var_label="Fuel Rate [kg/s]")
+instance.AddObserverTimeSeriesWithLabel(name="fuel_rate", slaveName="MACHINERY_SYSTEM", variable="fuel_rate", var_label="Fuel Rate [kg/s]")
+instance.AddObserverTimeSeriesWithLabel(name="fuel_consumption_me", slaveName="MACHINERY_SYSTEM", variable="fuel_consumption_me", var_label="Fuel Mass [kg]")
+instance.AddObserverTimeSeriesWithLabel(name="fuel_consumption_hsg", slaveName="MACHINERY_SYSTEM", variable="fuel_consumption_hsg", var_label="Fuel Mass [kg]")
+instance.AddObserverTimeSeriesWithLabel(name="fuel_consumption", slaveName="MACHINERY_SYSTEM", variable="fuel_consumption", var_label="Fuel Mass [kg]")
+instance.AddObserverTimeSeriesWithLabel(name="motor_torque", slaveName="MACHINERY_SYSTEM", variable="motor_torque", var_label="Torque [Nm]")
+instance.AddObserverTimeSeriesWithLabel(name="hybrid_shaft_generator_torque", slaveName="MACHINERY_SYSTEM", variable="hybrid_shaft_generator_torque", var_label="Torque [Nm]")
+
+# Rudder
+instance.AddObserverTimeSeriesWithLabel(name="rudder_force_v", slaveName="RUDDER", variable="rudder_force_v", var_label="Force [N]")
+instance.AddObserverTimeSeriesWithLabel(name="rudder_force_r", slaveName="RUDDER", variable="rudder_force_r", var_label="Torque [Nm]")
+
+# Ship Model
+instance.AddObserverTimeSeriesWithLabel(name="north", slaveName="SHIP_MODEL", variable="north", var_label="Position [m]")
+instance.AddObserverTimeSeriesWithLabel(name="east", slaveName="SHIP_MODEL", variable="east", var_label="Position [m]")
+instance.AddObserverTimeSeriesWithLabel(name="yaw_angle_rad", slaveName="SHIP_MODEL", variable="yaw_angle_rad", var_label="Angle [rad]")
+instance.AddObserverTimeSeriesWithLabel(name="forward_speed", slaveName="SHIP_MODEL", variable="forward_speed", var_label="Speed [m/s]")
+instance.AddObserverTimeSeriesWithLabel(name="sideways_speed", slaveName="SHIP_MODEL", variable="sideways_speed", var_label="Speed [m/s]")
+instance.AddObserverTimeSeriesWithLabel(name="yaw_rate", slaveName="SHIP_MODEL", variable="yaw_rate", var_label="Angular Speed [rad/s]")
+instance.AddObserverTimeSeriesWithLabel(name="measured_ship_speed", slaveName="SHIP_MODEL", variable="measured_ship_speed", var_label="Speed [m/s]")
+instance.AddObserverTimeSeriesWithLabel(name="d_north", slaveName="SHIP_MODEL", variable="d_north", var_label="Speed [m/s]")
+instance.AddObserverTimeSeriesWithLabel(name="d_east", slaveName="SHIP_MODEL", variable="d_east", var_label="Speed [m/s]")
+instance.AddObserverTimeSeriesWithLabel(name="d_yaw_angle_rad", slaveName="SHIP_MODEL", variable="d_yaw_angle_rad", var_label="Angular Speed [rad/s]")
+instance.AddObserverTimeSeriesWithLabel(name="d_forward_speed", slaveName="SHIP_MODEL", variable="d_forward_speed", var_label="Acceleration [m/s2]")
+instance.AddObserverTimeSeriesWithLabel(name="d_sideways_speed", slaveName="SHIP_MODEL", variable="d_sideways_speed", var_label="Acceleration [m/s2]")
+instance.AddObserverTimeSeriesWithLabel(name="d_yaw_rate", slaveName="SHIP_MODEL", variable="d_yaw_rate", var_label="Angular Acc. [rad/s2]")
+
+# Set Points Manager
+instance.AddObserverTimeSeriesWithLabel(name="prev_wp_north", slaveName="SET_POINTS_MANAGER", variable="prev_wp_north", var_label="Waypoint [-]")
+instance.AddObserverTimeSeriesWithLabel(name="prev_wp_east", slaveName="SET_POINTS_MANAGER", variable="prev_wp_east", var_label="Waypoint [-]")
+instance.AddObserverTimeSeriesWithLabel(name="prev_wp_speed", slaveName="SET_POINTS_MANAGER", variable="prev_wp_speed", var_label="Speed [m/s]")
+instance.AddObserverTimeSeriesWithLabel(name="next_wp_north", slaveName="SET_POINTS_MANAGER", variable="next_wp_north", var_label="Waypoint [-]")
+instance.AddObserverTimeSeriesWithLabel(name="next_wp_east", slaveName="SET_POINTS_MANAGER", variable="next_wp_east", var_label="Waypoint [-]")
+instance.AddObserverTimeSeriesWithLabel(name="next_wp_speed", slaveName="SET_POINTS_MANAGER", variable="next_wp_speed", var_label="Speed [m/s]")
+
+# =========================
 # Add Model Connections
 # =========================
 # Input to Autopilot
@@ -300,3 +361,8 @@ instance.AddSlaveConnection(slaveInputName="SET_POINTS_MANAGER", slaveInputVar="
 # Simulate
 # =========================
 instance.Simulate()
+
+# =========================
+# Plot
+# =========================
+instance.PlotTimeSeries(separate_plots=True)

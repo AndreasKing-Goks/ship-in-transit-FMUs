@@ -97,7 +97,7 @@ class CoSimInstance:
             print("An error occured while adding an observer: ", name, "-",slaveName, "-",variable,": ", type(error).__name__, "-", error)
             sys.exit(1)
             
-    def AddObserverTimeSeriesWithLabel(self, name: str, slaveName: str, variable: str, var_lable: str=None):
+    def AddObserverTimeSeriesWithLabel(self, name: str, slaveName: str, variable: str, var_label: str=None):
         try:
             self.observer_time_series_struct[name]             = ObserverStruct()
             self.observer_time_series_struct[name].slave       = slaveName
@@ -107,7 +107,7 @@ class CoSimInstance:
             self.observer_time_series.start_time_series(self.slaves_index[slaveName],
                                                                    value_reference=self.observer_time_series_struct[name].var_vr,
                                                                    variable_type=self.observer_time_series_struct[name].var_type)
-            self.observer_time_series_label[name]               = var_lable
+            self.observer_time_series_label[name]               = var_label
         except Exception as error:
             print("An error occured while adding an observer: ", name, "-",slaveName, "-",variable,": ", type(error).__name__, "-", error)
             sys.exit(1)

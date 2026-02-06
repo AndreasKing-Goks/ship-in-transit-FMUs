@@ -7,7 +7,7 @@ Date    : Januari 2026
 """
 
 from pythonfmu import Fmi2Causality, Fmi2Slave, Fmi2Variability, Real, Integer, Boolean, String
-import numpy as np
+import math
 
 class Rudder(Fmi2Slave):
     
@@ -18,89 +18,91 @@ class Rudder(Fmi2Slave):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         
-        # Rudder Parameters
+        # Parameters (DEGREES for limits)
         self.rudder_angle_to_sway_force_coefficient = 0.0
         self.rudder_angle_to_yaw_force_coefficient  = 0.0
-        self.max_rudder_angle_negative_deg          = 0.0
-        self.max_rudder_angle_positive_deg          = 0.0
-        
-        # Input Variables
-        self.rudder_angle_deg                       = 0.0
-        self.yaw_angle_rad                          = 0.0
-        self.forward_speed                          = 0.0
-        self.current_speed                          = 0.0
-        self.current_dir_rad                        = 0.0
-        
-        # Output Variables
-        self.rudder_force_v                         = 0.0
-        self.rudder_force_r                         = 0.0
-        
-        ## Registration
-        # Rudder Parameters
-        self.register_variable(Real("rudder_angle_to_sway_force_coefficient", causality=Fmi2Causality.parameter,variability=Fmi2Variability.fixed))
-        self.register_variable(Real("rudder_angle_to_yaw_force_coefficient", causality=Fmi2Causality.parameter,variability=Fmi2Variability.fixed))
-        self.register_variable(Real("max_rudder_angle_negative_deg", causality=Fmi2Causality.parameter,variability=Fmi2Variability.fixed))
-        self.register_variable(Real("max_rudder_angle_positive_deg", causality=Fmi2Causality.parameter,variability=Fmi2Variability.fixed))
-        
-        # Input Variables
+        self.max_rudder_angle_negative_deg          = -35.0
+        self.max_rudder_angle_positive_deg          = 35.0
+
+        # Inputs
+        self.rudder_angle_deg = 0.0
+        self.yaw_angle_rad    = 0.0
+        self.forward_speed    = 0.0
+        self.current_speed    = 0.0
+        self.current_dir_rad  = 0.0
+
+        # Outputs
+        self.rudder_force_v = 0.0
+        self.rudder_force_r = 0.0
+
+        # Registration
+        self.register_variable(Real("rudder_angle_to_sway_force_coefficient", causality=Fmi2Causality.parameter, variability=Fmi2Variability.fixed))
+        self.register_variable(Real("rudder_angle_to_yaw_force_coefficient",  causality=Fmi2Causality.parameter, variability=Fmi2Variability.fixed))
+        self.register_variable(Real("max_rudder_angle_negative_deg",          causality=Fmi2Causality.parameter, variability=Fmi2Variability.fixed))
+        self.register_variable(Real("max_rudder_angle_positive_deg",          causality=Fmi2Causality.parameter, variability=Fmi2Variability.fixed))
+
         self.register_variable(Real("rudder_angle_deg", causality=Fmi2Causality.input))
-        self.register_variable(Real("yaw_angle_rad", causality=Fmi2Causality.input))
-        self.register_variable(Real("forward_speed", causality=Fmi2Causality.input))
-        self.register_variable(Real("current_speed", causality=Fmi2Causality.input))
-        self.register_variable(Real("current_dir_rad", causality=Fmi2Causality.input))
-        
-        # Output Variables
+        self.register_variable(Real("yaw_angle_rad",    causality=Fmi2Causality.input))
+        self.register_variable(Real("forward_speed",    causality=Fmi2Causality.input))
+        self.register_variable(Real("current_speed",    causality=Fmi2Causality.input))
+        self.register_variable(Real("current_dir_rad",  causality=Fmi2Causality.input))
+
         self.register_variable(Real("rudder_force_v", causality=Fmi2Causality.output))
         self.register_variable(Real("rudder_force_r", causality=Fmi2Causality.output))
     
-    
-    def rotation(self, yaw_angle_rad):
-        ''' Specifies the rotation matrix for rotations about the z-axis, such that
-            "body-fixed coordinates" = rotation x "North-east-down-fixed coordinates" .
-        '''
-        return np.array([[np.cos(yaw_angle_rad), -np.sin(yaw_angle_rad), 0],
-                         [np.sin(yaw_angle_rad), np.cos(yaw_angle_rad), 0],
-                         [0, 0, 1]])
+    @staticmethod
+    def sat(val, low, hi):
+        return max(low, min(val, hi))
+
+    @staticmethod
+    def rotation_inv_first_component(yaw_angle_rad, vel_ned):
+        # u_current = (R^{-1} * vel)[0]
+        # For planar rotation, R^{-1} is rotation by -yaw
+        cy = math.cos(yaw_angle_rad)
+        sy = math.sin(yaw_angle_rad)
+        # R^{-1} = [[cy, sy],[-sy, cy]] for 2D
+        u_current = cy * vel_ned[0] + sy * vel_ned[1]
+        return u_current
         
         
-    def get_rudder_force(self, rudder_angle_deg, yaw_angle_rad, forward_speed, vel_current):
+    def get_rudder_force(self, rudder_angle_deg, yaw_angle_rad, forward_speed, vel_current_ned):
         ''' This method takes in the rudder angle and returns
             the force i sway and yaw generated by the rudder.
 
             args:
-            delta (float): The rudder angle in radians
+            delta_rad (float): The rudder angle in radians
 
             returs:
             v_force (float): The force in sway-direction generated by the rudder
             r_force (float): The yaw-torque generated by the rudder
         '''
-        delta = np.deg2rad(rudder_angle_deg)
-        u_current = np.dot(np.linalg.inv(self.rotation(yaw_angle_rad)), vel_current)[0]
-        v_force = -self.rudder_angle_to_sway_force_coefficient * delta * (forward_speed - u_current)
-        r_force = -self.rudder_angle_to_yaw_force_coefficient * delta * (forward_speed - u_current)
+        delta_rad = math.radians(rudder_angle_deg)
+        u_current = self.rotation_inv_first_component(yaw_angle_rad, vel_current_ned)
+
+        rel_u = (forward_speed - u_current)
+        v_force = -self.rudder_angle_to_sway_force_coefficient * delta_rad * rel_u
+        r_force = -self.rudder_angle_to_yaw_force_coefficient  * delta_rad * rel_u
         return v_force, r_force
     
     
     def do_step(self, current_time: float, step_size: float) -> bool:
-        # Get the input variables
-        yaw_angle_rad       = self.yaw_angle_rad
-        rudder_angle_deg    = np.deg2rad(self.rudder_angle_deg)
-        forward_speed       = self.forward_speed
-        current_speed       = self.current_speed
-        current_dir_rad     = self.current_dir_rad
-        
-        vel_current         = [current_speed * np.cos(current_dir_rad),
-                               current_speed * np.sin(current_dir_rad),
-                               0.0]
-        
-        # Saturate the rudder angle
-        if rudder_angle_deg < 0:
-            rudder_angle_deg = np.max([rudder_angle_deg, self.max_rudder_angle_negative_deg])
-        if rudder_angle_deg >= 0:
-            rudder_angle_deg = np.min([rudder_angle_deg, self.max_rudder_angle_positive_deg])
-            
-        # Get the Rudder Force
-        self.rudder_force_v, self.rudder_force_r = self.get_rudder_force(rudder_angle_deg, yaw_angle_rad, 
-                                                                         forward_speed, vel_current)
+        # Inputs
+        yaw = self.yaw_angle_rad
+        rud_deg = self.rudder_angle_deg
+        u = self.forward_speed
+        cs = self.current_speed
+        cd = self.current_dir_rad
+
+        # Saturate in DEGREES
+        rud_deg = self.sat(rud_deg, self.max_rudder_angle_negative_deg, self.max_rudder_angle_positive_deg)
+
+        vel_current = [cs * math.cos(cd), cs * math.sin(cd), 0.0]
+
+        self.rudder_force_v, self.rudder_force_r = self.get_rudder_force(
+            rudder_angle_deg=rud_deg,
+            yaw_angle_rad=yaw,
+            forward_speed=u,
+            vel_current_ned=vel_current
+        )
         
         return True

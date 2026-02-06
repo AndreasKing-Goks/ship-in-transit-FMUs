@@ -7,8 +7,6 @@ Date    : Januari 2026
 """
 
 from pythonfmu import Fmi2Causality, Fmi2Slave, Fmi2Variability, Real, Integer, Boolean, String
-import math
-import numpy as np
 
 class ThrottleController(Fmi2Slave):
     
@@ -19,16 +17,19 @@ class ThrottleController(Fmi2Slave):
         super().__init__(**kwargs)
         
         ## PI Parameters
-        self.kp                     = 0.0
-        self.ki                     = 0.0
+        self.kp                         = 0.0
+        self.ki                         = 0.0
         
         # Internal Variables
-        self.error_i                = 0.0
-        self.prev_error             = 0.0
+        self.error_i                    = 0.0
+        self.prev_error                 = 0.0
         
         ## Input
         self.desired_shaft_speed_rpm    = 0.0
         self.measured_shaft_speed_rpm   = 0.0 
+        
+        ## Output
+        self.throttle_cmd               = 0.0
         
         ## Registration
         # PI Parameters

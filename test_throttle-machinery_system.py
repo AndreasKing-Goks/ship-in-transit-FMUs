@@ -31,6 +31,11 @@ instance    = CoSimInstance(instanceName= name, stopTime=stopTime, stepSize=step
 # =========================
 # Adding slaves
 # =========================
+# ThrottleController.fmu
+throttle_controller_fmu_path = str(ROOT / "FMUs" / "ThrottleController.fmu")
+instance.AddSlave(name="THROTTLE_CONTROLLER", 
+                  path=throttle_controller_fmu_path)
+
 # MachinerySystem.fmu
 machinery_system_fmu_path = str(ROOT / "FMUs" / "MachinerySystem.fmu")
 instance.AddSlave(name="MACHINERY_SYSTEM", 
@@ -39,6 +44,14 @@ instance.AddSlave(name="MACHINERY_SYSTEM",
 # =========================
 # Set Initial Values
 # =========================
+# Throttle Controller
+throttle_controller_params = {
+    "kp": 0.05,
+    "ki": 0.0001
+}
+instance.SetInitialValues(slaveName="THROTTLE_CONTROLLER", 
+                         params=throttle_controller_params)
+
 # Machinery System
 machinery_system_params = {
     "mso_mode": 2,
@@ -69,6 +82,10 @@ instance.SetInitialValues(slaveName="MACHINERY_SYSTEM",
 # =========================
 # Setup Observer – Outputs
 # =========================
+# Throttle Controller
+instance.AddObserverTimeSeriesWithLabel(name="throttle_cmd", slaveName="THROTTLE_CONTROLLER", variable="throttle_cmd", var_label="Throttle [-]")
+
+# Machinery System
 instance.AddObserverTimeSeriesWithLabel(name="thrust_force", slaveName="MACHINERY_SYSTEM", variable="thrust_force", var_label="Force [kN]")
 instance.AddObserverTimeSeriesWithLabel(name="shaft_speed_rpm", slaveName="MACHINERY_SYSTEM", variable="shaft_speed_rpm", var_label="Shaft Speed [RPM]")
 instance.AddObserverTimeSeriesWithLabel(name="cmd_load_fraction_me", slaveName="MACHINERY_SYSTEM", variable="cmd_load_fraction_me", var_label="Load Fraction [-]")
@@ -88,37 +105,32 @@ instance.AddObserverTimeSeriesWithLabel(name="fuel_consumption", slaveName="MACH
 instance.AddObserverTimeSeriesWithLabel(name="motor_torque", slaveName="MACHINERY_SYSTEM", variable="motor_torque", var_label="Torque [Nm]")
 instance.AddObserverTimeSeriesWithLabel(name="hybrid_shaft_generator_torque", slaveName="MACHINERY_SYSTEM", variable="hybrid_shaft_generator_torque", var_label="Torque [Nm]")
 
-# # =========================
-# # Input Metadata
-# # =========================
-# engine_index        = instance.slaves_index["MACHINERY_SYSTEM"]
-# engine_variables    = instance.slaves_variables["MACHINERY_SYSTEM"]
-# load_perc_vr        = GetVariableIndex(engine_variables, 'load_perc')
-# mso_mode_vr         = GetVariableIndex(engine_variables, 'mso_mode')
-
 # =========================
 # Simulate
 # =========================
 while instance.time < instance.stopTime:
      # Get values
-    load_perc = 0.25
+    desired_shaft_speed_rpm = 200
     
     if instance.time > instance.stopTime/4:
-        load_perc=0.5
+        desired_shaft_speed_rpm = 300
     
     if instance.time > instance.stopTime/2:
-        load_perc = 1
-        instance.SingleVariableManipulation(slaveName="MACHINERY_SYSTEM", slaveVar="mso_mode", value=0)
-        # instance.manipulator.slave_integer_values(slave_index=engine_index, variable_references=[mso_mode_vr], values=[0])
+        desired_shaft_speed_rpm = 550
+        # instance.SingleVariableManipulation(slaveName="MACHINERY_SYSTEM", slaveVar="mso_mode", value=0)
     
     if instance.time > instance.stopTime*3/4:
-        load_perc = 0.75
-        instance.SingleVariableManipulation(slaveName="MACHINERY_SYSTEM", slaveVar="mso_mode", value=1)
-        # instance.manipulator.slave_integer_values(slave_index=engine_index, variable_references=[mso_mode_vr], values=[1])
+        desired_shaft_speed_rpm = 400
+        # instance.SingleVariableManipulation(slaveName="MACHINERY_SYSTEM", slaveVar="mso_mode", value=1)
+    
+    # Get values
+    measured_shaft_speed_rpm    = instance.GetLastValue(slaveName="MACHINERY_SYSTEM", slaveVar="shaft_speed_rpm")
+    throttle_cmd                = instance.GetLastValue(slaveName="THROTTLE_CONTROLLER", slaveVar="throttle_cmd")
     
     # Set values
-    instance.SingleVariableManipulation(slaveName="MACHINERY_SYSTEM", slaveVar="load_perc", value=load_perc)
-    # instance.manipulator.slave_real_values(engine_index, [load_perc_vr], [load_perc])
+    instance.SingleVariableManipulation(slaveName="THROTTLE_CONTROLLER", slaveVar="desired_shaft_speed_rpm", value=desired_shaft_speed_rpm)
+    instance.SingleVariableManipulation(slaveName="THROTTLE_CONTROLLER", slaveVar="measured_shaft_speed_rpm", value=measured_shaft_speed_rpm)
+    instance.SingleVariableManipulation(slaveName="MACHINERY_SYSTEM", slaveVar="load_perc", value=throttle_cmd)
     
     # Step
     instance.execution.step()
@@ -127,7 +139,8 @@ while instance.time < instance.stopTime:
 # =========================
 # Plot
 # =========================
-key_group_list = [["thrust_force"],
+key_group_list = [["throttle_cmd"],
+                  ["thrust_force"],
                   ["shaft_speed_rpm"],
                   ["cmd_load_fraction_me", "cmd_load_fraction_hsg"],
                   ["power_me", "available_power_me"],

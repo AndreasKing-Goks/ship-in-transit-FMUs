@@ -65,12 +65,12 @@ instance.SetInitialValues(slaveName="SET_POINTS_MANAGER",
 # =========================
 # Setup Observer – Outputs
 # =========================
-instance.AddObserverTimeSeriesWithLabel(name="prev_wp_north", slaveName="SET_POINTS_MANAGER", variable="prev_wp_north", var_lable="Waypoint [-]")
-instance.AddObserverTimeSeriesWithLabel(name="prev_wp_east", slaveName="SET_POINTS_MANAGER", variable="prev_wp_east", var_lable="Waypoint [-]")
-instance.AddObserverTimeSeriesWithLabel(name="prev_wp_speed", slaveName="SET_POINTS_MANAGER", variable="prev_wp_speed", var_lable="Speed [m/s]")
-instance.AddObserverTimeSeriesWithLabel(name="next_wp_north", slaveName="SET_POINTS_MANAGER", variable="next_wp_north", var_lable="Waypoint [-]")
-instance.AddObserverTimeSeriesWithLabel(name="next_wp_east", slaveName="SET_POINTS_MANAGER", variable="next_wp_east", var_lable="Waypoint [-]")
-instance.AddObserverTimeSeriesWithLabel(name="next_wp_speed", slaveName="SET_POINTS_MANAGER", variable="next_wp_speed", var_lable="Speed [m/s]")
+instance.AddObserverTimeSeriesWithLabel(name="prev_wp_north", slaveName="SET_POINTS_MANAGER", variable="prev_wp_north", var_label="Waypoint [-]")
+instance.AddObserverTimeSeriesWithLabel(name="prev_wp_east", slaveName="SET_POINTS_MANAGER", variable="prev_wp_east", var_label="Waypoint [-]")
+instance.AddObserverTimeSeriesWithLabel(name="prev_wp_speed", slaveName="SET_POINTS_MANAGER", variable="prev_wp_speed", var_label="Speed [m/s]")
+instance.AddObserverTimeSeriesWithLabel(name="next_wp_north", slaveName="SET_POINTS_MANAGER", variable="next_wp_north", var_label="Waypoint [-]")
+instance.AddObserverTimeSeriesWithLabel(name="next_wp_east", slaveName="SET_POINTS_MANAGER", variable="next_wp_east", var_label="Waypoint [-]")
+instance.AddObserverTimeSeriesWithLabel(name="next_wp_speed", slaveName="SET_POINTS_MANAGER", variable="next_wp_speed", var_label="Speed [m/s]")
 
 # # =========================
 # # Input Metadata
