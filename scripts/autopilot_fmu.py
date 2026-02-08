@@ -8,6 +8,7 @@ Date    : Januari 2026
 
 from pythonfmu import Fmi2Causality, Fmi2Slave, Fmi2Variability, Real, Integer, Boolean, String
 import math
+import traceback
 
 class Autopilot(Fmi2Slave):
     
@@ -161,24 +162,34 @@ class Autopilot(Fmi2Slave):
     
     
     def do_step(self, current_time: float, step_size: float) -> bool:
-        # Get the heading reference and the measured heading using input
-        yaw_angle_ref_rad, e_ct = self.los_guidance(self.north, self.east, 
-                                                    self.next_wp_north, self.next_wp_east, 
-                                                    self.prev_wp_north, self.prev_wp_east)
-        
-        # Compute the control signal
-        rudder_angle_des_rad = self.pid_ctrl(setpoint=yaw_angle_ref_rad, measurement=self.yaw_angle_rad, step_size=step_size) # self.heading_mea is input
-        
-        # Apply slew limiter around the previous rudder command
-        rudder_angle_rad = self.apply_slew_limit(rudder_angle_des_rad, self.prev_rudder_angle_rad, step_size=step_size)
-        
-        # Store current to previous rudder angle command
-        self.prev_rudder_angle_rad = rudder_angle_rad
-        
-        # Outputs
-        self.yaw_angle_ref_rad  = yaw_angle_ref_rad
-        self.e_ct               = e_ct
-        self.rudder_angle_deg   = math.degrees(rudder_angle_rad)
+        try:
+            # Get the heading reference and the measured heading using input
+            yaw_angle_ref_rad, e_ct = self.los_guidance(self.north, self.east, 
+                                                        self.next_wp_north, self.next_wp_east, 
+                                                        self.prev_wp_north, self.prev_wp_east)
+            
+            # Compute the control signal
+            rudder_angle_des_rad = self.pid_ctrl(setpoint=yaw_angle_ref_rad, measurement=self.yaw_angle_rad, step_size=step_size) # self.heading_mea is input
+            
+            # Apply slew limiter around the previous rudder command
+            rudder_angle_rad = self.apply_slew_limit(rudder_angle_des_rad, self.prev_rudder_angle_rad, step_size=step_size)
+            
+            # Store current to previous rudder angle command
+            self.prev_rudder_angle_rad = rudder_angle_rad
+            
+            # Outputs
+            self.yaw_angle_ref_rad  = yaw_angle_ref_rad
+            self.e_ct               = e_ct
+            self.rudder_angle_deg   = math.degrees(rudder_angle_rad)
+        except Exception as e:
+            # IMPORTANT: do not crash host
+            print(f"[Autopilot] ERROR t={current_time} dt={step_size}: {type(e).__name__}: {e}")
+            print(traceback.format_exc())
+
+            # Freeze dynamics safely (keep last state/outputs)
+            self.yaw_angle_ref_rad  = 0.0
+            self.e_ct               = 0.0
+            self.rudder_angle_deg   = 0.0
         
         return True
         

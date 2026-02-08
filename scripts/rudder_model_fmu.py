@@ -8,6 +8,7 @@ Date    : Januari 2026
 
 from pythonfmu import Fmi2Causality, Fmi2Slave, Fmi2Variability, Real, Integer, Boolean, String
 import math
+import traceback
 
 class Rudder(Fmi2Slave):
     
@@ -86,23 +87,32 @@ class Rudder(Fmi2Slave):
     
     
     def do_step(self, current_time: float, step_size: float) -> bool:
-        # Inputs
-        yaw = self.yaw_angle_rad
-        rud_deg = self.rudder_angle_deg
-        u = self.forward_speed
-        cs = self.current_speed
-        cd = self.current_dir_rad
+        try:
+            # Inputs
+            yaw = self.yaw_angle_rad
+            rud_deg = self.rudder_angle_deg
+            u = self.forward_speed
+            cs = self.current_speed
+            cd = self.current_dir_rad
 
-        # Saturate in DEGREES
-        rud_deg = self.sat(rud_deg, self.max_rudder_angle_negative_deg, self.max_rudder_angle_positive_deg)
+            # Saturate in DEGREES
+            rud_deg = self.sat(rud_deg, self.max_rudder_angle_negative_deg, self.max_rudder_angle_positive_deg)
 
-        vel_current = [cs * math.cos(cd), cs * math.sin(cd), 0.0]
+            vel_current = [cs * math.cos(cd), cs * math.sin(cd), 0.0]
 
-        self.rudder_force_v, self.rudder_force_r = self.get_rudder_force(
-            rudder_angle_deg=rud_deg,
-            yaw_angle_rad=yaw,
-            forward_speed=u,
-            vel_current_ned=vel_current
-        )
-        
+            self.rudder_force_v, self.rudder_force_r = self.get_rudder_force(
+                rudder_angle_deg=rud_deg,
+                yaw_angle_rad=yaw,
+                forward_speed=u,
+                vel_current_ned=vel_current
+            )
+        except Exception as e:
+            # IMPORTANT: do not crash host
+            print(f"[Rudder] ERROR t={current_time} dt={step_size}: {type(e).__name__}: {e}")
+            print(traceback.format_exc())            
+            
+            # Freeze dynamics safely (keep last state/outputs)
+            self.rudder_force_v = 0.0
+            self.rudder_force_r = 0.0
+            
         return True

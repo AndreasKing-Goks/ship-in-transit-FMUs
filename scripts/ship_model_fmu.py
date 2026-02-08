@@ -8,6 +8,7 @@ Date    : Januari 2026
 
 from pythonfmu import Fmi2Causality, Fmi2Slave, Fmi2Variability, Real, Integer, Boolean, String
 import numpy as np
+import traceback
 
 class ShipModel(Fmi2Slave):
     
@@ -16,6 +17,9 @@ class ShipModel(Fmi2Slave):
     
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+        
+        # Precomputed Flag
+        self._precomputed                                   = False
         
         ## Parameters
         # Ship configuration
@@ -36,8 +40,8 @@ class ShipModel(Fmi2Slave):
         self.nonlinear_friction_coefficient_in_yaw          = 0.0
         
         # Environment
-        self.rho_seawater                                   = 0.0
-        self.rho_air                                        = 0.0
+        self.rho_seawater                                   = 1025.0
+        self.rho_air                                        = 1.2
         self.g                                              = 9.81
         self.front_above_water_height                       = 0.0
         self.side_above_water_height                        = 0.0
@@ -150,17 +154,58 @@ class ShipModel(Fmi2Slave):
         self.register_variable(Real("d_sideways_speed", causality=Fmi2Causality.output))
         self.register_variable(Real("d_yaw_rate", causality=Fmi2Causality.output))
         
+        
+    def _eps(self):
+        return 1e-9
+        
+    # Save Division Module
+    def _safe_div(self, num, den, name=""):
+        den = float(den)
+        if abs(den) < self._eps():
+            raise ValueError(f"Division by ~0 in {name}: den={den}")
+        return float(num) / den 
+    
+    
+    def _validate_params(self):
+        # Anything that appears in a denominator or matrix must be > 0
+        must_be_pos = [
+            ("coefficient_of_deadweight_to_displacement", self.coefficient_of_deadweight_to_displacement),
+            ("rho_seawater", self.rho_seawater),
+            ("length_of_ship", self.length_of_ship),
+            ("width_of_ship", self.width_of_ship),
+            ("mass_over_linear_friction_coefficient_in_surge", self.mass_over_linear_friction_coefficient_in_surge),
+            ("mass_over_linear_friction_coefficient_in_sway", self.mass_over_linear_friction_coefficient_in_sway),
+            ("mass_over_linear_friction_coefficient_in_yaw", self.mass_over_linear_friction_coefficient_in_yaw),
+        ]
+        for n, v in must_be_pos:
+            if float(v) <= 0.0:
+                raise ValueError(f"Parameter '{n}' must be > 0, got {v}")
+
+        # optional: sanity checks
+        if self.dead_weight_tonnage <= 0:
+            raise ValueError(f"dead_weight_tonnage must be > 0, got {self.dead_weight_tonnage}")
+
     
     def pre_compute_initial_variables(self):
+        self._validate_params()
+        
         # Ship
         self.payload            = 0.9 * (self.dead_weight_tonnage - self.bunkers)
-        self.lsw                = self.dead_weight_tonnage / self.coefficient_of_deadweight_to_displacement - self.dead_weight_tonnage
+        
+        # lsw = DWT/c - DWT  (c must be >0)
+        self.lsw                = self._safe_div(self.dead_weight_tonnage, self.coefficient_of_deadweight_to_displacement,
+                                                 "lsw: dead_weight_tonnage/coefficient") - self.dead_weight_tonnage
+        
         self.mass               = self.lsw + self.payload + self.bunkers + self.ballast
         self.l_ship             = self.length_of_ship
         self.w_ship             = self.width_of_ship
-        self.t_ship             = self.mass / (self.rho_seawater * self.l_ship * self.w_ship)
+        
+        # draft t_ship = m/(rho*L*W)
+        denom                   = self.rho_seawater * self.l_ship * self.w_ship
+        self.t_ship             = self._safe_div(self.mass, denom, "t_ship")
+        
         self.x_g                = 0.0
-        self.i_z                = self.mass * (self.l_ship ** 2 + self.w_ship ** 2) / 12
+        self.i_z                = self.mass * (self.l_ship ** 2 + self.w_ship ** 2) / 12.0
         self.proj_area_f        = self.w_ship * self.front_above_water_height
         self.proj_area_l        = self.l_ship * self.side_above_water_height
         
@@ -299,13 +344,14 @@ class ShipModel(Fmi2Slave):
         v_r = sideways_speed - v_c[1]
 
         # Kinetic equation
-        m_inv = np.linalg.inv(self.mass_matrix())
-        dx = np.dot(
-            m_inv,
-            -np.dot(self.coriolis_matrix(forward_speed, sideways_speed, yaw_rate), vel)
-            - np.dot(self.coriolis_added_mass_matrix(u_r=u_r, v_r=v_r), vel - v_c)
-            - np.dot(self.linear_damping_matrix() + self.non_linear_damping_matrix(forward_speed, sideways_speed, yaw_rate), vel - v_c)
-            + wind_force + ctrl_force)
+        M   = self.mass_matrix()
+        rhs = (
+                - self.coriolis_matrix(forward_speed, sideways_speed, yaw_rate) @ vel
+                - self.coriolis_added_mass_matrix(u_r=u_r, v_r=v_r) @ (vel - v_c)
+                - (self.linear_damping_matrix() + self.non_linear_damping_matrix(forward_speed, sideways_speed, yaw_rate)) @ (vel - v_c)
+                + wind_force + ctrl_force
+            )
+        dx = np.linalg.solve(M, rhs)
         d_forward_speed = dx[0]
         d_sideways_speed = dx[1]
         d_yaw_rate = dx[2]
@@ -314,75 +360,90 @@ class ShipModel(Fmi2Slave):
         
 
     def do_step(self, current_time: float, step_size: float) -> bool:
-        ## Get current ship states
-        north               = self.initial_north_position_m
-        east                = self.initial_east_position_m
-        yaw_angle_rad       = self.initial_yaw_angle_rad
-        forward_speed       = self.initial_forward_speed_m_per_s
-        sideways_speed      = self.initial_sideways_speed_m_per_s
-        yaw_rate            = self.initial_yaw_rate_rad_per_s
-        
-        ## Get force inputs
-        thrust_force        = self.thrust_force
-        rudder_force_v      = self.rudder_force_v
-        rudder_force_r      = self.rudder_force_r
-        
-        # Get environment load arguments
-        wind_speed          = self.wind_speed
-        wind_dir_rad        = self.wind_dir_rad
-        current_speed       = self.current_speed
-        current_dir_rad     = self.current_dir_rad
-        
-        # Get force
-        wind_force          = self.get_wind_force(wind_speed, wind_dir_rad, yaw_angle_rad, forward_speed, sideways_speed)
-        current_velocity    = np.array([current_speed * np.cos(current_dir_rad),
-                                        current_speed * np.sin(current_dir_rad),
-                                        0.0])
-        
-        ## Pre-compute initial variables
-        self.pre_compute_initial_variables()
-        
-        # Compute the kinematics and kinetics
-        d_north, d_east, d_yaw_angle_rad          = self.three_dof_kinematics(yaw_angle_rad,
-                                                                                    forward_speed, 
-                                                                                    sideways_speed, 
-                                                                                    yaw_rate)
-        d_forward_speed, d_sideways_speed, d_yaw_rate   = self.three_dof_kinetics(yaw_angle_rad,
-                                                                                forward_speed, 
-                                                                                sideways_speed, 
-                                                                                yaw_rate,
-                                                                                thrust_force, 
-                                                                                rudder_force_v,
-                                                                                rudder_force_r,
-                                                                                wind_force,
-                                                                                current_velocity)
-        
-        ## Get Output
-        # Compute d_x
-        self.d_north                        = d_north
-        self.d_east                         = d_east
-        self.d_yaw_angle_rad                = d_yaw_angle_rad
-        self.d_forward_speed                = d_forward_speed
-        self.d_sideways_speed               = d_sideways_speed
-        self.d_yaw_rate                     = d_yaw_rate
-        
-        # Integrate d_x (Euler integration)
-        self.north                          = north          + step_size * d_north
-        self.east                           = east           + step_size * d_east
-        self.yaw_angle_rad                  = yaw_angle_rad  + step_size * d_yaw_angle_rad
-        self.forward_speed                  = forward_speed  + step_size * d_forward_speed
-        self.sideways_speed                 = sideways_speed + step_size * d_sideways_speed
-        self.yaw_rate                       = yaw_rate       + step_size * d_yaw_rate
-        
-        # Get the measured speed
-        self.measured_ship_speed            = np.sqrt(self.forward_speed ** 2 + self.sideways_speed ** 2)
-        
-        # Re-assigns the final states to the previous states
-        self.initial_north_position_m       = self.north
-        self.initial_east_position_m        = self.east
-        self.initial_yaw_angle_rad          = self.yaw_angle_rad
-        self.initial_forward_speed_m_per_s  = self.forward_speed
-        self.initial_sideways_speed_m_per_s = self.sideways_speed
-        self.initial_yaw_rate_rad_per_s     = self.yaw_rate
+        try:
+            # Precompute once
+            if not self._precomputed:
+                ## Pre-compute initial variables
+                self.pre_compute_initial_variables()
+                self._precomputed = True
+            
+            ## Get current ship states
+            north               = self.initial_north_position_m
+            east                = self.initial_east_position_m
+            yaw_angle_rad       = self.initial_yaw_angle_rad
+            forward_speed       = self.initial_forward_speed_m_per_s
+            sideways_speed      = self.initial_sideways_speed_m_per_s
+            yaw_rate            = self.initial_yaw_rate_rad_per_s
+            
+            ## Get force inputs
+            thrust_force        = self.thrust_force
+            rudder_force_v      = self.rudder_force_v
+            rudder_force_r      = self.rudder_force_r
+            
+            # Get environment load arguments
+            wind_speed          = self.wind_speed
+            wind_dir_rad        = self.wind_dir_rad
+            current_speed       = self.current_speed
+            current_dir_rad     = self.current_dir_rad
+            
+            # Get force
+            wind_force          = self.get_wind_force(wind_speed, wind_dir_rad, yaw_angle_rad, forward_speed, sideways_speed)
+            current_velocity    = np.array([current_speed * np.cos(current_dir_rad),
+                                            current_speed * np.sin(current_dir_rad),
+                                            0.0])
+            
+            # Compute the kinematics and kinetics
+            d_north, d_east, d_yaw_angle_rad          = self.three_dof_kinematics(yaw_angle_rad,
+                                                                                  forward_speed, 
+                                                                                  sideways_speed, 
+                                                                                  yaw_rate)
+            d_forward_speed, d_sideways_speed, d_yaw_rate   = self.three_dof_kinetics(yaw_angle_rad,
+                                                                                      forward_speed, 
+                                                                                      sideways_speed, 
+                                                                                      yaw_rate,
+                                                                                      thrust_force, 
+                                                                                      rudder_force_v,
+                                                                                      rudder_force_r,
+                                                                                      wind_force,
+                                                                                      current_velocity)
+            
+            ## Get Output
+            # Compute d_x
+            self.d_north                        = d_north
+            self.d_east                         = d_east
+            self.d_yaw_angle_rad                = d_yaw_angle_rad
+            self.d_forward_speed                = d_forward_speed
+            self.d_sideways_speed               = d_sideways_speed
+            self.d_yaw_rate                     = d_yaw_rate
+            
+            # Integrate d_x (Euler integration)
+            self.north                          = north          + step_size * d_north
+            self.east                           = east           + step_size * d_east
+            self.yaw_angle_rad                  = yaw_angle_rad  + step_size * d_yaw_angle_rad
+            self.forward_speed                  = forward_speed  + step_size * d_forward_speed
+            self.sideways_speed                 = sideways_speed + step_size * d_sideways_speed
+            self.yaw_rate                       = yaw_rate       + step_size * d_yaw_rate
+            
+            # Get the measured speed
+            self.measured_ship_speed            = np.sqrt(self.forward_speed ** 2 + self.sideways_speed ** 2)
+            
+            # Re-assigns the final states to the previous states
+            self.initial_north_position_m       = self.north
+            self.initial_east_position_m        = self.east
+            self.initial_yaw_angle_rad          = self.yaw_angle_rad
+            self.initial_forward_speed_m_per_s  = self.forward_speed
+            self.initial_sideways_speed_m_per_s = self.sideways_speed
+            self.initial_yaw_rate_rad_per_s     = self.yaw_rate
+            
+        except Exception as e:
+            # IMPORTANT: do not crash host
+            print(f"[ShipModel] ERROR t={current_time} dt={step_size}: {type(e).__name__}: {e}")
+            print(traceback.format_exc())
+
+            # Freeze dynamics safely (keep last state/outputs)
+            self.d_north = self.d_east = self.d_yaw_angle_rad = 0.0
+            self.d_forward_speed = self.d_sideways_speed = self.d_yaw_rate = 0.0
+            # keep measured speed consistent with current outputs
+            self.measured_ship_speed = float(np.hypot(self.forward_speed, self.sideways_speed)) if np.isfinite(self.forward_speed) else 0.0
         
         return True

@@ -7,6 +7,7 @@ Date    : Januari 2026
 """
 
 from pythonfmu import Fmi2Causality, Fmi2Slave, Fmi2Variability, Real, Integer, Boolean, String
+import traceback
 
 class ShaftSpeedController(Fmi2Slave):
     
@@ -59,10 +60,17 @@ class ShaftSpeedController(Fmi2Slave):
     
     
     def do_step(self, current_time: float, step_size: float) -> bool:
-        desired_shaft_speed_rpm = self.pi_ctrl(setpoint=self.desired_ship_speed, 
-                                               measurement=self.measured_ship_speed,
-                                               step_size=step_size)
-                
-        self.shaft_speed_cmd_rpm = desired_shaft_speed_rpm
+        try:
+            desired_shaft_speed_rpm = self.pi_ctrl(setpoint=self.desired_ship_speed, 
+                                                measurement=self.measured_ship_speed,
+                                                step_size=step_size)       
+            self.shaft_speed_cmd_rpm = desired_shaft_speed_rpm
+        except Exception as e:
+            # IMPORTANT: do not crash host
+            print(f"[ShaftSpeedController] ERROR t={current_time} dt={step_size}: {type(e).__name__}: {e}")
+            print(traceback.format_exc())
+            
+            # Freeze dynamics safely (keep last state/outputs)
+            self.shaft_speed_cmd_rpm    = 0.0
         
         return True

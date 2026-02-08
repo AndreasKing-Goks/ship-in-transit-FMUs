@@ -8,175 +8,181 @@ Authors : Andreas R.G. Sitorus
 Date    : Januari 2026
 """
 
-from pythonfmu import Fmi2Causality, Fmi2Slave, Fmi2Variability, Real, Integer, Boolean, String
+from pythonfmu import Fmi2Causality, Fmi2Slave, Fmi2Variability, Real, Integer, Boolean
 import numpy as np
+import traceback
+
 
 class SetPointsManager(Fmi2Slave):
-    
     author = "Andreas R.G. Sitorus"
-    description = "Setpoints Manager Python FMU implementation"
-    
+    description = "Setpoints Manager (index-based, deterministic)"
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        
-        ## Parameters
-        self.ra                 = 300.0     # Radius of Acceptance
-        self.max_inter_wp       = 8         # Maximum Intermediate Waypoints
-        
-        ## Waypoints [In Longitude (east) and Latitude (north)]
-        # Start
-        self.wp_start_north     = np.nan
-        self.wp_start_east      = np.nan
-        self.wp_start_speed     = np.nan
-        
-        # Intermediate
-        self.wp_1_north         = np.nan
-        self.wp_1_east          = np.nan
-        self.wp_1_speed         = np.nan
-        
-        self.wp_2_north         = np.nan
-        self.wp_2_east          = np.nan
-        self.wp_2_speed         = np.nan
-        
-        self.wp_3_north         = np.nan
-        self.wp_3_east          = np.nan
-        self.wp_3_speed         = np.nan
-        
-        self.wp_4_north         = np.nan
-        self.wp_4_east          = np.nan
-        self.wp_4_speed         = np.nan
-        
-        self.wp_5_north         = np.nan
-        self.wp_5_east          = np.nan
-        self.wp_5_speed         = np.nan
-        
-        self.wp_6_north         = np.nan
-        self.wp_6_east          = np.nan
-        self.wp_6_speed         = np.nan
-        
-        self.wp_7_north         = np.nan
-        self.wp_7_east          = np.nan
-        self.wp_7_speed         = np.nan
-        
-        self.wp_8_north         = np.nan
-        self.wp_8_east          = np.nan
-        self.wp_8_speed         = np.nan
-        
-        # End
-        self.wp_end_north       = np.nan
-        self.wp_end_east        = np.nan
-        self.wp_end_speed       = np.nan
-        
-        ## Input Variables
-        self.north              = 0.0
-        self.east               = 0.0
-        
-        ## Output Variables
-        self.prev_wp_north      = np.nan
-        self.prev_wp_east       = np.nan
-        self.prev_wp_speed      = np.nan
-        
-        self.next_wp_north      = np.nan
-        self.next_wp_east       = np.nan
-        self.next_wp_speed      = np.nan
-        
-        self.last_wp_active     = False     # Boolean flag if ship reaches the last waypoint.
-        
-        ## Registration 
+
         # Parameters
-        self.register_variable(Real("ra", causality=Fmi2Causality.parameter,variability=Fmi2Variability.tunable))
-        self.register_variable(Integer("max_inter_wp", causality=Fmi2Causality.parameter,variability=Fmi2Variability.tunable))
-        
-        # Input variables
+        self.ra = 300.0
+        self.max_inter_wp = 8
+
+        # Waypoints (parameters)
+        self.wp_start_north = np.nan
+        self.wp_start_east  = np.nan
+        self.wp_start_speed = np.nan
+
+        for i in range(1, 9):
+            setattr(self, f"wp_{i}_north", np.nan)
+            setattr(self, f"wp_{i}_east",  np.nan)
+            setattr(self, f"wp_{i}_speed", np.nan)
+
+        self.wp_end_north = np.nan
+        self.wp_end_east  = np.nan
+        self.wp_end_speed = np.nan
+
+        # Inputs
+        self.north = 0.0
+        self.east  = 0.0
+
+        # Outputs
+        self.prev_wp_north = np.nan
+        self.prev_wp_east  = np.nan
+        self.prev_wp_speed = np.nan
+
+        self.next_wp_north = np.nan
+        self.next_wp_east  = np.nan
+        self.next_wp_speed = np.nan
+
+        self.last_wp_active = False
+
+        # Internal
+        self._traj = []
+        self._idx = 0
+        self._traj_built = False
+
+        # Registration
+        self.register_variable(Real("ra", causality=Fmi2Causality.parameter, variability=Fmi2Variability.tunable))
+        self.register_variable(Integer("max_inter_wp", causality=Fmi2Causality.parameter, variability=Fmi2Variability.tunable))
+
         self.register_variable(Real("north", causality=Fmi2Causality.input))
         self.register_variable(Real("east", causality=Fmi2Causality.input))
-        
-        # Waypoints
-        self.register_variable(Real("wp_start_north", causality=Fmi2Causality.parameter,variability=Fmi2Variability.fixed))
-        self.register_variable(Real("wp_start_east", causality=Fmi2Causality.parameter,variability=Fmi2Variability.fixed))
-        self.register_variable(Real("wp_start_speed", causality=Fmi2Causality.parameter,variability=Fmi2Variability.fixed))
-        
-        self.register_variable(Real("wp_1_north", causality=Fmi2Causality.parameter,variability=Fmi2Variability.fixed))
-        self.register_variable(Real("wp_1_east", causality=Fmi2Causality.parameter,variability=Fmi2Variability.fixed))
-        self.register_variable(Real("wp_1_speed", causality=Fmi2Causality.parameter,variability=Fmi2Variability.fixed))
-        
-        self.register_variable(Real("wp_2_north", causality=Fmi2Causality.parameter,variability=Fmi2Variability.fixed))
-        self.register_variable(Real("wp_2_east", causality=Fmi2Causality.parameter,variability=Fmi2Variability.fixed))
-        self.register_variable(Real("wp_2_speed", causality=Fmi2Causality.parameter,variability=Fmi2Variability.fixed))
-        
-        self.register_variable(Real("wp_3_north", causality=Fmi2Causality.parameter,variability=Fmi2Variability.fixed))
-        self.register_variable(Real("wp_3_east", causality=Fmi2Causality.parameter,variability=Fmi2Variability.fixed))
-        self.register_variable(Real("wp_3_speed", causality=Fmi2Causality.parameter,variability=Fmi2Variability.fixed))
-        
-        self.register_variable(Real("wp_4_north", causality=Fmi2Causality.parameter,variability=Fmi2Variability.fixed))
-        self.register_variable(Real("wp_4_east", causality=Fmi2Causality.parameter,variability=Fmi2Variability.fixed))
-        self.register_variable(Real("wp_4_speed", causality=Fmi2Causality.parameter,variability=Fmi2Variability.fixed))
-        
-        self.register_variable(Real("wp_5_north", causality=Fmi2Causality.parameter,variability=Fmi2Variability.fixed))
-        self.register_variable(Real("wp_5_east", causality=Fmi2Causality.parameter,variability=Fmi2Variability.fixed))
-        self.register_variable(Real("wp_5_speed", causality=Fmi2Causality.parameter,variability=Fmi2Variability.fixed))
-        
-        self.register_variable(Real("wp_6_north", causality=Fmi2Causality.parameter,variability=Fmi2Variability.fixed))
-        self.register_variable(Real("wp_6_east", causality=Fmi2Causality.parameter,variability=Fmi2Variability.fixed))
-        self.register_variable(Real("wp_6_speed", causality=Fmi2Causality.parameter,variability=Fmi2Variability.fixed))
-        
-        self.register_variable(Real("wp_7_north", causality=Fmi2Causality.parameter,variability=Fmi2Variability.fixed))
-        self.register_variable(Real("wp_7_east", causality=Fmi2Causality.parameter,variability=Fmi2Variability.fixed))
-        self.register_variable(Real("wp_7_speed", causality=Fmi2Causality.parameter,variability=Fmi2Variability.fixed))
-        
-        self.register_variable(Real("wp_8_north", causality=Fmi2Causality.parameter,variability=Fmi2Variability.fixed))
-        self.register_variable(Real("wp_8_east", causality=Fmi2Causality.parameter,variability=Fmi2Variability.fixed))
-        self.register_variable(Real("wp_8_speed", causality=Fmi2Causality.parameter,variability=Fmi2Variability.fixed))
-        
-        self.register_variable(Real("wp_end_north", causality=Fmi2Causality.parameter,variability=Fmi2Variability.fixed))
-        self.register_variable(Real("wp_end_east", causality=Fmi2Causality.parameter,variability=Fmi2Variability.fixed))
-        self.register_variable(Real("wp_end_speed", causality=Fmi2Causality.parameter,variability=Fmi2Variability.fixed))
-        
-        # Output variables
+
+        self.register_variable(Real("wp_start_north", causality=Fmi2Causality.parameter, variability=Fmi2Variability.fixed))
+        self.register_variable(Real("wp_start_east",  causality=Fmi2Causality.parameter, variability=Fmi2Variability.fixed))
+        self.register_variable(Real("wp_start_speed", causality=Fmi2Causality.parameter, variability=Fmi2Variability.fixed))
+
+        for i in range(1, 9):
+            self.register_variable(Real(f"wp_{i}_north", causality=Fmi2Causality.parameter, variability=Fmi2Variability.fixed))
+            self.register_variable(Real(f"wp_{i}_east",  causality=Fmi2Causality.parameter, variability=Fmi2Variability.fixed))
+            self.register_variable(Real(f"wp_{i}_speed", causality=Fmi2Causality.parameter, variability=Fmi2Variability.fixed))
+
+        self.register_variable(Real("wp_end_north", causality=Fmi2Causality.parameter, variability=Fmi2Variability.fixed))
+        self.register_variable(Real("wp_end_east",  causality=Fmi2Causality.parameter, variability=Fmi2Variability.fixed))
+        self.register_variable(Real("wp_end_speed", causality=Fmi2Causality.parameter, variability=Fmi2Variability.fixed))
+
         self.register_variable(Real("prev_wp_north", causality=Fmi2Causality.output))
-        self.register_variable(Real("prev_wp_east", causality=Fmi2Causality.output))
+        self.register_variable(Real("prev_wp_east",  causality=Fmi2Causality.output))
         self.register_variable(Real("prev_wp_speed", causality=Fmi2Causality.output))
-        
+
         self.register_variable(Real("next_wp_north", causality=Fmi2Causality.output))
-        self.register_variable(Real("next_wp_east", causality=Fmi2Causality.output))
+        self.register_variable(Real("next_wp_east",  causality=Fmi2Causality.output))
         self.register_variable(Real("next_wp_speed", causality=Fmi2Causality.output))
-        
+
         self.register_variable(Boolean("last_wp_active", causality=Fmi2Causality.output))
-            
-            
-    def get_trajectory_array(self):
-        # Trajectory container
-        self.trajectory = [[self.wp_start_north, self.wp_start_east, self.wp_start_speed], [self.wp_end_north, self.wp_end_east, self.wp_end_speed]]
-        
-        for i in range(self.max_inter_wp):
-            north = getattr(self, f"wp_{i+1}_north")
-            east  = getattr(self, f"wp_{i+1}_east")
-            speed = getattr(self, f"wp_{i+1}_speed")
-            
-            if (north is not np.nan) and (east is not np.nan) and (speed is not np.nan):
-                self.trajectory.insert(-1,[north, east, speed])     # Insert the waypoints in the last entry before the end waypoint
-       
-                
+
+    def _valid_triplet(self, n, e, s) -> bool:
+        return np.isfinite(n) and np.isfinite(e) and np.isfinite(s)
+
+    def _build_trajectory(self):
+        traj = []
+
+        # Start
+        if self._valid_triplet(self.wp_start_north, self.wp_start_east, self.wp_start_speed):
+            traj.append((float(self.wp_start_north), float(self.wp_start_east), float(self.wp_start_speed)))
+
+        # Intermediate (1..max_inter_wp)
+        m = int(self.max_inter_wp)
+        m = max(0, min(m, 8))
+        for i in range(1, m + 1):
+            n = getattr(self, f"wp_{i}_north")
+            e = getattr(self, f"wp_{i}_east")
+            s = getattr(self, f"wp_{i}_speed")
+            if self._valid_triplet(n, e, s):
+                traj.append((float(n), float(e), float(s)))
+
+        # End
+        if self._valid_triplet(self.wp_end_north, self.wp_end_east, self.wp_end_speed):
+            traj.append((float(self.wp_end_north), float(self.wp_end_east), float(self.wp_end_speed)))
+
+        self._traj = traj
+        self._idx = 0
+        self._traj_built = True
+
+        # Initialize outputs if we have at least 2 points
+        if len(self._traj) >= 2:
+            p = self._traj[0]
+            q = self._traj[1]
+            self.prev_wp_north, self.prev_wp_east, self.prev_wp_speed = p
+            self.next_wp_north, self.next_wp_east, self.next_wp_speed = q
+            self.last_wp_active = False
+        else:
+            # Not enough points
+            self.prev_wp_north = self.prev_wp_east = self.prev_wp_speed = np.nan
+            self.next_wp_north = self.next_wp_east = self.next_wp_speed = np.nan
+            self.last_wp_active = False
+
+    def _dist2_to_next(self) -> float:
+        n2, e2, _ = self._traj[self._idx + 1]
+        dn = n2 - float(self.north)
+        de = e2 - float(self.east)
+        return dn * dn + de * de
+
     def do_step(self, current_time: float, step_size: float) -> bool:
-        # Get trajectory array
-        self.get_trajectory_array()
-        
-        for i in range(len(self.trajectory)-1):
-            dist_to_wp = np.array([self.trajectory[i][0] - self.north, 
-                                   self.trajectory[i][1] - self.east])
-            
-            if np.linalg.norm(dist_to_wp) <= self.ra:
-                self.prev_wp_north = self.trajectory[i][0]
-                self.prev_wp_east  = self.trajectory[i][1]
-                self.prev_wp_speed = self.trajectory[i][2]
-                
-                self.next_wp_north = self.trajectory[i+1][0]
-                self.next_wp_east  = self.trajectory[i+1][1]
-                self.next_wp_speed = self.trajectory[i+1][2]
-                
-            if (self.next_wp_north == self.trajectory[-1][0]) and (self.next_wp_east == self.trajectory[-1][1]):
+        try:
+            # Build once (or rebuild if you want: detect changes; keeping it simple)
+            if not self._traj_built:
+                self._build_trajectory()
+
+            # If not enough waypoints, nothing to do
+            if len(self._traj) < 2:
+                return True
+
+            ra2 = float(self.ra) * float(self.ra)
+
+            # If we're already on last segment, latch and keep outputs fixed
+            if self._idx >= len(self._traj) - 2:
                 self.last_wp_active = True
+                return True
+
+            # Switch ONLY when close to the NEXT waypoint
+            if self._dist2_to_next() <= ra2:
+                self._idx += 1
+
+                # Update prev/next using new index
+                p = self._traj[self._idx]
+                q = self._traj[self._idx + 1] if (self._idx + 1) < len(self._traj) else self._traj[-1]
+
+                self.prev_wp_north, self.prev_wp_east, self.prev_wp_speed = p
+                self.next_wp_north, self.next_wp_east, self.next_wp_speed = q
+
+            # Update last_wp_active based on index (more robust than float compares)
+            self.last_wp_active = (self._idx >= len(self._traj) - 2)
+
+        except Exception as e:
+            # Keep host alive; do not crash co-sim
+            print(f"[SetPointsManager] Exception t={current_time}, dt={step_size}: {type(e).__name__}: {e}")
+            print(traceback.format_exc())
+
+            # Freeze dynamics safely (keep last state/outputs)
+            self.prev_wp_north = 0.0
+            self.prev_wp_east  = 0.0
+            self.prev_wp_speed = 0.0
+
+            self.next_wp_north = 0.0
+            self.next_wp_east  = 0.0
+            self.next_wp_speed = 0.0
+            
+            self.last_wp_active = False
             
         return True
+
                 
                 

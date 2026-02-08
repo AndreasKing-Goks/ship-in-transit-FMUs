@@ -22,8 +22,8 @@ from utils import *
 # =========================
 # Instantiate CoSimInstance
 # =========================
-stopTime = 100 # Number of steps in seconds (int)
-stepSize = 0.01 # Number of seconds (int)
+stopTime = 10000 # Number of steps in seconds (int)
+stepSize = 5 # Number of seconds (int)
 
 name        = "Ship Path-Following Test"
 instance    = CoSimInstance(instanceName= name, stopTime=stopTime, stepSize=stepSize)
@@ -61,15 +61,15 @@ ship_model_fmu_path = str(ROOT / "FMUs" / "ShipModel.fmu")
 instance.AddSlave(name="SHIP_MODEL", 
                   path=ship_model_fmu_path)
 
-# SurfaceCurrentModel.fmu
-surface_current_model_fmu_path = str(ROOT / "FMUs" / "SurfaceCurrentModel.fmu")
-instance.AddSlave(name="SURFACE_CURRENT", 
-                  path=surface_current_model_fmu_path)
+# # SurfaceCurrentModel.fmu
+# surface_current_model_fmu_path = str(ROOT / "FMUs" / "SurfaceCurrentModel.fmu")
+# instance.AddSlave(name="SURFACE_CURRENT", 
+#                   path=surface_current_model_fmu_path)
 
-# WindModel.fmu
-wind_model_fmu_path = str(ROOT / "FMUs" / "WindModel.fmu")
-instance.AddSlave(name="WIND", 
-                  path=wind_model_fmu_path)
+# # WindModel.fmu
+# wind_model_fmu_path = str(ROOT / "FMUs" / "WindModel.fmu")
+# instance.AddSlave(name="WIND", 
+#                   path=wind_model_fmu_path)
 
 # SetPointsManager.fmu
 setpoints_manager_fmu_path = str(ROOT / "FMUs" / "SetPointsManager.fmu")
@@ -365,4 +365,34 @@ instance.Simulate()
 # =========================
 # Plot
 # =========================
-instance.PlotTimeSeries(separate_plots=True)
+key_group_list = [["measured_ship_speed", "next_wp_speed"],
+                  ["yaw_angle_rad", "yaw_angle_ref_rad"],
+                  ["rudder_angle_deg"],
+                  ["cross_track_error"],
+                  ["shaft_speed_rpm", "shaft_speed_cmd_rpm"],
+                  ["north"],
+                  ["east"],
+                  ["forward_speed"],
+                  ["sideways_speed"],
+                  ["yaw_rate"],
+                  ["d_north"],
+                  ["d_east"],
+                  ["d_forward_speed"],
+                  ["d_sideways_speed"],
+                  ["d_yaw_rate"],
+                  ["prev_wp_north"],
+                  ["prev_wp_east"],
+                  ["next_wp_north"],
+                  ["next_wp_east"],
+                  ["thrust_force"],
+                  ["cmd_load_fraction_me", "cmd_load_fraction_hsg"],
+                  ["power_me", "available_power_me"],
+                  ["power_electrical", "available_power_electrical"],
+                  ["power", "propulsion_power"],
+                  ["fuel_rate_me", "fuel_rate_hsg", "fuel_rate"],
+                  ["fuel_consumption_me", "fuel_consumption_hsg", "fuel_consumption"],
+                  ["motor_torque", "hybrid_shaft_generator_torque"],
+                  ["rudder_force_v"],
+                  ["rudder_force_r"]]
+
+instance.JoinPlotTimeSeries(list(reversed(key_group_list)),  create_title= False, legend= True, show_instance_name=False)

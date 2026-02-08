@@ -8,6 +8,7 @@ Date    : Januari 2026
 
 from pythonfmu import Fmi2Causality, Fmi2Slave, Fmi2Variability, Real, Integer, Boolean, String
 import numpy as np
+import traceback
 
 class MachinerySystem(Fmi2Slave):
     
@@ -251,70 +252,96 @@ class MachinerySystem(Fmi2Slave):
             
         
     def do_step(self, current_time: float, step_size: float) -> bool:
-        ## TREAT MACHINERY MODE AS AN INPUT
-        # MEC Mode
-        if self.mso_mode == 0:
-            self.main_engine_capacity = self.main_engine_capacity_spec
-            self.electrical_capacity  = self.diesel_gen_capacity_spec       # Use 1 generator
-            self.shaft_generator_state = 'OFF'
-        # PTO Mode
-        elif self.mso_mode == 1:
-            self.main_engine_capacity = self.main_engine_capacity_spec
-            self.electrical_capacity  = 0.0
-            self.shaft_generator_state = 'GEN'
-        # PTI Mode
-        elif self.mso_mode == 2:
-            self.main_engine_capacity = 0.0
-            self.electrical_capacity  = 2 * self.diesel_gen_capacity_spec   # Use 2 generators
-            self.shaft_generator_state = 'MOTOR'
+        try:
+            ## TREAT MACHINERY MODE AS AN INPUT
+            # MEC Mode
+            if self.mso_mode == 0:
+                self.main_engine_capacity = self.main_engine_capacity_spec
+                self.electrical_capacity  = self.diesel_gen_capacity_spec       # Use 1 generator
+                self.shaft_generator_state = 'OFF'
+            # PTO Mode
+            elif self.mso_mode == 1:
+                self.main_engine_capacity = self.main_engine_capacity_spec
+                self.electrical_capacity  = 0.0
+                self.shaft_generator_state = 'GEN'
+            # PTI Mode
+            elif self.mso_mode == 2:
+                self.main_engine_capacity = 0.0
+                self.electrical_capacity  = 2 * self.diesel_gen_capacity_spec   # Use 2 generators
+                self.shaft_generator_state = 'MOTOR'
+            
+            # Update Available Propulsion Power
+            if self.shaft_generator_state == 'MOTOR':
+                self.available_propulsion_power = self.main_engine_capacity + self.electrical_capacity - self.hotel_load
+                self.available_propulsion_power_main_engine = self.main_engine_capacity
+                self.available_propulsion_power_electrical = self.electrical_capacity - self.hotel_load
+            elif self.shaft_generator_state == 'GEN':
+                self.available_propulsion_power = self.main_engine_capacity - self.hotel_load
+                self.available_propulsion_power_main_engine = self.main_engine_capacity - self.hotel_load
+                self.available_propulsion_power_electrical = 0
+            elif self.shaft_generator_state == 'OFF':
+                self.available_propulsion_power = self.main_engine_capacity
+                self.available_propulsion_power_main_engine = self.main_engine_capacity
+                self.available_propulsion_power_electrical = 0
+            
+            # Max shaft speed
+            shaft_speed_max = 1.1 * (self.rated_speed_main_engine_rpm * np.pi / 30) * self.gear_ratio_between_main_engine_and_propeller
+            
+            # Get the shaft speed using input
+            self.d_omega = self.update_shaft_equation(self.load_perc)   
+            self.omega   = np.min([(self.omega + self.d_omega * step_size), shaft_speed_max])          # Integration
+            
+            # Get the thrust
+            self.thrust_force = self.get_thrust_force(self.omega)
+            
+            # Compute the shaft speed in rpm
+            self.shaft_speed_rpm = self.omega * 30 /np.pi
+            
+            # Get the commanded load fraction
+            load_main_engine, load_electrical, load_percentage_main_engine, load_percentage_electrical = self.distribute_load(self.load_perc)
+            self.cmd_load_fraction_me               = load_percentage_main_engine
+            self.cmd_load_fraction_hsg              = load_percentage_electrical
+            self.power_me                           = load_main_engine / 1000
+            self.available_power_me                 = self.main_engine_capacity / 1000
+            self.power_electrical                   = load_electrical / 1000
+            self.available_power_electrical         = self.electrical_capacity / 1000
+            self.power                              = (load_main_engine + load_electrical) / 1000
+            self.propulsion_power                   = self.available_propulsion_power
+            
+            # Get fuel consumption
+            rate_me, rate_hsg, fuel_consumption_me, fuel_consumption_hsg, fuel_consumption = self.get_fuel_consumption(self.load_perc, step_size=step_size)
+            self.fuel_rate_me                       = rate_me
+            self.fuel_rate_hsg                      = rate_hsg
+            self.fuel_rate                          = rate_me + rate_hsg
+            self.fuel_consumption_me                = fuel_consumption_me
+            self.fuel_consumption_hsg               = fuel_consumption_hsg
+            self.fuel_consumption                   = fuel_consumption
+            self.motor_torque                       = self.main_engine_torque(self.load_perc)
+            self.hybrid_shaft_generator_torque      = self.hsg_torque(self.load_perc)
         
-        # Update Available Propulsion Power
-        if self.shaft_generator_state == 'MOTOR':
-            self.available_propulsion_power = self.main_engine_capacity + self.electrical_capacity - self.hotel_load
-            self.available_propulsion_power_main_engine = self.main_engine_capacity
-            self.available_propulsion_power_electrical = self.electrical_capacity - self.hotel_load
-        elif self.shaft_generator_state == 'GEN':
-            self.available_propulsion_power = self.main_engine_capacity - self.hotel_load
-            self.available_propulsion_power_main_engine = self.main_engine_capacity - self.hotel_load
-            self.available_propulsion_power_electrical = 0
-        elif self.shaft_generator_state == 'OFF':
-            self.available_propulsion_power = self.main_engine_capacity
-            self.available_propulsion_power_main_engine = self.main_engine_capacity
-            self.available_propulsion_power_electrical = 0
-        
-        # Max shaft speed
-        shaft_speed_max = 1.1 * (self.rated_speed_main_engine_rpm * np.pi / 30) * self.gear_ratio_between_main_engine_and_propeller
-        
-        # Get the shaft speed using input
-        self.d_omega = self.update_shaft_equation(self.load_perc)   
-        self.omega   = np.min([(self.omega + self.d_omega * step_size), shaft_speed_max])          # Integration
-        
-        # Get the thrust
-        self.thrust_force = self.get_thrust_force(self.omega)
-        
-        # Compute the shaft speed in rpm
-        self.shaft_speed_rpm = self.omega * 30 /np.pi
-        
-        # Get the commanded load fraction
-        load_main_engine, load_electrical, load_percentage_main_engine, load_percentage_electrical = self.distribute_load(self.load_perc)
-        self.cmd_load_fraction_me               = load_percentage_main_engine
-        self.cmd_load_fraction_hsg              = load_percentage_electrical
-        self.power_me                           = load_main_engine / 1000
-        self.available_power_me                 = self.main_engine_capacity / 1000
-        self.power_electrical                   = load_electrical / 1000
-        self.available_power_electrical         = self.electrical_capacity / 1000
-        self.power                              = (load_main_engine + load_electrical) / 1000
-        self.propulsion_power                   = self.available_propulsion_power
-        
-        # Get fuel consumption
-        rate_me, rate_hsg, fuel_consumption_me, fuel_consumption_hsg, fuel_consumption = self.get_fuel_consumption(self.load_perc, step_size=step_size)
-        self.fuel_rate_me                       = rate_me
-        self.fuel_rate_hsg                      = rate_hsg
-        self.fuel_rate                          = rate_me + rate_hsg
-        self.fuel_consumption_me                = fuel_consumption_me
-        self.fuel_consumption_hsg               = fuel_consumption_hsg
-        self.fuel_consumption                   = fuel_consumption
-        self.motor_torque                       = self.main_engine_torque(self.load_perc)
-        self.hybrid_shaft_generator_torque      = self.hsg_torque(self.load_perc)
+        except Exception as e:
+            # IMPORTANT: do not crash host
+            print(f"[MachinerySystem] ERROR t={current_time} dt={step_size}: {type(e).__name__}: {e}")
+            print(traceback.format_exc())
+
+            # Freeze dynamics safely (keep last state/outputs)
+            self.thrust_force                                               = 0.0
+            self.shaft_speed_rpm                                            = 0.0
+            self.cmd_load_fraction_me                                       = 0.0
+            self.cmd_load_fraction_hsg                                      = 0.0
+            self.power_me                                                   = 0.0
+            self.available_power_me                                         = 0.0
+            self.power_electrical                                           = 0.0
+            self.available_power_electrical                                 = 0.0
+            self.power                                                      = 0.0
+            self.propulsion_power                                           = 0.0
+            self.fuel_rate_me                                               = 0.0
+            self.fuel_rate_hsg                                              = 0.0
+            self.fuel_rate                                                  = 0.0
+            self.fuel_consumption_me                                        = 0.0
+            self.fuel_consumption_hsg                                       = 0.0
+            self.fuel_consumption                                           = 0.0
+            self.motor_torque                                               = 0.0
+            self.hybrid_shaft_generator_torque                              = 0.0
         
         return True    

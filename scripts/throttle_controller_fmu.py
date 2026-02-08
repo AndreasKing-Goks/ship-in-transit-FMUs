@@ -7,6 +7,7 @@ Date    : Januari 2026
 """
 
 from pythonfmu import Fmi2Causality, Fmi2Slave, Fmi2Variability, Real, Integer, Boolean, String
+import traceback
 
 class ThrottleController(Fmi2Slave):
     
@@ -67,10 +68,18 @@ class ThrottleController(Fmi2Slave):
     
     
     def do_step(self, current_time: float, step_size: float) -> bool:
-        throttle = self.pi_ctrl(setpoint=self.desired_shaft_speed_rpm, 
-                                measurement=self.measured_shaft_speed_rpm,
-                                step_size=step_size)
-        
-        self.throttle_cmd = self.sat(val=throttle, low=0, hi=1.1)
-        
+        try:
+            throttle = self.pi_ctrl(setpoint=self.desired_shaft_speed_rpm, 
+                                    measurement=self.measured_shaft_speed_rpm,
+                                    step_size=step_size)
+            
+            self.throttle_cmd = self.sat(val=throttle, low=0, hi=1.1)
+            
+        except Exception as e:
+            # IMPORTANT: do not crash host
+            print(f"[ThrottleController] ERROR t={current_time} dt={step_size}: {type(e).__name__}: {e}")
+            print(traceback.format_exc())
+            
+            # Freeze dynamics safely (keep last state/outputs)
+            self.throttle_cmd               = 0.0
         return True

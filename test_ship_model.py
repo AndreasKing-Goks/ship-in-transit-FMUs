@@ -103,7 +103,7 @@ for nm in inputs:
 def thrust_force(t_s):
     # ramp thrust up, then hold (units depend on your model; start modest)
     if t_s < 10:
-        return 2e5 * (t_s / 10.0)  # 0 -> 200kN-ish equivalent (if N)
+        return 2e6 * (t_s / 10.0)  # 0 -> 200kN-ish equivalent (if N)
     return 2e5
 
 def rudder_force_v(t_s): return 0.0
