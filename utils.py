@@ -1,4 +1,4 @@
-    # MANDATORY TO LOCATE THE .dll FILES
+# MANDATORY TO LOCATE THE .dll FILES
 import os, sys
 from pathlib import Path
 
@@ -183,7 +183,7 @@ class CoSimInstance:
         if show:
             plt.show()
             
-    def JoinPlotTimeSeries(self, key_group_list, create_title: bool = False, legend: bool = True, show_instance_name: bool=False, show_separately: bool=False):
+    def JoinPlotTimeSeries(self, key_group_list, create_title: bool = False, legend: bool = True, show_instance_name: bool=False, show_separately: bool=False, show=True):
         for key_group in key_group_list:
             struct_time_points  = []
             struct_step_number  = []
@@ -213,10 +213,10 @@ class CoSimInstance:
             if create_title:
                 plt.title("Time series form co-simulation instance \"%s\"" %(self.instanceName))
             # plt.tight_layout()
-            if show_separately:
+            if show_separately and show:
                 plt.show()
 
-        if not show_separately:
+        if not show_separately and show:
             plt.show()
 
     def AddSlave(self, path: str, name: str):
@@ -376,3 +376,4 @@ class CoSimInstance:
             self.execution.step()
             self.PostSolverFunctionCall()
             self.time +=self.stepSize
+
