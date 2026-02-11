@@ -22,8 +22,8 @@ class Rudder(Fmi2Slave):
         # Parameters (DEGREES for limits)
         self.rudder_angle_to_sway_force_coefficient = 0.0
         self.rudder_angle_to_yaw_force_coefficient  = 0.0
-        self.max_rudder_angle_negative_deg          = -35.0
-        self.max_rudder_angle_positive_deg          = 35.0
+        self.max_rudder_angle_negative_deg          = -30.0
+        self.max_rudder_angle_positive_deg          = 30.0
 
         # Inputs
         self.rudder_angle_deg = 0.0

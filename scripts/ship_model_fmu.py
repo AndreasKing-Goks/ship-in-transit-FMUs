@@ -303,7 +303,7 @@ class ShipModel(Fmi2Slave):
         return np.array([tau_u, tau_v, tau_n])
 
         
-    def three_dof_kinematics(self, yaw_angle_rad, forward_speed, sideways_speed, yaw_rate):
+    def t0hree_dof_kinematics(self, yaw_angle_rad, forward_speed, sideways_speed, yaw_rate):
         ''' Updates the time differientials of the north position, east
             position and yaw angle. Should be called in the simulation
             loop before the integration step.

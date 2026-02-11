@@ -28,63 +28,92 @@ from main import ShipInTransitCoSimulation
 name        = "Ship Path-Following Test"
 
 # Time
-stopTime = 4000 # Number of steps in seconds (int)
-stepSize = 5 # Number of seconds (int)
+stopTime = 10000 # Number of steps in seconds (int)
+stepSize = 1.0  # Number of seconds (int)
 
 # Set Points Manager
-start_north = 0.0
-iw_north    = [3000.0, 4000.0, 2500.0]
-end_north   = 1000.0
+start_north_route     = 0.0
+iw_north_routes       = [2500.0, 2500.0, 7500.0, 7500]
+end_north_route       = 10000.0
+north_routes          = [start_north_route] + iw_north_routes + [end_north_route]
 
-start_east  = 0.0
-iw_east     = [2000.0, 5000.0, 7500.0]
-end_east    = 9000.0
+start_east_route      = 0.0
+iw_east_routes        = [5000.0, 7500.0, 7500.0, 10000]
+end_east_route        = 15000.0
+east_routes           = [start_east_route] + iw_east_routes + [end_east_route]
 
-start_speed = 5.0
-iw_speed    = [5.0,    5.0,      5.0]
-end_speed   = 5.0
+start_speed           = 5.0
+iw_speed              = [4.0, 4.0, 4.0, 4.0]
+end_speed             = 2.0
+speed_set_point       = [start_speed] + iw_speed + [end_speed]
 
 set_points_manager_params = {
     "ra": 300,
-    "max_inter_wp": 3,
-    "wp_start_north": start_north,
-    "wp_start_east": start_east,
+    "max_inter_wp": 4,
+    "wp_start_north": start_north_route,
+    "wp_start_east": start_east_route,
     "wp_start_speed": start_speed,
-    "wp_end_north": end_north,
-    "wp_end_east": end_east,
+    "wp_end_north": end_north_route,
+    "wp_end_east": end_east_route,
     "wp_end_speed": end_speed,
 }
-assert len(iw_north) == len(iw_east) == len(iw_speed) == set_points_manager_params["max_inter_wp"]
 
-for i, (wp_north, wp_east, wp_speed) in enumerate(zip(iw_north, iw_east, iw_speed), start=1):
+assert len(iw_north_routes) == len(iw_east_routes) == len(iw_speed) == set_points_manager_params["max_inter_wp"]
+
+for i, (wp_north, wp_east, wp_speed) in enumerate(zip(iw_north_routes, iw_east_routes, iw_speed), start=1):
     set_points_manager_params[f"wp_{i}_north"] = wp_north
     set_points_manager_params[f"wp_{i}_east"]  = wp_east
     set_points_manager_params[f"wp_{i}_speed"] = wp_speed
-    
 
+# # Set Points Manager
+# start_north_route   = 0.0
+# iw_north_routes     = []
+# end_north_route     = 10000.0
+# north_routes        = [start_north_route] + iw_north_routes + [end_north_route]
+
+# start_east_route    = 0.0
+# iw_east_routes      = []
+# end_east_route      = 10000.0
+# east_routes         = [start_east_route] + iw_east_routes + [end_east_route]
+
+# start_speed         = 5.0
+# iw_speed            = []
+# end_speed           = 5.0
+# speed_set_point     = [start_speed] + iw_speed + [end_speed]
+
+# set_points_manager_params = {
+#     "ra": 300,
+#     "max_inter_wp": 3,
+#     "wp_start_north": start_north_route,
+#     "wp_start_east": start_east_route,
+#     "wp_start_speed": start_speed,
+#     "wp_end_north": end_north_route,
+#     "wp_end_east": end_east_route,
+#     "wp_end_speed": end_speed,
+# }
+    
 # Autopilot
 autopilot_params = {
-    "ra": 300,
     "r": 1000,
     "ki_ct": 0.002,
-    "integrator_limit": 4000,
-    "kp": 100.75,
-    "ki": 50.0,
-    "kd": 25.5,
+    "integrator_limit": 5000,
+    "kp": 1.5,
+    "ki": 0.005,
+    "kd": 75,
     "max_rudder_rate_deg_per_sec": 2.3,
     "max_rudder_angle_deg": 30
 }
 
 # Shaft Speed Controller
 shaft_speed_controller_params = {
-    "kp": 0.50,
-    "ki": 0.025
+    "kp": 250.0,
+    "ki": 0.25
 }
 
 # Throttle Controller
 throttle_controller_params = {
-    "kp": 0.05,
-    "ki": 0.0001
+    "kp": 125.0,
+    "ki": 0.25
 }
 
 # Machinery System
@@ -117,14 +146,16 @@ machinery_system_params = {
 rudder_params = {
     "rudder_angle_to_sway_force_coefficient": 50e3,
     "rudder_angle_to_yaw_force_coefficient": 500e3,
-    "max_rudder_angle_negative_deg": np.deg2rad(-35),
-    "max_rudder_angle_positive_deg": np.deg2rad(35)
+    "max_rudder_angle_negative_deg": -30,
+    "max_rudder_angle_positive_deg": +30
 }
 
-# Ship Model
-init_d_north = iw_north[0] - start_north
-init_d_east  = iw_east[0]  - start_east 
-initial_yaw_angle_rad = np.atan2(init_d_east, init_d_north)
+# # Ship Model
+initial_d_north_route = north_routes[1] - north_routes[0]
+initial_d_east_route  = east_routes[1]  - east_routes[0]
+initial_yaw_angle_rad = np.atan2(initial_d_east_route, initial_d_north_route)
+initial_north_pos     = north_routes[0]
+initial_east_pos      = east_routes[0]
 ship_model_params = {
     "dead_weight_tonnage": 3850000,
     "coefficient_of_deadweight_to_displacement": 0.7,
@@ -148,8 +179,8 @@ ship_model_params = {
     "cx": 0.5,
     "cy": 0.7,
     "cn": 0.08,
-    "initial_north_position_m": start_north,
-    "initial_east_position_m": start_east,
+    "initial_north_position_m": initial_north_pos,
+    "initial_east_position_m": initial_east_pos,
     "initial_yaw_angle_rad": initial_yaw_angle_rad,
     "initial_forward_speed_m_per_s": 0.0,
     "initial_sideways_speed_m_per_s": 0.0,
@@ -197,12 +228,12 @@ instance    = ShipInTransitCoSimulation(autopilot_params=autopilot_params,
                                         rudder_params=rudder_params,
                                         ship_model_params=ship_model_params,
                                         set_points_manager_params=set_points_manager_params,
-                                        start_north=start_north,
-                                        iw_north=iw_north,
-                                        end_north=end_north,
-                                        start_east=start_east,
-                                        iw_east=iw_east,
-                                        end_east=end_east,
+                                        start_north=start_north_route,
+                                        iw_north=iw_north_routes,
+                                        end_north=end_north_route,
+                                        start_east=start_east_route,
+                                        iw_east=iw_east_routes,
+                                        end_east=end_east_route,
                                         instanceName= name, 
                                         stopTime=stopTime, 
                                         stepSize=stepSize)
@@ -258,6 +289,10 @@ instance.AddSlave(name="SHIP_MODEL",
 # =========================
 # Set Initial Values
 # =========================
+# Set Points Manager
+instance.SetInitialValues(slaveName="SET_POINTS_MANAGER", 
+                         params=set_points_manager_params)
+
 # Autopilot
 instance.SetInitialValues(slaveName="AUTOPILOT", 
                          params=autopilot_params)
@@ -290,10 +325,6 @@ instance.SetInitialValues(slaveName="SHIP_MODEL",
 # instance.SetInitialValues(slaveName="WIND", 
 #                          params=wind_params)
 
-# Set Points Manager
-instance.SetInitialValues(slaveName="SET_POINTS_MANAGER", 
-                         params=set_points_manager_params)
-
 # =========================
 # Setup Observer – Outputs
 # =========================
@@ -309,6 +340,11 @@ instance.AddObserverTimeSeriesWithLabel(name="next_wp_speed", slaveName="SET_POI
 instance.AddObserverTimeSeriesWithLabel(name="yaw_angle_ref_rad", slaveName="AUTOPILOT", variable="yaw_angle_ref_rad", var_label="Angle [rad]")
 instance.AddObserverTimeSeriesWithLabel(name="rudder_angle_deg", slaveName="AUTOPILOT", variable="rudder_angle_deg", var_label="Angle [deg]")
 instance.AddObserverTimeSeriesWithLabel(name="cross_track_error", slaveName="AUTOPILOT", variable="e_ct", var_label="Error [m]")
+# - debug - #
+instance.AddObserverTimeSeriesWithLabel(name="alpha_k_rad", slaveName="AUTOPILOT", variable="alpha_k_rad", var_label="Angle [rad]")
+instance.AddObserverTimeSeriesWithLabel(name="chi_r_rad", slaveName="AUTOPILOT", variable="chi_r_rad", var_label="Angle [rad]")
+instance.AddObserverTimeSeriesWithLabel(name="delta", slaveName="AUTOPILOT", variable="delta", var_label="Distance [m]")
+
 
 # Shaft Speed Controller
 instance.AddObserverTimeSeriesWithLabel(name="shaft_speed_cmd_rpm", slaveName="SHAFT_SPEED_CONTROLLER", variable="shaft_speed_cmd_rpm", var_label="Shaft Speed [rpm]")
@@ -426,8 +462,8 @@ key_group_list = [
     ["rudder_angle_deg"],
     ["cross_track_error"],
     ["shaft_speed_rpm", "shaft_speed_cmd_rpm"],
-    ["north"],
-    ["east"],
+    # ["north"],
+    # ["east"],
     # ["forward_speed"],
     # ["sideways_speed"],
     # ["yaw_rate"],
@@ -440,7 +476,7 @@ key_group_list = [
     # ["prev_wp_east"],
     # ["next_wp_north"],
     # ["next_wp_east"],
-    # ["thrust_force"],
+    ["thrust_force"],
     # ["cmd_load_fraction_me", "cmd_load_fraction_hsg"],
     # ["power_me", "available_power_me"],
     # ["power_electrical", "available_power_electrical"],
@@ -448,12 +484,15 @@ key_group_list = [
     # ["fuel_rate_me", "fuel_rate_hsg", "fuel_rate"],
     # ["fuel_consumption_me", "fuel_consumption_hsg", "fuel_consumption"],
     # ["motor_torque", "hybrid_shaft_generator_torque"],
-    # ["rudder_force_v"],
-    # ["rudder_force_r"]
+    ["rudder_force_v"],
+    ["rudder_force_r"],
+    # ["alpha_k_rad"],
+    # ["chi_r_rad"],
+    # ["delta"],
     ]
 
-# Plot Time Series
-# instance.JoinPlotTimeSeries(list(reversed(key_group_list)),  create_title= False, legend= True, show_instance_name=False, show=True)
-
 # Plot Ship Trajectory
-instance.PlotShipTrajectory()
+instance.PlotShipTrajectory(show=False)
+
+# Plot Time Series
+instance.JoinPlotTimeSeries(list(reversed(key_group_list)),  create_title= False, legend= True, show_instance_name=False, show=True)

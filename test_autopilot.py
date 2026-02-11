@@ -28,7 +28,7 @@ def plot_real_ts(observer, slave_index, vr, label, sample_count=200000):
     plt.plot(t_s, y, label=label)
 
 stepSize = int(1e7)     # 0.01 s
-stopTime = int(40e9)    # 40 s (gives time to "move")
+stopTime = int(100e9)    # 40 s (gives time to "move")
 
 execution = CosimExecution.from_step_size(step_size=stepSize)
 observer = CosimObserver.create_time_series()
@@ -45,9 +45,9 @@ vars_ = execution.slave_variables(slave_index=idx)
 # Optional: set autopilot parameters if present (adapt to your FMU names)
 # Use try/except so script runs even if some params differ.
 try:
-    execution.real_initial_value(idx, GetVariableIndex(vars_, "kp"), 1.5)
-    execution.real_initial_value(idx, GetVariableIndex(vars_, "ki"), 75.0)
-    execution.real_initial_value(idx, GetVariableIndex(vars_, "kd"), 0.005)
+    execution.real_initial_value(idx, GetVariableIndex(vars_, "kp"), 10.5)
+    execution.real_initial_value(idx, GetVariableIndex(vars_, "ki"), 0.0)
+    execution.real_initial_value(idx, GetVariableIndex(vars_, "kd"), 0.5)
     execution.real_initial_value(idx, GetVariableIndex(vars_, "max_rudder_rate_deg_per_sec"), 2.3)
     execution.real_initial_value(idx, GetVariableIndex(vars_, "max_rudder_angle_deg"), 35.0)
     execution.real_initial_value(idx, GetVariableIndex(vars_, "integrator_limit"), 4000.0)

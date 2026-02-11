@@ -19,7 +19,6 @@ class Autopilot(Fmi2Slave):
         super().__init__(**kwargs)
         
         ## LOS Guidance Parameters
-        self.ra                             = 0.0       # Radius of Acceptance
         self.r                              = 0.0       # Lookahead Distance
         self.ki_ct                          = 0.0       # Integral Gain
         self.integrator_limit               = 0.0       # Integrator Windup Limit
@@ -56,7 +55,6 @@ class Autopilot(Fmi2Slave):
         
         ## Registration
         # LOS Guidance Parameters
-        self.register_variable(Real("ra", causality=Fmi2Causality.parameter,variability=Fmi2Variability.tunable))
         self.register_variable(Real("r", causality=Fmi2Causality.parameter,variability=Fmi2Variability.tunable))
         self.register_variable(Real("ki_ct", causality=Fmi2Causality.parameter,variability=Fmi2Variability.fixed))
         self.register_variable(Real("integrator_limit", causality=Fmi2Causality.parameter,variability=Fmi2Variability.fixed))
@@ -83,6 +81,14 @@ class Autopilot(Fmi2Slave):
         self.register_variable(Real("yaw_angle_ref_rad", causality=Fmi2Causality.output))
         self.register_variable(Real("rudder_angle_deg", causality=Fmi2Causality.output))
         self.register_variable(Real("e_ct", causality=Fmi2Causality.output))
+        
+        # Debug / telemetry
+        self.alpha_k_rad = 0.0
+        self.chi_r_rad   = 0.0
+        self.delta       = 0.0
+        self.register_variable(Real("alpha_k_rad", causality=Fmi2Causality.output))
+        self.register_variable(Real("chi_r_rad",   causality=Fmi2Causality.output))
+        self.register_variable(Real("delta",       causality=Fmi2Causality.output))
         
     
     def _wrap_to_pi(self, a):
@@ -111,7 +117,7 @@ class Autopilot(Fmi2Slave):
             
         self.prev_error = error
         self.error_i = error_i
-        return error * self.kp + d_error * self.kd + error_i * self.ki
+        return -(error * self.kp + d_error * self.kd + error_i * self.ki)
     
 
     def apply_slew_limit(self, u_des_rad: float, u_prev_rad: float, step_size: float) -> float:
@@ -136,10 +142,11 @@ class Autopilot(Fmi2Slave):
         dx = next_wp_east - prev_wp_east
         dy = next_wp_north - prev_wp_north
         
-        alpha_k = math.atan2(dy, dx)
+        alpha_k = math.atan2(dx, dy)
         
         # Cross-Track Error
-        e_ct = -(north - next_wp_north) * math.sin(alpha_k) + (east - next_wp_east) * math.cos(alpha_k)
+        v_norm = math.hypot(dx, dy)
+        e_ct = -(dx*(north - prev_wp_north) - dy*(east - prev_wp_east)) / max(1e-9, v_norm)
         
         # Keep inside circle
         if e_ct ** 2 >= self.r ** 2 and self.r > 0:
@@ -158,6 +165,11 @@ class Autopilot(Fmi2Slave):
         
         yaw_angle_ref_rad = self._wrap_to_pi(alpha_k + chi_r)
         
+        # Debug
+        self.alpha_k_rad = alpha_k
+        self.chi_r_rad   = chi_r
+        self.delta       = delta
+
         return yaw_angle_ref_rad, e_ct
     
     

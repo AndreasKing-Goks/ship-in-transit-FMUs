@@ -8,6 +8,7 @@ dll_dir = Path(sys.prefix) / "Lib" / "site-packages" / "libcosimpy" / "libcosimc
 os.add_dll_directory(str(dll_dir))
 
 import matplotlib.pyplot as plt
+import matplotlib.patches as patches
 import numpy as np
 
 class ShipInTransitCoSimulation(CoSimInstance):
@@ -38,11 +39,11 @@ class ShipInTransitCoSimulation(CoSimInstance):
         # FMU params
         self.autopilot_params               = autopilot_params
         self.shaft_speed_controller_params  = shaft_speed_controller_params
-        self.throttle_controller_params     = throttle_controller_params,
-        self.machinery_system_params        = machinery_system_params, 
-        self.rudder_params                  = rudder_params,
-        self.ship_model_params              = ship_model_params,
-        self.set_points_manager_params      = set_points_manager_params,
+        self.throttle_controller_params     = throttle_controller_params
+        self.machinery_system_params        = machinery_system_params
+        self.rudder_params                  = rudder_params
+        self.ship_model_params              = ship_model_params
+        self.set_points_manager_params      = set_points_manager_params
         
         # Ship Draw
         self.draw           = ShipDraw(ship_model_params["length_of_ship"],
@@ -51,6 +52,8 @@ class ShipInTransitCoSimulation(CoSimInstance):
         self.ship_drawings  = [[],[]]
         
         # Route
+        self.iw_north      = iw_north
+        self.iw_east       = iw_east
         self.route_north   = [start_north] + iw_north + [end_north]
         self.route_east    = [start_east]  + iw_east  + [end_east]
         
@@ -60,9 +63,9 @@ class ShipInTransitCoSimulation(CoSimInstance):
         show=True,
         mode="quick",   # "quick" or "paper"
         block=True,
-        fig_width=5.0,
-        every_n=5,
-        margin_frac=0.08,     # 👈 8% padding around trajectory
+        fig_width=10.0,
+        every_n=25,
+        margin_frac=0.08,     # 8% padding around trajectory
         equal_aspect=True,
         save_path=None,
     ):
@@ -80,6 +83,7 @@ class ShipInTransitCoSimulation(CoSimInstance):
             legend_fs = 9
 
             grid_alpha = 0.4
+            roa_alpha  = 0.25
             dpi = 500
 
         elif mode == "quick":
@@ -93,6 +97,7 @@ class ShipInTransitCoSimulation(CoSimInstance):
             legend_fs = 7
 
             grid_alpha = 0.2
+            roa_alpha  = 0.15
             dpi = 110
 
         else:
@@ -146,9 +151,19 @@ class ShipInTransitCoSimulation(CoSimInstance):
         ax.plot(self.route_east, self.route_north,
                 lw=route_lw, ls="--", color=route_color, label="Mission trajectory")
 
+        # Waypoints
         ax.scatter(self.route_east, self.route_north,
                 s=18 if mode == "quick" else 30,
                 marker="x", color=route_color)
+        for north_iwp, east_iwp in zip(self.iw_north, self.iw_east):
+            circ = patches.Circle(
+                (east_iwp, north_iwp),
+                radius=self.set_points_manager_params["ra"],
+                fill=True,
+                color=route_color,
+                alpha=roa_alpha
+            )
+            ax.add_patch(circ)
 
         # Ship drawings (subsample for speed)
         for x, y in zip(self.ship_drawings[1][::6],
