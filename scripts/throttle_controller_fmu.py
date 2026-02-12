@@ -53,27 +53,28 @@ class ThrottleController(Fmi2Slave):
         return max(low, min(val, hi))
     
     
-    def pi_ctrl(self, setpoint, measurement, step_size, *args):
-        ''' 
-            Uses a proportional-integral control law to calculate a control
-            output. The optional argument is an 2x1 array and will specify lower
-            and upper limit for error integration [lower, upper]
-        '''
-        error = setpoint - measurement
-        error_i = self.error_i + error * step_size
-        if args:
-            error_i = self.sat(error_i, args[0], args[1])
-        self.error_i = error_i
-        return error * self.kp + error_i * self.ki
-    
-    
     def do_step(self, current_time: float, step_size: float) -> bool:
         try:
-            throttle = self.pi_ctrl(setpoint=self.desired_shaft_speed_rpm, 
-                                    measurement=self.measured_shaft_speed_rpm,
-                                    step_size=step_size)
-            
-            self.throttle_cmd = self.sat(val=throttle, low=0, hi=1.1)
+            # error in RPM domain (inner loop)
+            error = self.desired_shaft_speed_rpm - self.measured_shaft_speed_rpm
+
+            # PI unsaturated
+            u_unsat = self.kp * error + self.ki * self.error_i
+
+            # Saturate throttle (recommended)
+            u_sat = self.sat(u_unsat, 0.0, 1.0)
+
+            # Anti-windup: conditional integration
+            sat_high = (u_sat >= 1.0 - 1e-9)
+            sat_low  = (u_sat <= 0.0 + 1e-9)
+
+            pushing_further_high = sat_high and (error > 0.0)  # wants more throttle but already max
+            pushing_further_low  = sat_low  and (error < 0.0)  # wants less throttle but already min
+
+            if not (pushing_further_high or pushing_further_low):
+                self.error_i += error * step_size
+
+            self.throttle_cmd = u_sat
             
         except Exception as e:
             # IMPORTANT: do not crash host
@@ -81,5 +82,6 @@ class ThrottleController(Fmi2Slave):
             print(traceback.format_exc())
             
             # Freeze dynamics safely (keep last state/outputs)
-            self.throttle_cmd               = 0.0
+            self.throttle_cmd = 0.0
+            
         return True

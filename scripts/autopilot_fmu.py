@@ -82,14 +82,6 @@ class Autopilot(Fmi2Slave):
         self.register_variable(Real("rudder_angle_deg", causality=Fmi2Causality.output))
         self.register_variable(Real("e_ct", causality=Fmi2Causality.output))
         
-        # Debug / telemetry
-        self.alpha_k_rad = 0.0
-        self.chi_r_rad   = 0.0
-        self.delta       = 0.0
-        self.register_variable(Real("alpha_k_rad", causality=Fmi2Causality.output))
-        self.register_variable(Real("chi_r_rad",   causality=Fmi2Causality.output))
-        self.register_variable(Real("delta",       causality=Fmi2Causality.output))
-        
     
     def _wrap_to_pi(self, a):
         return (a + math.pi) % (2*math.pi) - math.pi
@@ -122,7 +114,7 @@ class Autopilot(Fmi2Slave):
 
     def apply_slew_limit(self, u_des_rad: float, u_prev_rad: float, step_size: float) -> float:
         """Limit |Δu| ≤ max_rudder_rate * dt, then hard-limit angle."""
-        max_rate_rad = math.radians(self.max_rudder_rate_deg_per_sec)
+        max_rate_rad  = math.radians(self.max_rudder_rate_deg_per_sec)
         max_angle_rad = math.radians(self.max_rudder_angle_deg)
         
         # Compute the maximum rudder angle displacement based on the maximum rudder angle rate
@@ -164,11 +156,6 @@ class Autopilot(Fmi2Slave):
         chi_r = math.atan2(-e_ct, delta - self.e_ct_int * self.ki_ct)
         
         yaw_angle_ref_rad = self._wrap_to_pi(alpha_k + chi_r)
-        
-        # Debug
-        self.alpha_k_rad = alpha_k
-        self.chi_r_rad   = chi_r
-        self.delta       = delta
 
         return yaw_angle_ref_rad, e_ct
     

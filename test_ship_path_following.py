@@ -38,13 +38,13 @@ end_north_route       = 10000.0
 north_routes          = [start_north_route] + iw_north_routes + [end_north_route]
 
 start_east_route      = 0.0
-iw_east_routes        = [5000.0, 7500.0, 7500.0, 10000]
+iw_east_routes        = [2500.0, 7500.0, 7500.0, 12500]
 end_east_route        = 15000.0
 east_routes           = [start_east_route] + iw_east_routes + [end_east_route]
 
 start_speed           = 5.0
-iw_speed              = [4.0, 4.0, 4.0, 4.0]
-end_speed             = 2.0
+iw_speed              = [5.0, 5.0, 5.0, 4.0]
+end_speed             = 4.0
 speed_set_point       = [start_speed] + iw_speed + [end_speed]
 
 set_points_manager_params = {
@@ -58,12 +58,13 @@ set_points_manager_params = {
     "wp_end_speed": end_speed,
 }
 
-assert len(iw_north_routes) == len(iw_east_routes) == len(iw_speed) == set_points_manager_params["max_inter_wp"]
+if len(iw_north_routes) != 0 and len(iw_east_routes) != 0 and len(iw_speed) != 0:
+    assert len(iw_north_routes) == len(iw_east_routes) == len(iw_speed) == set_points_manager_params["max_inter_wp"]
 
-for i, (wp_north, wp_east, wp_speed) in enumerate(zip(iw_north_routes, iw_east_routes, iw_speed), start=1):
-    set_points_manager_params[f"wp_{i}_north"] = wp_north
-    set_points_manager_params[f"wp_{i}_east"]  = wp_east
-    set_points_manager_params[f"wp_{i}_speed"] = wp_speed
+    for i, (wp_north, wp_east, wp_speed) in enumerate(zip(iw_north_routes, iw_east_routes, iw_speed), start=1):
+        set_points_manager_params[f"wp_{i}_north"] = wp_north
+        set_points_manager_params[f"wp_{i}_east"]  = wp_east
+        set_points_manager_params[f"wp_{i}_speed"] = wp_speed
 
 # # Set Points Manager
 # start_north_route   = 0.0
@@ -106,14 +107,17 @@ autopilot_params = {
 
 # Shaft Speed Controller
 shaft_speed_controller_params = {
-    "kp": 250.0,
-    "ki": 0.25
+    "kp": 30,
+    "ki": 15,
+    "rated_speed_main_engine_rpm": 1000,
+    "gear_ratio_between_main_engine_and_propeller": 0.6,
+    "idle_rpm_fraction": 0.1
 }
 
 # Throttle Controller
 throttle_controller_params = {
-    "kp": 125.0,
-    "ki": 0.25
+    "kp": 0.005,
+    "ki": 0.00005
 }
 
 # Machinery System
@@ -340,14 +344,17 @@ instance.AddObserverTimeSeriesWithLabel(name="next_wp_speed", slaveName="SET_POI
 instance.AddObserverTimeSeriesWithLabel(name="yaw_angle_ref_rad", slaveName="AUTOPILOT", variable="yaw_angle_ref_rad", var_label="Angle [rad]")
 instance.AddObserverTimeSeriesWithLabel(name="rudder_angle_deg", slaveName="AUTOPILOT", variable="rudder_angle_deg", var_label="Angle [deg]")
 instance.AddObserverTimeSeriesWithLabel(name="cross_track_error", slaveName="AUTOPILOT", variable="e_ct", var_label="Error [m]")
-# - debug - #
-instance.AddObserverTimeSeriesWithLabel(name="alpha_k_rad", slaveName="AUTOPILOT", variable="alpha_k_rad", var_label="Angle [rad]")
-instance.AddObserverTimeSeriesWithLabel(name="chi_r_rad", slaveName="AUTOPILOT", variable="chi_r_rad", var_label="Angle [rad]")
-instance.AddObserverTimeSeriesWithLabel(name="delta", slaveName="AUTOPILOT", variable="delta", var_label="Distance [m]")
-
 
 # Shaft Speed Controller
 instance.AddObserverTimeSeriesWithLabel(name="shaft_speed_cmd_rpm", slaveName="SHAFT_SPEED_CONTROLLER", variable="shaft_speed_cmd_rpm", var_label="Shaft Speed [rpm]")
+# -debug
+instance.AddObserverTimeSeriesWithLabel(name="rpm_cmd_pi", slaveName="SHAFT_SPEED_CONTROLLER", variable="rpm_cmd_pi", var_label="Shaft Speed [rpm]")
+instance.AddObserverTimeSeriesWithLabel(name="rpm_cmd_ff", slaveName="SHAFT_SPEED_CONTROLLER", variable="rpm_cmd_ff", var_label="Shaft Speed [rpm]")
+instance.AddObserverTimeSeriesWithLabel(name="error_i", slaveName="SHAFT_SPEED_CONTROLLER", variable="error_i", var_label="error")
+instance.AddObserverTimeSeriesWithLabel(name="error", slaveName="SHAFT_SPEED_CONTROLLER", variable="error", var_label="error")
+instance.AddObserverTimeSeriesWithLabel(name="des_speed", slaveName="SHAFT_SPEED_CONTROLLER", variable="des_speed", var_label="Speed [m/s]")
+instance.AddObserverTimeSeriesWithLabel(name="mea_speed", slaveName="SHAFT_SPEED_CONTROLLER", variable="mea_speed", var_label="Speed [m/s]")
+
 
 # Throttle Controller
 instance.AddObserverTimeSeriesWithLabel(name="throttle_cmd", slaveName="THROTTLE_CONTROLLER", variable="throttle_cmd", var_label="Throttle [-]")
@@ -458,10 +465,15 @@ instance.Simulate()
 # =========================
 key_group_list = [
     ["measured_ship_speed", "next_wp_speed"],
-    ["yaw_angle_rad", "yaw_angle_ref_rad"],
-    ["rudder_angle_deg"],
-    ["cross_track_error"],
+    # ["yaw_angle_rad", "yaw_angle_ref_rad"],
+    # ["rudder_angle_deg"],
+    # ["cross_track_error"],
     ["shaft_speed_rpm", "shaft_speed_cmd_rpm"],
+    ["throttle_cmd"],
+    ["rpm_cmd_pi"],
+    ["rpm_cmd_ff"],
+    ["error_i"],
+    ["error"],
     # ["north"],
     # ["east"],
     # ["forward_speed"],
@@ -476,7 +488,7 @@ key_group_list = [
     # ["prev_wp_east"],
     # ["next_wp_north"],
     # ["next_wp_east"],
-    ["thrust_force"],
+    # ["thrust_force"],
     # ["cmd_load_fraction_me", "cmd_load_fraction_hsg"],
     # ["power_me", "available_power_me"],
     # ["power_electrical", "available_power_electrical"],
@@ -484,11 +496,10 @@ key_group_list = [
     # ["fuel_rate_me", "fuel_rate_hsg", "fuel_rate"],
     # ["fuel_consumption_me", "fuel_consumption_hsg", "fuel_consumption"],
     # ["motor_torque", "hybrid_shaft_generator_torque"],
-    ["rudder_force_v"],
-    ["rudder_force_r"],
-    # ["alpha_k_rad"],
-    # ["chi_r_rad"],
-    # ["delta"],
+    # ["rudder_force_v"],
+    # ["rudder_force_r"]
+    ["des_speed"],
+    ["mea_speed"],
     ]
 
 # Plot Ship Trajectory
