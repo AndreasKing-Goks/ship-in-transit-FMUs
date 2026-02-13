@@ -23,7 +23,7 @@ class ShipInTransitCoSimulation(CoSimInstance):
                  machinery_system_params        : dict, 
                  rudder_params                  : dict,
                  ship_model_params              : dict,
-                 set_points_manager_params      : dict,
+                 mission_manager_params         : dict,
                  start_north                    : float,
                  iw_north                       : list,
                  end_north                      : float,
@@ -43,7 +43,7 @@ class ShipInTransitCoSimulation(CoSimInstance):
         self.machinery_system_params        = machinery_system_params
         self.rudder_params                  = rudder_params
         self.ship_model_params              = ship_model_params
-        self.set_points_manager_params      = set_points_manager_params
+        self.mission_manager_params         = mission_manager_params
         
         # Ship Draw
         self.draw           = ShipDraw(ship_model_params["length_of_ship"],
@@ -56,6 +56,35 @@ class ShipInTransitCoSimulation(CoSimInstance):
         self.iw_east       = iw_east
         self.route_north   = [start_north] + iw_north + [end_north]
         self.route_east    = [start_east]  + iw_east  + [end_east]
+        
+        # Stop flag
+        self.stop          = False
+
+        
+    def PreSolverFunctionCall(self):
+        pass
+
+
+    def PostSolverFunctionCall(self):
+        """
+        Stop the simulator once the stop flag is received
+        """
+        # Get the flag
+        reach_wp_end    = self.GetLastValue(slaveName="MISSION_MANAGER", slaveVar="reach_wp_end")
+        
+        # If all ships reach the end point, stop the simulation
+        self.stop       = reach_wp_end
+        pass        
+
+
+    def Simulate(self):
+        while self.time < self.stopTime and (not self.stop):
+            self.CoSimManipulate()
+            self.SetInputFromExternal()
+            self.PreSolverFunctionCall()
+            self.execution.step()
+            self.PostSolverFunctionCall()
+            self.time +=self.stepSize
         
     
     def PlotShipTrajectory(
@@ -155,10 +184,10 @@ class ShipInTransitCoSimulation(CoSimInstance):
         ax.scatter(self.route_east, self.route_north,
                 s=18 if mode == "quick" else 30,
                 marker="x", color=route_color)
-        for north_iwp, east_iwp in zip(self.iw_north, self.iw_east):
+        for north_iwp, east_iwp in zip(self.route_north[1:], self.route_east[1:]):
             circ = patches.Circle(
                 (east_iwp, north_iwp),
-                radius=self.set_points_manager_params["ra"],
+                radius=self.mission_manager_params["ra"],
                 fill=True,
                 color=route_color,
                 alpha=roa_alpha

@@ -1,6 +1,6 @@
 """
-Setpoints Manager Python FMU implementation.
-This FMU manages a list of setpoints (waypoints and desired speeds) and provides the previous and next setpoints.
+Mission Manager Python FMU implementation.
+This FMU manages a list of mission (waypoints and desired speeds) and provides the previous and next setpoints.
 It includes a switching mechanism based on a radius of acceptance.
 This FMU contains a minimum 2 setpoints to a maximum 10 setpoints.
 
@@ -13,9 +13,9 @@ import numpy as np
 import traceback
 
 
-class SetPointsManager(Fmi2Slave):
+class MissionManager(Fmi2Slave):
     author = "Andreas R.G. Sitorus"
-    description = "Setpoints Manager (index-based, deterministic)"
+    description = "Mission Manager (index-based, deterministic)"
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -25,33 +25,35 @@ class SetPointsManager(Fmi2Slave):
         self.max_inter_wp = 8
 
         # Waypoints (parameters)
-        self.wp_start_north = np.nan
-        self.wp_start_east  = np.nan
-        self.wp_start_speed = np.nan
+        self.wp_start_north = 0.0
+        self.wp_start_east  = 0.0
+        self.wp_start_speed = 0.0
 
         for i in range(1, 9):
-            setattr(self, f"wp_{i}_north", np.nan)
-            setattr(self, f"wp_{i}_east",  np.nan)
-            setattr(self, f"wp_{i}_speed", np.nan)
+            setattr(self, f"wp_{i}_north", 0.0)
+            setattr(self, f"wp_{i}_east",  0.0)
+            setattr(self, f"wp_{i}_speed", 0.0)
 
-        self.wp_end_north = np.nan
-        self.wp_end_east  = np.nan
-        self.wp_end_speed = np.nan
+        self.wp_end_north = 0.0
+        self.wp_end_east  = 0.0
+        self.wp_end_speed = 0.0
 
         # Inputs
         self.north = 0.0
         self.east  = 0.0
 
         # Outputs
-        self.prev_wp_north = np.nan
-        self.prev_wp_east  = np.nan
-        self.prev_wp_speed = np.nan
+        self.prev_wp_north = 0.0
+        self.prev_wp_east  = 0.0
+        self.prev_wp_speed = 0.0
 
-        self.next_wp_north = np.nan
-        self.next_wp_east  = np.nan
-        self.next_wp_speed = np.nan
+        self.next_wp_north = 0.0
+        self.next_wp_east  = 0.0
+        self.next_wp_speed = 0.0
 
         self.last_wp_active = False
+        
+        self.reach_wp_end   = False
 
         # Internal
         self._traj = []
@@ -87,6 +89,8 @@ class SetPointsManager(Fmi2Slave):
         self.register_variable(Real("next_wp_speed", causality=Fmi2Causality.output))
 
         self.register_variable(Boolean("last_wp_active", causality=Fmi2Causality.output))
+        
+        self.register_variable(Boolean("reach_wp_end", causality=Fmi2Causality.output))
 
     def _valid_triplet(self, n, e, s) -> bool:
         return np.isfinite(n) and np.isfinite(e) and np.isfinite(s)
@@ -125,8 +129,8 @@ class SetPointsManager(Fmi2Slave):
             self.last_wp_active = False
         else:
             # Not enough points
-            self.prev_wp_north = self.prev_wp_east = self.prev_wp_speed = np.nan
-            self.next_wp_north = self.next_wp_east = self.next_wp_speed = np.nan
+            self.prev_wp_north = self.prev_wp_east = self.prev_wp_speed = 0.0
+            self.next_wp_north = self.next_wp_east = self.next_wp_speed = 0.0
             self.last_wp_active = False
 
     def _dist2_to_next(self) -> float:
@@ -148,8 +152,15 @@ class SetPointsManager(Fmi2Slave):
             ra2 = float(self.ra) * float(self.ra)
 
             # If we're already on last segment, latch and keep outputs fixed
+            # while keep checking if the ship reaches the end point
             if self._idx >= len(self._traj) - 2:
                 self.last_wp_active = True
+                self.reach_wp_end   = False
+                
+                # Check if the ship reaches the end point (three-quarter way inside the waypoint's RoA)
+                if self._dist2_to_next() <= ra2 / 16:
+                    self.last_wp_active = True
+                    self.reach_wp_end   = True           
                 return True
 
             # Switch ONLY when close to the NEXT waypoint
@@ -162,13 +173,10 @@ class SetPointsManager(Fmi2Slave):
 
                 self.prev_wp_north, self.prev_wp_east, self.prev_wp_speed = p
                 self.next_wp_north, self.next_wp_east, self.next_wp_speed = q
-
-            # Update last_wp_active based on index (more robust than float compares)
-            self.last_wp_active = (self._idx >= len(self._traj) - 2)
-
+            
         except Exception as e:
             # Keep host alive; do not crash co-sim
-            print(f"[SetPointsManager] Exception t={current_time}, dt={step_size}: {type(e).__name__}: {e}")
+            print(f"[MissionManager] Exception t={current_time}, dt={step_size}: {type(e).__name__}: {e}")
             print(traceback.format_exc())
 
             # Freeze dynamics safely (keep last state/outputs)
@@ -181,6 +189,8 @@ class SetPointsManager(Fmi2Slave):
             self.next_wp_speed = 0.0
             
             self.last_wp_active = False
+            
+            self.reach_wp_end   = False
             
         return True
 

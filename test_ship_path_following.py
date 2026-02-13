@@ -43,11 +43,11 @@ end_east_route        = 15000.0
 east_routes           = [start_east_route] + iw_east_routes + [end_east_route]
 
 start_speed           = 5.0
-iw_speed              = [5.0, 5.0, 5.0, 4.0]
-end_speed             = 4.0
+iw_speed              = [5.0, 5.0, 4.0, 3.0]
+end_speed             = 2.0
 speed_set_point       = [start_speed] + iw_speed + [end_speed]
 
-set_points_manager_params = {
+mission_manager_params = {
     "ra": 300,
     "max_inter_wp": 4,
     "wp_start_north": start_north_route,
@@ -59,12 +59,12 @@ set_points_manager_params = {
 }
 
 if len(iw_north_routes) != 0 and len(iw_east_routes) != 0 and len(iw_speed) != 0:
-    assert len(iw_north_routes) == len(iw_east_routes) == len(iw_speed) == set_points_manager_params["max_inter_wp"]
+    assert len(iw_north_routes) == len(iw_east_routes) == len(iw_speed) == mission_manager_params["max_inter_wp"]
 
     for i, (wp_north, wp_east, wp_speed) in enumerate(zip(iw_north_routes, iw_east_routes, iw_speed), start=1):
-        set_points_manager_params[f"wp_{i}_north"] = wp_north
-        set_points_manager_params[f"wp_{i}_east"]  = wp_east
-        set_points_manager_params[f"wp_{i}_speed"] = wp_speed
+        mission_manager_params[f"wp_{i}_north"] = wp_north
+        mission_manager_params[f"wp_{i}_east"]  = wp_east
+        mission_manager_params[f"wp_{i}_speed"] = wp_speed
 
 # # Set Points Manager
 # start_north_route   = 0.0
@@ -82,7 +82,7 @@ if len(iw_north_routes) != 0 and len(iw_east_routes) != 0 and len(iw_speed) != 0
 # end_speed           = 5.0
 # speed_set_point     = [start_speed] + iw_speed + [end_speed]
 
-# set_points_manager_params = {
+# mission_manager_params = {
 #     "ra": 300,
 #     "max_inter_wp": 3,
 #     "wp_start_north": start_north_route,
@@ -99,7 +99,7 @@ autopilot_params = {
     "ki_ct": 0.002,
     "integrator_limit": 5000,
     "kp": 1.5,
-    "ki": 0.005,
+    "ki": 0.0001,
     "kd": 75,
     "max_rudder_rate_deg_per_sec": 2.3,
     "max_rudder_angle_deg": 30
@@ -107,7 +107,7 @@ autopilot_params = {
 
 # Shaft Speed Controller
 shaft_speed_controller_params = {
-    "kp": 30,
+    "kp": 100,
     "ki": 15,
     "rated_speed_main_engine_rpm": 1000,
     "gear_ratio_between_main_engine_and_propeller": 0.6,
@@ -231,7 +231,7 @@ instance    = ShipInTransitCoSimulation(autopilot_params=autopilot_params,
                                         machinery_system_params=machinery_system_params,
                                         rudder_params=rudder_params,
                                         ship_model_params=ship_model_params,
-                                        set_points_manager_params=set_points_manager_params,
+                                        mission_manager_params=mission_manager_params,
                                         start_north=start_north_route,
                                         iw_north=iw_north_routes,
                                         end_north=end_north_route,
@@ -245,10 +245,10 @@ instance    = ShipInTransitCoSimulation(autopilot_params=autopilot_params,
 # =========================
 # Adding slaves
 # =========================
-# SetPointsManager.fmu
-setpoints_manager_fmu_path = str(ROOT / "FMUs" / "SetPointsManager.fmu")
-instance.AddSlave(name="SET_POINTS_MANAGER", 
-                  path=setpoints_manager_fmu_path)
+# MissionManager.fmu
+mission_manager_fmu_path = str(ROOT / "FMUs" / "MissionManager.fmu")
+instance.AddSlave(name="MISSION_MANAGER", 
+                  path=mission_manager_fmu_path)
 
 # Autopilot.fmu
 autopilot_fmu_path = str(ROOT / "FMUs" / "Autopilot.fmu")
@@ -294,8 +294,8 @@ instance.AddSlave(name="SHIP_MODEL",
 # Set Initial Values
 # =========================
 # Set Points Manager
-instance.SetInitialValues(slaveName="SET_POINTS_MANAGER", 
-                         params=set_points_manager_params)
+instance.SetInitialValues(slaveName="MISSION_MANAGER", 
+                         params=mission_manager_params)
 
 # Autopilot
 instance.SetInitialValues(slaveName="AUTOPILOT", 
@@ -333,12 +333,14 @@ instance.SetInitialValues(slaveName="SHIP_MODEL",
 # Setup Observer – Outputs
 # =========================
 # Set Points Manager
-instance.AddObserverTimeSeriesWithLabel(name="prev_wp_north", slaveName="SET_POINTS_MANAGER", variable="prev_wp_north", var_label="Waypoint [-]")
-instance.AddObserverTimeSeriesWithLabel(name="prev_wp_east", slaveName="SET_POINTS_MANAGER", variable="prev_wp_east", var_label="Waypoint [-]")
-instance.AddObserverTimeSeriesWithLabel(name="prev_wp_speed", slaveName="SET_POINTS_MANAGER", variable="prev_wp_speed", var_label="Speed [m/s]")
-instance.AddObserverTimeSeriesWithLabel(name="next_wp_north", slaveName="SET_POINTS_MANAGER", variable="next_wp_north", var_label="Waypoint [-]")
-instance.AddObserverTimeSeriesWithLabel(name="next_wp_east", slaveName="SET_POINTS_MANAGER", variable="next_wp_east", var_label="Waypoint [-]")
-instance.AddObserverTimeSeriesWithLabel(name="next_wp_speed", slaveName="SET_POINTS_MANAGER", variable="next_wp_speed", var_label="Speed [m/s]")
+instance.AddObserverTimeSeriesWithLabel(name="prev_wp_north", slaveName="MISSION_MANAGER", variable="prev_wp_north", var_label="Waypoint [-]")
+instance.AddObserverTimeSeriesWithLabel(name="prev_wp_east", slaveName="MISSION_MANAGER", variable="prev_wp_east", var_label="Waypoint [-]")
+instance.AddObserverTimeSeriesWithLabel(name="prev_wp_speed", slaveName="MISSION_MANAGER", variable="prev_wp_speed", var_label="Speed [m/s]")
+instance.AddObserverTimeSeriesWithLabel(name="next_wp_north", slaveName="MISSION_MANAGER", variable="next_wp_north", var_label="Waypoint [-]")
+instance.AddObserverTimeSeriesWithLabel(name="next_wp_east", slaveName="MISSION_MANAGER", variable="next_wp_east", var_label="Waypoint [-]")
+instance.AddObserverTimeSeriesWithLabel(name="next_wp_speed", slaveName="MISSION_MANAGER", variable="next_wp_speed", var_label="Speed [m/s]")
+instance.AddObserverTimeSeriesWithLabel(name="last_wp_active", slaveName="MISSION_MANAGER", variable="last_wp_active", var_label="Binary Condition [1/0]")
+instance.AddObserverTimeSeriesWithLabel(name="reach_wp_end", slaveName="MISSION_MANAGER", variable="reach_wp_end", var_label="Binary Condition [1/0]")
 
 # Autopilot
 instance.AddObserverTimeSeriesWithLabel(name="yaw_angle_ref_rad", slaveName="AUTOPILOT", variable="yaw_angle_ref_rad", var_label="Angle [rad]")
@@ -402,9 +404,9 @@ instance.AddObserverTimeSeriesWithLabel(name="d_yaw_rate", slaveName="SHIP_MODEL
 # Add Model Connections
 # =========================
 # Input to Set Points Manager
-instance.AddSlaveConnection(slaveInputName="SET_POINTS_MANAGER", slaveInputVar="north", 
+instance.AddSlaveConnection(slaveInputName="MISSION_MANAGER", slaveInputVar="north", 
                             slaveOutputName="SHIP_MODEL", slaveOutputVar="north")
-instance.AddSlaveConnection(slaveInputName="SET_POINTS_MANAGER", slaveInputVar="east", 
+instance.AddSlaveConnection(slaveInputName="MISSION_MANAGER", slaveInputVar="east", 
                             slaveOutputName="SHIP_MODEL", slaveOutputVar="east")
 
 # Input to Autopilot
@@ -415,17 +417,17 @@ instance.AddSlaveConnection(slaveInputName="AUTOPILOT", slaveInputVar="east",
 instance.AddSlaveConnection(slaveInputName="AUTOPILOT", slaveInputVar="yaw_angle_rad", 
                             slaveOutputName="SHIP_MODEL", slaveOutputVar="yaw_angle_rad")
 instance.AddSlaveConnection(slaveInputName="AUTOPILOT", slaveInputVar="prev_wp_north", 
-                            slaveOutputName="SET_POINTS_MANAGER", slaveOutputVar="prev_wp_north")
+                            slaveOutputName="MISSION_MANAGER", slaveOutputVar="prev_wp_north")
 instance.AddSlaveConnection(slaveInputName="AUTOPILOT", slaveInputVar="prev_wp_east", 
-                            slaveOutputName="SET_POINTS_MANAGER", slaveOutputVar="prev_wp_east")
+                            slaveOutputName="MISSION_MANAGER", slaveOutputVar="prev_wp_east")
 instance.AddSlaveConnection(slaveInputName="AUTOPILOT", slaveInputVar="next_wp_north", 
-                            slaveOutputName="SET_POINTS_MANAGER", slaveOutputVar="next_wp_north")
+                            slaveOutputName="MISSION_MANAGER", slaveOutputVar="next_wp_north")
 instance.AddSlaveConnection(slaveInputName="AUTOPILOT", slaveInputVar="next_wp_east", 
-                            slaveOutputName="SET_POINTS_MANAGER", slaveOutputVar="next_wp_east")
+                            slaveOutputName="MISSION_MANAGER", slaveOutputVar="next_wp_east")
 
 # Input to Shaft Speed Controller
 instance.AddSlaveConnection(slaveInputName="SHAFT_SPEED_CONTROLLER", slaveInputVar="desired_ship_speed", 
-                            slaveOutputName="SET_POINTS_MANAGER", slaveOutputVar="prev_wp_speed")
+                            slaveOutputName="MISSION_MANAGER", slaveOutputVar="next_wp_speed")
 instance.AddSlaveConnection(slaveInputName="SHAFT_SPEED_CONTROLLER", slaveInputVar="measured_ship_speed", 
                             slaveOutputName="SHIP_MODEL", slaveOutputVar="measured_ship_speed")
 
@@ -463,17 +465,20 @@ instance.Simulate()
 # =========================
 # Plot
 # =========================
+# Plot Ship Trajectory
+instance.PlotShipTrajectory(show=False)
+
 key_group_list = [
     ["measured_ship_speed", "next_wp_speed"],
-    # ["yaw_angle_rad", "yaw_angle_ref_rad"],
-    # ["rudder_angle_deg"],
-    # ["cross_track_error"],
+    ["yaw_angle_rad", "yaw_angle_ref_rad"],
+    ["rudder_angle_deg"],
+    ["cross_track_error"],
     ["shaft_speed_rpm", "shaft_speed_cmd_rpm"],
     ["throttle_cmd"],
-    ["rpm_cmd_pi"],
-    ["rpm_cmd_ff"],
-    ["error_i"],
-    ["error"],
+    # ["rpm_cmd_pi"],
+    # ["rpm_cmd_ff"],
+    # ["error_i"],
+    # ["error"],
     # ["north"],
     # ["east"],
     # ["forward_speed"],
@@ -489,6 +494,8 @@ key_group_list = [
     # ["next_wp_north"],
     # ["next_wp_east"],
     # ["thrust_force"],
+    # ["prev_wp_speed"],
+    # ["next_wp_speed"],
     # ["cmd_load_fraction_me", "cmd_load_fraction_hsg"],
     # ["power_me", "available_power_me"],
     # ["power_electrical", "available_power_electrical"],
@@ -498,12 +505,9 @@ key_group_list = [
     # ["motor_torque", "hybrid_shaft_generator_torque"],
     # ["rudder_force_v"],
     # ["rudder_force_r"]
-    ["des_speed"],
-    ["mea_speed"],
+    # ["des_speed"],
+    # ["mea_speed"],
     ]
-
-# Plot Ship Trajectory
-instance.PlotShipTrajectory(show=False)
 
 # Plot Time Series
 instance.JoinPlotTimeSeries(list(reversed(key_group_list)),  create_title= False, legend= True, show_instance_name=False, show=True)

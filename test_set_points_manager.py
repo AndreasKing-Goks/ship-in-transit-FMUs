@@ -25,22 +25,22 @@ from utils import *
 stopTime = 100 # Number of steps in nano seconds (int)
 stepSize = 0.01 # Number of nano seconds (int)
 
-name        = "Set Points Manager Test"
+name        = "Mission Manager Test"
 instance    = CoSimInstance(instanceName= name, stopTime=stopTime, stepSize=stepSize)
 
 # =========================
 # Adding slaves
 # =========================
-# SetPointsManager.fmu
-setpoints_manager_fmu_path = str(ROOT / "FMUs" / "SetPointsManager.fmu")
-instance.AddSlave(name="SET_POINTS_MANAGER", 
-                  path=setpoints_manager_fmu_path)
+# MissionManager.fmu
+mission_manager_fmu_path = str(ROOT / "FMUs" / "MissionManager.fmu")
+instance.AddSlave(name="MISSION_MANAGER", 
+                  path=mission_manager_fmu_path)
 
 # =========================
 # Set Initial Values
 # =========================
 # Set Points Manager
-set_points_manager_params = {
+mission_manager_params = {
     "ra": 300,
     "max_inter_wp": 3,
     "wp_start_north": 0.0,
@@ -59,24 +59,24 @@ set_points_manager_params = {
     "wp_end_east": 10000.0,
     "wp_end_speed": 9.0,
 }
-instance.SetInitialValues(slaveName="SET_POINTS_MANAGER", 
-                         params=set_points_manager_params)
+instance.SetInitialValues(slaveName="MISSION_MANAGER", 
+                         params=mission_manager_params)
 
 # =========================
 # Setup Observer – Outputs
 # =========================
-instance.AddObserverTimeSeriesWithLabel(name="prev_wp_north", slaveName="SET_POINTS_MANAGER", variable="prev_wp_north", var_label="Waypoint [-]")
-instance.AddObserverTimeSeriesWithLabel(name="prev_wp_east", slaveName="SET_POINTS_MANAGER", variable="prev_wp_east", var_label="Waypoint [-]")
-instance.AddObserverTimeSeriesWithLabel(name="prev_wp_speed", slaveName="SET_POINTS_MANAGER", variable="prev_wp_speed", var_label="Speed [m/s]")
-instance.AddObserverTimeSeriesWithLabel(name="next_wp_north", slaveName="SET_POINTS_MANAGER", variable="next_wp_north", var_label="Waypoint [-]")
-instance.AddObserverTimeSeriesWithLabel(name="next_wp_east", slaveName="SET_POINTS_MANAGER", variable="next_wp_east", var_label="Waypoint [-]")
-instance.AddObserverTimeSeriesWithLabel(name="next_wp_speed", slaveName="SET_POINTS_MANAGER", variable="next_wp_speed", var_label="Speed [m/s]")
+instance.AddObserverTimeSeriesWithLabel(name="prev_wp_north", slaveName="MISSION_MANAGER", variable="prev_wp_north", var_label="Waypoint [-]")
+instance.AddObserverTimeSeriesWithLabel(name="prev_wp_east", slaveName="MISSION_MANAGER", variable="prev_wp_east", var_label="Waypoint [-]")
+instance.AddObserverTimeSeriesWithLabel(name="prev_wp_speed", slaveName="MISSION_MANAGER", variable="prev_wp_speed", var_label="Speed [m/s]")
+instance.AddObserverTimeSeriesWithLabel(name="next_wp_north", slaveName="MISSION_MANAGER", variable="next_wp_north", var_label="Waypoint [-]")
+instance.AddObserverTimeSeriesWithLabel(name="next_wp_east", slaveName="MISSION_MANAGER", variable="next_wp_east", var_label="Waypoint [-]")
+instance.AddObserverTimeSeriesWithLabel(name="next_wp_speed", slaveName="MISSION_MANAGER", variable="next_wp_speed", var_label="Speed [m/s]")
 
 # # =========================
 # # Input Metadata
 # # =========================
-# spm_index       = instance.slaves_index["SET_POINTS_MANAGER"]
-# spm_variables   = instance.slaves_variables["SET_POINTS_MANAGER"]
+# spm_index       = instance.slaves_index["MISSION_MANAGER"]
+# spm_variables   = instance.slaves_variables["MISSION_MANAGER"]
 # north_vr        = GetVariableIndex(spm_variables, 'north')
 # east_vr         = GetVariableIndex(spm_variables, 'east')
 
@@ -92,8 +92,8 @@ for step in range(len(north_list)):
     north = north_list[step]
     east  = east_list[step]
     
-    instance.SingleVariableManipulation(slaveName="SET_POINTS_MANAGER", slaveVar="north", value=north)
-    instance.SingleVariableManipulation(slaveName="SET_POINTS_MANAGER", slaveVar="east", value=east)
+    instance.SingleVariableManipulation(slaveName="MISSION_MANAGER", slaveVar="north", value=north)
+    instance.SingleVariableManipulation(slaveName="MISSION_MANAGER", slaveVar="east", value=east)
     # instance.manipulator.slave_real_values(spm_index, [north_vr], [north])
     # instance.manipulator.slave_real_values(spm_index, [east_vr], [east])
     
