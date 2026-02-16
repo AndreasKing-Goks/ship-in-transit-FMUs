@@ -74,7 +74,7 @@ class ShipModel(Fmi2Slave):
         self.sideways_speed                                 = 0.0
         self.yaw_rate                                       = 0.0
         
-        self.measured_ship_speed                            = 0.0
+        self.total_ship_speed                               = 0.0
         
         self.d_north                                        = 0.0
         self.d_east                                         = 0.0
@@ -145,7 +145,7 @@ class ShipModel(Fmi2Slave):
         self.register_variable(Real("sideways_speed", causality=Fmi2Causality.output))
         self.register_variable(Real("yaw_rate", causality=Fmi2Causality.output))
         
-        self.register_variable(Real("measured_ship_speed", causality=Fmi2Causality.output))
+        self.register_variable(Real("total_ship_speed", causality=Fmi2Causality.output))
         
         self.register_variable(Real("d_north", causality=Fmi2Causality.output))
         self.register_variable(Real("d_east", causality=Fmi2Causality.output))
@@ -303,7 +303,7 @@ class ShipModel(Fmi2Slave):
         return np.array([tau_u, tau_v, tau_n])
 
         
-    def t0hree_dof_kinematics(self, yaw_angle_rad, forward_speed, sideways_speed, yaw_rate):
+    def three_dof_kinematics(self, yaw_angle_rad, forward_speed, sideways_speed, yaw_rate):
         ''' Updates the time differientials of the north position, east
             position and yaw angle. Should be called in the simulation
             loop before the integration step.
@@ -425,7 +425,7 @@ class ShipModel(Fmi2Slave):
             self.yaw_rate                       = yaw_rate       + step_size * d_yaw_rate
             
             # Get the measured speed
-            self.measured_ship_speed            = np.sqrt(self.forward_speed ** 2 + self.sideways_speed ** 2)
+            self.total_ship_speed               = np.sqrt(self.forward_speed ** 2 + self.sideways_speed ** 2)
             
             # Re-assigns the final states to the previous states
             self.initial_north_position_m       = self.north
@@ -444,6 +444,6 @@ class ShipModel(Fmi2Slave):
             self.d_north = self.d_east = self.d_yaw_angle_rad = 0.0
             self.d_forward_speed = self.d_sideways_speed = self.d_yaw_rate = 0.0
             # keep measured speed consistent with current outputs
-            self.measured_ship_speed = float(np.hypot(self.forward_speed, self.sideways_speed)) if np.isfinite(self.forward_speed) else 0.0
+            self.total_ship_speed = float(np.hypot(self.forward_speed, self.sideways_speed)) if np.isfinite(self.forward_speed) else 0.0
         
         return True

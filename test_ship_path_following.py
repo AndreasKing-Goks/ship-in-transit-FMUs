@@ -339,8 +339,6 @@ instance.AddObserverTimeSeriesWithLabel(name="prev_wp_speed", slaveName="MISSION
 instance.AddObserverTimeSeriesWithLabel(name="next_wp_north", slaveName="MISSION_MANAGER", variable="next_wp_north", var_label="Waypoint [-]")
 instance.AddObserverTimeSeriesWithLabel(name="next_wp_east", slaveName="MISSION_MANAGER", variable="next_wp_east", var_label="Waypoint [-]")
 instance.AddObserverTimeSeriesWithLabel(name="next_wp_speed", slaveName="MISSION_MANAGER", variable="next_wp_speed", var_label="Speed [m/s]")
-instance.AddObserverTimeSeriesWithLabel(name="last_wp_active", slaveName="MISSION_MANAGER", variable="last_wp_active", var_label="Binary Condition [1/0]")
-instance.AddObserverTimeSeriesWithLabel(name="reach_wp_end", slaveName="MISSION_MANAGER", variable="reach_wp_end", var_label="Binary Condition [1/0]")
 
 # Autopilot
 instance.AddObserverTimeSeriesWithLabel(name="yaw_angle_ref_rad", slaveName="AUTOPILOT", variable="yaw_angle_ref_rad", var_label="Angle [rad]")
@@ -349,14 +347,6 @@ instance.AddObserverTimeSeriesWithLabel(name="cross_track_error", slaveName="AUT
 
 # Shaft Speed Controller
 instance.AddObserverTimeSeriesWithLabel(name="shaft_speed_cmd_rpm", slaveName="SHAFT_SPEED_CONTROLLER", variable="shaft_speed_cmd_rpm", var_label="Shaft Speed [rpm]")
-# -debug
-instance.AddObserverTimeSeriesWithLabel(name="rpm_cmd_pi", slaveName="SHAFT_SPEED_CONTROLLER", variable="rpm_cmd_pi", var_label="Shaft Speed [rpm]")
-instance.AddObserverTimeSeriesWithLabel(name="rpm_cmd_ff", slaveName="SHAFT_SPEED_CONTROLLER", variable="rpm_cmd_ff", var_label="Shaft Speed [rpm]")
-instance.AddObserverTimeSeriesWithLabel(name="error_i", slaveName="SHAFT_SPEED_CONTROLLER", variable="error_i", var_label="error")
-instance.AddObserverTimeSeriesWithLabel(name="error", slaveName="SHAFT_SPEED_CONTROLLER", variable="error", var_label="error")
-instance.AddObserverTimeSeriesWithLabel(name="des_speed", slaveName="SHAFT_SPEED_CONTROLLER", variable="des_speed", var_label="Speed [m/s]")
-instance.AddObserverTimeSeriesWithLabel(name="mea_speed", slaveName="SHAFT_SPEED_CONTROLLER", variable="mea_speed", var_label="Speed [m/s]")
-
 
 # Throttle Controller
 instance.AddObserverTimeSeriesWithLabel(name="throttle_cmd", slaveName="THROTTLE_CONTROLLER", variable="throttle_cmd", var_label="Throttle [-]")
@@ -392,7 +382,7 @@ instance.AddObserverTimeSeriesWithLabel(name="yaw_angle_rad", slaveName="SHIP_MO
 instance.AddObserverTimeSeriesWithLabel(name="forward_speed", slaveName="SHIP_MODEL", variable="forward_speed", var_label="Speed [m/s]")
 instance.AddObserverTimeSeriesWithLabel(name="sideways_speed", slaveName="SHIP_MODEL", variable="sideways_speed", var_label="Speed [m/s]")
 instance.AddObserverTimeSeriesWithLabel(name="yaw_rate", slaveName="SHIP_MODEL", variable="yaw_rate", var_label="Angular Speed [rad/s]")
-instance.AddObserverTimeSeriesWithLabel(name="measured_ship_speed", slaveName="SHIP_MODEL", variable="measured_ship_speed", var_label="Speed [m/s]")
+instance.AddObserverTimeSeriesWithLabel(name="total_ship_speed", slaveName="SHIP_MODEL", variable="total_ship_speed", var_label="Speed [m/s]")
 instance.AddObserverTimeSeriesWithLabel(name="d_north", slaveName="SHIP_MODEL", variable="d_north", var_label="Speed [m/s]")
 instance.AddObserverTimeSeriesWithLabel(name="d_east", slaveName="SHIP_MODEL", variable="d_east", var_label="Speed [m/s]")
 instance.AddObserverTimeSeriesWithLabel(name="d_yaw_angle_rad", slaveName="SHIP_MODEL", variable="d_yaw_angle_rad", var_label="Angular Speed [rad/s]")
@@ -429,7 +419,7 @@ instance.AddSlaveConnection(slaveInputName="AUTOPILOT", slaveInputVar="next_wp_e
 instance.AddSlaveConnection(slaveInputName="SHAFT_SPEED_CONTROLLER", slaveInputVar="desired_ship_speed", 
                             slaveOutputName="MISSION_MANAGER", slaveOutputVar="next_wp_speed")
 instance.AddSlaveConnection(slaveInputName="SHAFT_SPEED_CONTROLLER", slaveInputVar="measured_ship_speed", 
-                            slaveOutputName="SHIP_MODEL", slaveOutputVar="measured_ship_speed")
+                            slaveOutputName="SHIP_MODEL", slaveOutputVar="forward_speed")
 
 # Input to Throttle Controller
 instance.AddSlaveConnection(slaveInputName="THROTTLE_CONTROLLER", slaveInputVar="desired_shaft_speed_rpm", 
@@ -469,7 +459,7 @@ instance.Simulate()
 instance.PlotShipTrajectory(show=False)
 
 key_group_list = [
-    ["measured_ship_speed", "next_wp_speed"],
+    ["forward_speed", "next_wp_speed", "total_ship_speed"],
     ["yaw_angle_rad", "yaw_angle_ref_rad"],
     ["rudder_angle_deg"],
     ["cross_track_error"],
