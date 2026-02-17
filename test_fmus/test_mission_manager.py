@@ -8,7 +8,7 @@ os.add_dll_directory(str(dll_dir))
 
 ## PATH HELPER (OBLIGATORY)
 # project root = two levels up from this file
-ROOT = Path(__file__).resolve().parents[0]
+ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 import matplotlib.pyplot as plt
@@ -17,7 +17,7 @@ from libcosimpy.CosimSlave import CosimLocalSlave
 from libcosimpy.CosimManipulator import CosimManipulator
 from libcosimpy.CosimObserver import CosimObserver
 from libcosimpy.CosimEnums import CosimVariableType
-from utils import *
+from old_function.utils import *
 
 # =========================
 # Instantiate CoSimInstance

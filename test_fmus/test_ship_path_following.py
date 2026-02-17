@@ -8,7 +8,7 @@ os.add_dll_directory(str(dll_dir))
 
 ## PATH HELPER (OBLIGATORY)
 # project root = two levels up from this file
-ROOT = Path(__file__).resolve().parents[0]
+ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 import matplotlib.pyplot as plt
@@ -18,8 +18,8 @@ from libcosimpy.CosimSlave import CosimLocalSlave
 from libcosimpy.CosimManipulator import CosimManipulator
 from libcosimpy.CosimObserver import CosimObserver
 from libcosimpy.CosimEnums import CosimVariableType
-from utils import *
-from main import ShipInTransitCoSimulation
+from old_function.utils import *
+from old_function.main import ShipInTransitCoSimulation
 
 # =========================
 # Configurations
@@ -65,33 +65,6 @@ if len(iw_north_routes) != 0 and len(iw_east_routes) != 0 and len(iw_speed) != 0
         mission_manager_params[f"wp_{i}_north"] = wp_north
         mission_manager_params[f"wp_{i}_east"]  = wp_east
         mission_manager_params[f"wp_{i}_speed"] = wp_speed
-
-# # Set Points Manager
-# start_north_route   = 0.0
-# iw_north_routes     = []
-# end_north_route     = 10000.0
-# north_routes        = [start_north_route] + iw_north_routes + [end_north_route]
-
-# start_east_route    = 0.0
-# iw_east_routes      = []
-# end_east_route      = 10000.0
-# east_routes         = [start_east_route] + iw_east_routes + [end_east_route]
-
-# start_speed         = 5.0
-# iw_speed            = []
-# end_speed           = 5.0
-# speed_set_point     = [start_speed] + iw_speed + [end_speed]
-
-# mission_manager_params = {
-#     "ra": 300,
-#     "max_inter_wp": 3,
-#     "wp_start_north": start_north_route,
-#     "wp_start_east": start_east_route,
-#     "wp_start_speed": start_speed,
-#     "wp_end_north": end_north_route,
-#     "wp_end_east": end_east_route,
-#     "wp_end_speed": end_speed,
-# }
     
 # Autopilot
 autopilot_params = {
@@ -345,7 +318,7 @@ instance.AddObserverTimeSeriesWithLabel(name="yaw_angle_ref_rad", slaveName="AUT
 instance.AddObserverTimeSeriesWithLabel(name="rudder_angle_deg", slaveName="AUTOPILOT", variable="rudder_angle_deg", var_label="Angle [deg]")
 instance.AddObserverTimeSeriesWithLabel(name="cross_track_error", slaveName="AUTOPILOT", variable="e_ct", var_label="Error [m]")
 
-# Shaft Speed Controller
+# Shaft Speed Controller  
 instance.AddObserverTimeSeriesWithLabel(name="shaft_speed_cmd_rpm", slaveName="SHAFT_SPEED_CONTROLLER", variable="shaft_speed_cmd_rpm", var_label="Shaft Speed [rpm]")
 
 # Throttle Controller

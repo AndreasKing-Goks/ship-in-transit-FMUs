@@ -8,7 +8,7 @@ os.add_dll_directory(str(dll_dir))
 
 ## PATH HELPER (OBLIGATORY)
 # project root = two levels up from this file
-ROOT = Path(__file__).resolve().parents[0]
+ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 import matplotlib.pyplot as plt
@@ -19,7 +19,7 @@ from libcosimpy.CosimSlave import CosimLocalSlave
 from libcosimpy.CosimManipulator import CosimManipulator
 from libcosimpy.CosimObserver import CosimObserver
 from libcosimpy.CosimEnums import CosimVariableType
-from utils import GetVariableInfo, GetVariableIndex
+from old_function.utils import GetVariableInfo, GetVariableIndex
 
 
 def plot_real_ts(observer, slave_index, vr, label, sample_count=200000):

@@ -8,7 +8,7 @@ os.add_dll_directory(str(dll_dir))
 
 ## PATH HELPER (OBLIGATORY)
 # project root = two levels up from this file
-ROOT = Path(__file__).resolve().parents[0]
+ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 import matplotlib.pyplot as plt
@@ -17,12 +17,12 @@ from libcosimpy.CosimSlave import CosimLocalSlave
 from libcosimpy.CosimManipulator import CosimManipulator
 from libcosimpy.CosimObserver import CosimObserver
 from libcosimpy.CosimEnums import CosimVariableType
-from utils import *
+from old_function.utils import *
 
 # =========================
 # Instantiate CoSimInstance
 # =========================
-stopTime = 100 # Number of steps in nano seconds (int)
+stopTime = 2000 # Number of steps in nano seconds (int)
 stepSize = 0.01 # Number of nano seconds (int)
 
 name        = "Ship Path-Following Test"
@@ -40,6 +40,11 @@ instance.AddSlave(name="THROTTLE_CONTROLLER",
 machinery_system_fmu_path = str(ROOT / "FMUs" / "MachinerySystem.fmu")
 instance.AddSlave(name="MACHINERY_SYSTEM", 
                   path=machinery_system_fmu_path)
+
+# ShipModel.fmu
+ship_model_fmu_path = str(ROOT / "FMUs" / "ShipModel.fmu")
+instance.AddSlave(name="SHIP_MODEL", 
+                  path=ship_model_fmu_path)
 
 # =========================
 # Set Initial Values
@@ -79,6 +84,40 @@ machinery_system_params = {
 instance.SetInitialValues(slaveName="MACHINERY_SYSTEM", 
                          params=machinery_system_params)
 
+# # Ship Model
+ship_model_params = {
+    "dead_weight_tonnage": 3850000,
+    "coefficient_of_deadweight_to_displacement": 0.7,
+    "bunkers": 200000,
+    "ballast": 200000,
+    "length_of_ship": 80,
+    "width_of_ship": 16,
+    "added_mass_coefficient_in_surge": 0.4,
+    "added_mass_coefficient_in_sway": 0.4,
+    "added_mass_coefficient_in_yaw": 0.4,
+    "mass_over_linear_friction_coefficient_in_surge": 130,
+    "mass_over_linear_friction_coefficient_in_sway": 18,
+    "mass_over_linear_friction_coefficient_in_yaw": 90,
+    "nonlinear_friction_coefficient_in_surge": 2400,
+    "nonlinear_friction_coefficient_in_sway": 4000,
+    "nonlinear_friction_coefficient_in_yaw": 400,
+    "rho_seawater": 1025,
+    "rho_air": 1.2,
+    "front_above_water_height": 8,
+    "side_above_water_height": 8,
+    "cx": 0.5,
+    "cy": 0.7,
+    "cn": 0.08,
+    "initial_north_position_m": 0.0,
+    "initial_east_position_m": 0.0,
+    "initial_yaw_angle_rad": 0.0,
+    "initial_forward_speed_m_per_s": 0.0,
+    "initial_sideways_speed_m_per_s": 0.0,
+    "initial_yaw_rate_rad_per_s": 0.0 
+}
+instance.SetInitialValues(slaveName="SHIP_MODEL", 
+                         params=ship_model_params)
+
 # =========================
 # Setup Observer – Outputs
 # =========================
@@ -105,32 +144,38 @@ instance.AddObserverTimeSeriesWithLabel(name="fuel_consumption", slaveName="MACH
 instance.AddObserverTimeSeriesWithLabel(name="motor_torque", slaveName="MACHINERY_SYSTEM", variable="motor_torque", var_label="Torque [Nm]")
 instance.AddObserverTimeSeriesWithLabel(name="hybrid_shaft_generator_torque", slaveName="MACHINERY_SYSTEM", variable="hybrid_shaft_generator_torque", var_label="Torque [Nm]")
 
+# Ship Model
+instance.AddObserverTimeSeriesWithLabel(name="total_ship_speed", slaveName="SHIP_MODEL", variable="total_ship_speed", var_label="Speed [m/s]")
+
 # =========================
 # Simulate
 # =========================
 while instance.time < instance.stopTime:
      # Get values
-    desired_shaft_speed_rpm = 200
+    desired_shaft_speed_rpm = 450
     
-    if instance.time > instance.stopTime/4:
-        desired_shaft_speed_rpm = 300
+    # if instance.time > instance.stopTime/4:
+    #     desired_shaft_speed_rpm = 300
     
-    if instance.time > instance.stopTime/2:
-        desired_shaft_speed_rpm = 550
-        # instance.SingleVariableManipulation(slaveName="MACHINERY_SYSTEM", slaveVar="mso_mode", value=0)
+    # if instance.time > instance.stopTime/2:
+    #     desired_shaft_speed_rpm = 550
+    #     # instance.SingleVariableManipulation(slaveName="MACHINERY_SYSTEM", slaveVar="mso_mode", value=0)
     
-    if instance.time > instance.stopTime*3/4:
-        desired_shaft_speed_rpm = 400
+    # if instance.time > instance.stopTime*3/4:
+    #     desired_shaft_speed_rpm = 400
         # instance.SingleVariableManipulation(slaveName="MACHINERY_SYSTEM", slaveVar="mso_mode", value=1)
     
     # Get values
     measured_shaft_speed_rpm    = instance.GetLastValue(slaveName="MACHINERY_SYSTEM", slaveVar="shaft_speed_rpm")
     throttle_cmd                = instance.GetLastValue(slaveName="THROTTLE_CONTROLLER", slaveVar="throttle_cmd")
+    thrust_force                = instance.GetLastValue(slaveName="MACHINERY_SYSTEM", slaveVar="thrust_force")
     
     # Set values
     instance.SingleVariableManipulation(slaveName="THROTTLE_CONTROLLER", slaveVar="desired_shaft_speed_rpm", value=desired_shaft_speed_rpm)
     instance.SingleVariableManipulation(slaveName="THROTTLE_CONTROLLER", slaveVar="measured_shaft_speed_rpm", value=measured_shaft_speed_rpm)
     instance.SingleVariableManipulation(slaveName="MACHINERY_SYSTEM", slaveVar="load_perc", value=throttle_cmd)
+    instance.SingleVariableManipulation(slaveName="SHIP_MODEL", slaveVar="thrust_force", value=thrust_force)
+    
     
     # Step
     instance.execution.step()
@@ -148,6 +193,7 @@ key_group_list = [["throttle_cmd"],
                   ["power", "propulsion_power"],
                   ["fuel_rate_me", "fuel_rate_hsg", "fuel_rate"],
                   ["fuel_consumption_me", "fuel_consumption_hsg", "fuel_consumption"],
-                  ["motor_torque", "hybrid_shaft_generator_torque"]]
+                  ["motor_torque", "hybrid_shaft_generator_torque"],
+                  ["total_ship_speed"]]
 
 instance.JoinPlotTimeSeries(key_group_list,  create_title= False, legend= True, show_instance_name=False)
