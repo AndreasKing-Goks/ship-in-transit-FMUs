@@ -28,9 +28,9 @@ MANIFEST
 trained_model/
 0_*/
 
-misc/
-sub_systems/
-trial/
+/misc/
+/sub_systems/
+/trial/
 
 
 # PyInstaller
