@@ -52,10 +52,10 @@ instance = ShipInTransitCoSimulation(instanceName=instanceName, stopTime=stopTim
 # Be sure to add target ship first, then add own ship to properly setup the Colav system
 
 # # Add target ship(s). NOTE: Target ship starts from entry 2 onwards
-ts_params = []
 for ts_config in ships_config[1:]:
     ts_param = compile_ship_params(ts_config)
-    ts_params.append(ts_param)
     
 # Add own ship. NOTE: Own ship always in located in the first entry
 os_param = compile_ship_params(ships_config[0])
+
+print(ships_config[0]['SHIP_CONNECTIONS'])
