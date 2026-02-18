@@ -59,12 +59,12 @@ ships:
       - [SHIP_MODEL, rudder_force_r, RUDDER,           rudder_force_r]
 
       # Collision Avoidance (Only Internal Ports)
-      - [COLAV, own_north,          SHIP_MODEL,       north]
-      - [COLAV, own_east,           SHIP_MODEL,       east]
-      - [COLAV, own_yaw_angle,      SHIP_MODEL,       yaw_angle_rad]
-      - [COLAV, own_measured_speed, SHIP_MODEL,       total_ship_speed]
-      - [COLAV, throttle_cmd,       MACHINERY_SYSTEM, throttle_cmd]
-      - [COLAV, rudder_angle_deg,   AUTOPILOT,        rudder_angle_deg]
+      - [COLAV, own_north,          SHIP_MODEL,           north]
+      - [COLAV, own_east,           SHIP_MODEL,           east]
+      - [COLAV, own_yaw_angle,      SHIP_MODEL,           yaw_angle_rad]
+      - [COLAV, own_measured_speed, SHIP_MODEL,           total_ship_speed]
+      - [COLAV, throttle_cmd,       THROTTLE_CONTROLLER,  throttle_cmd]
+      - [COLAV, rudder_angle_deg,   AUTOPILOT,            rudder_angle_deg]
 
     SHIP_OBSERVERS:
       - [MISSION_MANAGER, prev_wp_north, "Waypoint [m]"]
@@ -118,94 +118,95 @@ ships:
       - [SHIP_MODEL, d_sideways_speed, "Acceleration [m/s2]"]
       - [SHIP_MODEL, d_yaw_rate, "Angular Acc. [rad/s2]"]
 
-    mission_manager:
-      ra: 300
-      max_inter_wp: 4
+    fmu_params:
+      mission_manager:
+        ra: 300
+        max_inter_wp: 4
 
-    autopilot:
-      r: 1000
-      ki_ct: 0.002
-      integrator_limit: 5000
-      kp: 1.5
-      ki: 0.0001
-      kd: 75
-      max_rudder_rate_deg_per_sec: 2.3
-      max_rudder_angle_deg: 30
+      autopilot:
+        r: 1000
+        ki_ct: 0.002
+        integrator_limit: 5000
+        kp: 1.5
+        ki: 0.0001
+        kd: 75
+        max_rudder_rate_deg_per_sec: 2.3
+        max_rudder_angle_deg: 30
 
-    shaft_speed_controller:
-      kp: 100
-      ki: 15
-      rated_speed_main_engine_rpm: 1000
-      gear_ratio_between_main_engine_and_propeller: 0.6
-      idle_rpm_fraction: 0.1
+      shaft_speed_controller:
+        kp: 100
+        ki: 15
+        rated_speed_main_engine_rpm: 1000
+        gear_ratio_between_main_engine_and_propeller: 0.6
+        idle_rpm_fraction: 0.1
 
-    throttle_controller:
-      kp: 0.005
-      ki: 0.00005
+      throttle_controller:
+        kp: 0.005
+        ki: 0.00005
 
-    machinery_system:
-      hotel_load: 200000
-      rated_speed_main_engine_rpm: 1000
-      linear_friction_main_engine: 68
-      linear_friction_hybrid_shaft_generator: 57
-      gear_ratio_between_main_engine_and_propeller: 0.6
-      gear_ratio_between_hybrid_shaft_generator_and_propeller: 0.6
-      propeller_inertia: 6000
-      propeller_speed_to_torque_coefficient: 7.5
-      propeller_diameter: 3.1
-      propeller_speed_to_thrust_force_coefficient: 1.7
-      specific_fuel_consumption_coefficients_me_a_coeff: 128.89
-      specific_fuel_consumption_coefficients_me_b_coeff: -168.93
-      specific_fuel_consumption_coefficients_me_c_coeff: 246.76
-      specific_fuel_consumption_coefficients_dg_a_coeff: 180.71
-      specific_fuel_consumption_coefficients_dg_b_coeff: -289.90
-      specific_fuel_consumption_coefficients_dg_c_coeff: 324.90
-      omega: 0.0
-      d_omega: 0.0
-      main_engine_capacity_spec: 2.16e6
-      diesel_gen_capacity_spec: 5.1e5
-      mso_mode: 0
+      machinery_system:
+        hotel_load: 200000
+        rated_speed_main_engine_rpm: 1000
+        linear_friction_main_engine: 68
+        linear_friction_hybrid_shaft_generator: 57
+        gear_ratio_between_main_engine_and_propeller: 0.6
+        gear_ratio_between_hybrid_shaft_generator_and_propeller: 0.6
+        propeller_inertia: 6000
+        propeller_speed_to_torque_coefficient: 7.5
+        propeller_diameter: 3.1
+        propeller_speed_to_thrust_force_coefficient: 1.7
+        specific_fuel_consumption_coefficients_me_a_coeff: 128.89
+        specific_fuel_consumption_coefficients_me_b_coeff: -168.93
+        specific_fuel_consumption_coefficients_me_c_coeff: 246.76
+        specific_fuel_consumption_coefficients_dg_a_coeff: 180.71
+        specific_fuel_consumption_coefficients_dg_b_coeff: -289.90
+        specific_fuel_consumption_coefficients_dg_c_coeff: 324.90
+        omega: 0.0
+        d_omega: 0.0
+        main_engine_capacity_spec: 2160000.0
+        diesel_gen_capacity_spec: 510000.0
+        mso_mode: 0
 
-    rudder:
-      rudder_angle_to_sway_force_coefficient: 50000
-      rudder_angle_to_yaw_force_coefficient: 500000
-      max_rudder_angle_negative_deg: -30
-      max_rudder_angle_positive_deg: 30
+      rudder:
+        rudder_angle_to_sway_force_coefficient: 50000
+        rudder_angle_to_yaw_force_coefficient: 500000
+        max_rudder_angle_negative_deg: -30
+        max_rudder_angle_positive_deg: 30
 
-    collision_avoidance:
-      throttle_scale_factor: 0.5
-      rud_ang_increment_deg: 15.0
-      danger_zone_radius: 926.0
-      collision_zone_radius: 100.0
-      max_target_ship_count: 1
-      hold.time: 600.0
+      collision_avoidance:
+        throttle_scale_factor: 0.5
+        rud_ang_increment_deg: 15.0
+        danger_zone_radius: 926.0
+        collision_zone_radius: 100.0
+        max_target_ship_count: 1
+        hold_time: 600.0
 
-    ship_model_base:
-      dead_weight_tonnage: 3850000
-      coefficient_of_deadweight_to_displacement: 0.7
-      bunkers: 200000
-      ballast: 200000
-      length_of_ship: 80
-      width_of_ship: 16
-      added_mass_coefficient_in_surge: 0.4
-      added_mass_coefficient_in_sway: 0.4
-      added_mass_coefficient_in_yaw: 0.4
-      mass_over_linear_friction_coefficient_in_surge: 130
-      mass_over_linear_friction_coefficient_in_sway: 18
-      mass_over_linear_friction_coefficient_in_yaw: 90
-      nonlinear_friction_coefficient_in_surge: 2400
-      nonlinear_friction_coefficient_in_sway: 4000
-      nonlinear_friction_coefficient_in_yaw: 400
-      rho_seawater: 1025
-      rho_air: 1.2
-      front_above_water_height: 8
-      side_above_water_height: 8
-      cx: 0.5
-      cy: 0.7
-      cn: 0.08
-      initial_forward_speed_m_per_s: 0.0
-      initial_sideways_speed_m_per_s: 0.0
-      initial_yaw_rate_rad_per_s: 0.0
+      ship_model_base:
+        dead_weight_tonnage: 3850000
+        coefficient_of_deadweight_to_displacement: 0.7
+        bunkers: 200000
+        ballast: 200000
+        length_of_ship: 80
+        width_of_ship: 16
+        added_mass_coefficient_in_surge: 0.4
+        added_mass_coefficient_in_sway: 0.4
+        added_mass_coefficient_in_yaw: 0.4
+        mass_over_linear_friction_coefficient_in_surge: 130
+        mass_over_linear_friction_coefficient_in_sway: 18
+        mass_over_linear_friction_coefficient_in_yaw: 90
+        nonlinear_friction_coefficient_in_surge: 2400
+        nonlinear_friction_coefficient_in_sway: 4000
+        nonlinear_friction_coefficient_in_yaw: 400
+        rho_seawater: 1025
+        rho_air: 1.2
+        front_above_water_height: 8
+        side_above_water_height: 8
+        cx: 0.5
+        cy: 0.7
+        cn: 0.08
+        initial_forward_speed_m_per_s: 0.0
+        initial_sideways_speed_m_per_s: 0.0
+        initial_yaw_rate_rad_per_s: 0.0
 
   ##########################################################
 
@@ -314,83 +315,84 @@ ships:
       - [SHIP_MODEL, d_sideways_speed, "Acceleration [m/s2]"]
       - [SHIP_MODEL, d_yaw_rate, "Angular Acc. [rad/s2]"]
 
-    mission_manager:
-      ra: 300
-      max_inter_wp: 4
+    fmu_params:
+      mission_manager:
+        ra: 300
+        max_inter_wp: 4
 
-    autopilot:
-      r: 1000
-      ki_ct: 0.002
-      integrator_limit: 5000
-      kp: 1.5
-      ki: 0.0001
-      kd: 75
-      max_rudder_rate_deg_per_sec: 2.3
-      max_rudder_angle_deg: 30
+      autopilot:
+        r: 1000
+        ki_ct: 0.002
+        integrator_limit: 5000
+        kp: 1.5
+        ki: 0.0001
+        kd: 75
+        max_rudder_rate_deg_per_sec: 2.3
+        max_rudder_angle_deg: 30
 
-    shaft_speed_controller:
-      kp: 100
-      ki: 15
-      rated_speed_main_engine_rpm: 1000
-      gear_ratio_between_main_engine_and_propeller: 0.6
-      idle_rpm_fraction: 0.1
+      shaft_speed_controller:
+        kp: 100
+        ki: 15
+        rated_speed_main_engine_rpm: 1000
+        gear_ratio_between_main_engine_and_propeller: 0.6
+        idle_rpm_fraction: 0.1
 
-    throttle_controller:
-      kp: 0.005
-      ki: 0.00005
+      throttle_controller:
+        kp: 0.005
+        ki: 0.00005
 
-    machinery_system:
-      hotel_load: 200000
-      rated_speed_main_engine_rpm: 1000
-      linear_friction_main_engine: 68
-      linear_friction_hybrid_shaft_generator: 57
-      gear_ratio_between_main_engine_and_propeller: 0.6
-      gear_ratio_between_hybrid_shaft_generator_and_propeller: 0.6
-      propeller_inertia: 6000
-      propeller_speed_to_torque_coefficient: 7.5
-      propeller_diameter: 3.1
-      propeller_speed_to_thrust_force_coefficient: 1.7
-      specific_fuel_consumption_coefficients_me_a_coeff: 128.89
-      specific_fuel_consumption_coefficients_me_b_coeff: -168.93
-      specific_fuel_consumption_coefficients_me_c_coeff: 246.76
-      specific_fuel_consumption_coefficients_dg_a_coeff: 180.71
-      specific_fuel_consumption_coefficients_dg_b_coeff: -289.90
-      specific_fuel_consumption_coefficients_dg_c_coeff: 324.90
-      omega: 0.0
-      d_omega: 0.0
-      main_engine_capacity_spec: 2.16e6
-      diesel_gen_capacity_spec: 5.1e5
-      mso_mode: 0
+      machinery_system:
+        hotel_load: 200000
+        rated_speed_main_engine_rpm: 1000
+        linear_friction_main_engine: 68
+        linear_friction_hybrid_shaft_generator: 57
+        gear_ratio_between_main_engine_and_propeller: 0.6
+        gear_ratio_between_hybrid_shaft_generator_and_propeller: 0.6
+        propeller_inertia: 6000
+        propeller_speed_to_torque_coefficient: 7.5
+        propeller_diameter: 3.1
+        propeller_speed_to_thrust_force_coefficient: 1.7
+        specific_fuel_consumption_coefficients_me_a_coeff: 128.89
+        specific_fuel_consumption_coefficients_me_b_coeff: -168.93
+        specific_fuel_consumption_coefficients_me_c_coeff: 246.76
+        specific_fuel_consumption_coefficients_dg_a_coeff: 180.71
+        specific_fuel_consumption_coefficients_dg_b_coeff: -289.90
+        specific_fuel_consumption_coefficients_dg_c_coeff: 324.90
+        omega: 0.0
+        d_omega: 0.0
+        main_engine_capacity_spec: 2160000.0
+        diesel_gen_capacity_spec: 510000.0
+        mso_mode: 0
 
-    rudder:
-      rudder_angle_to_sway_force_coefficient: 50000
-      rudder_angle_to_yaw_force_coefficient: 500000
-      max_rudder_angle_negative_deg: -30
-      max_rudder_angle_positive_deg: 30
+      rudder:
+        rudder_angle_to_sway_force_coefficient: 50000
+        rudder_angle_to_yaw_force_coefficient: 500000
+        max_rudder_angle_negative_deg: -30
+        max_rudder_angle_positive_deg: 30
 
-    ship_model_base:
-      dead_weight_tonnage: 3850000
-      coefficient_of_deadweight_to_displacement: 0.7
-      bunkers: 200000
-      ballast: 200000
-      length_of_ship: 80
-      width_of_ship: 16
-      added_mass_coefficient_in_surge: 0.4
-      added_mass_coefficient_in_sway: 0.4
-      added_mass_coefficient_in_yaw: 0.4
-      mass_over_linear_friction_coefficient_in_surge: 130
-      mass_over_linear_friction_coefficient_in_sway: 18
-      mass_over_linear_friction_coefficient_in_yaw: 90
-      nonlinear_friction_coefficient_in_surge: 2400
-      nonlinear_friction_coefficient_in_sway: 4000
-      nonlinear_friction_coefficient_in_yaw: 400
-      rho_seawater: 1025
-      rho_air: 1.2
-      front_above_water_height: 8
-      side_above_water_height: 8
-      cx: 0.5
-      cy: 0.7
-      cn: 0.08
-      initial_forward_speed_m_per_s: 0.0
-      initial_sideways_speed_m_per_s: 0.0
-      initial_yaw_rate_rad_per_s: 0.0
+      ship_model_base:
+        dead_weight_tonnage: 3850000
+        coefficient_of_deadweight_to_displacement: 0.7
+        bunkers: 200000
+        ballast: 200000
+        length_of_ship: 80
+        width_of_ship: 16
+        added_mass_coefficient_in_surge: 0.4
+        added_mass_coefficient_in_sway: 0.4
+        added_mass_coefficient_in_yaw: 0.4
+        mass_over_linear_friction_coefficient_in_surge: 130
+        mass_over_linear_friction_coefficient_in_sway: 18
+        mass_over_linear_friction_coefficient_in_yaw: 90
+        nonlinear_friction_coefficient_in_surge: 2400
+        nonlinear_friction_coefficient_in_sway: 4000
+        nonlinear_friction_coefficient_in_yaw: 400
+        rho_seawater: 1025
+        rho_air: 1.2
+        front_above_water_height: 8
+        side_above_water_height: 8
+        cx: 0.5
+        cy: 0.7
+        cn: 0.08
+        initial_forward_speed_m_per_s: 0.0
+        initial_sideways_speed_m_per_s: 0.0
+        initial_yaw_rate_rad_per_s: 0.0

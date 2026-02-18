@@ -16,7 +16,7 @@ from libcosimpy.CosimManipulator import CosimManipulator
 from libcosimpy.CosimObserver import CosimObserver
 from libcosimpy.CosimEnums import CosimVariableType
 
-from utils import ShipDraw
+from utils import ShipDraw, compile_ship_params
 
 
 def GetVariableIndex(variables, name):
@@ -418,48 +418,79 @@ class ShipInTransitCoSimulation(CoSimInstance):
     
     
     def add_ship(self,
-                 SHIP_BLOCKS,
-                 SHIP_CONNECTIONS,
-                 SHIP_OBSERVERS,
-                 ROOT               : Path, 
-                 prefix             : str, 
-                 params_by_block    : dict, 
-                 colav_fmu          : str   = "None"):
-        # Add slaves
-        for block, relpath in SHIP_BLOCKS:
-            self.AddSlave(
-                name=self.ship_slave(prefix, block),
-                path=str(ROOT / relpath)
-            )
+                 ship_configs,
+                 ROOT: Path ):
+        
+        for ship_config in ship_configs:
+            prefix              = ship_config.get("id")
+            role                = ship_config.get("role")
+            enable_colav        = ship_config.get("enable_colav")
+            SHIP_BLOCKS         = ship_config.get("SHIP_BLOCKS")
+            SHIP_CONNECTIONS    = ship_config.get("SHIP_CONNECTIONS")
+            SHIP_OBSERVERS      = ship_config.get("SHIP_OBSERVERS")
+            fmu_params          = compile_ship_params(ship_config)
+            
+            # Add slaves
+            for block, relpath in SHIP_BLOCKS:
+                self.AddSlave(
+                    name=self.ship_slave(prefix, block),
+                    path=str(ROOT / relpath)
+                )
 
-        # Optional: add COLAV FMU for own ship
-        if colav_fmu == "simple":
-            self.AddSlave(
-                name=self.ship_slave(prefix, "COLAV"),
-                path=str(ROOT / "FMUs" / "SimpleCollisionAvoidance.fmu")
-            )
+            # Set initial values
+            for block, p in fmu_params.items():
+                self.SetInitialValues(slaveName=self.ship_slave(prefix, block), params=p)
 
-        # Set initial values
-        for block, p in params_by_block.items():
-            self.SetInitialValues(slaveName=self.ship_slave(prefix, block), params=p)
+            # Add internal connections
+            for in_block, in_var, out_block, out_var in SHIP_CONNECTIONS:
+                self.AddSlaveConnection(
+                    slaveInputName=self.ship_slave(prefix, in_block),
+                    slaveInputVar=in_var,
+                    slaveOutputName=self.ship_slave(prefix, out_block),
+                    slaveOutputVar=out_var,
+                )
+            
+            # Add COLAV FMU for the ship that has it
+            if enable_colav:
+                # All other ships (exclude self)
+                targets = [sc for sc in ship_configs if sc.get("id") != prefix]
 
-        # Add internal connections
-        for in_block, in_var, out_block, out_var in SHIP_CONNECTIONS:
-            self.AddSlaveConnection(
-                slaveInputName=self.ship_slave(prefix, in_block),
-                slaveInputVar=in_var,
-                slaveOutputName=self.ship_slave(prefix, out_block),
-                slaveOutputVar=out_var,
-            )
+                for idx, tgt in enumerate(targets, start=1):
+                    tgt_prefix = tgt.get("id")
 
-        # Add observers (namespaced keys)
-        for block, var, label in SHIP_OBSERVERS:
-            self.AddObserverTimeSeriesWithLabel(
-                name=f"{prefix}.{var}",
-                slaveName=self.ship_slave(prefix, block),
-                variable=var,
-                var_label=label
-            )
+                    self.AddSlaveConnection(
+                        slaveInputName=self.ship_slave(prefix, "COLAV"),
+                        slaveInputVar=f"tar_{idx}_north",
+                        slaveOutputName=self.ship_slave(tgt_prefix, "SHIP_MODEL"),
+                        slaveOutputVar="north",
+                    )
+                    self.AddSlaveConnection(
+                        slaveInputName=self.ship_slave(prefix, "COLAV"),
+                        slaveInputVar=f"tar_{idx}_east",
+                        slaveOutputName=self.ship_slave(tgt_prefix, "SHIP_MODEL"),
+                        slaveOutputVar="east",
+                    )
+                    self.AddSlaveConnection(
+                        slaveInputName=self.ship_slave(prefix, "COLAV"),
+                        slaveInputVar=f"tar_{idx}_yaw_angle",
+                        slaveOutputName=self.ship_slave(tgt_prefix, "SHIP_MODEL"),
+                        slaveOutputVar="yaw_angle_rad",
+                    )
+                    self.AddSlaveConnection(
+                        slaveInputName=self.ship_slave(prefix, "COLAV"),
+                        slaveInputVar=f"tar_{idx}_measured_speed",
+                        slaveOutputName=self.ship_slave(tgt_prefix, "SHIP_MODEL"),
+                        slaveOutputVar="total_ship_speed",
+                    )
+
+            # Add observers (namespaced keys)
+            for block, var, label in SHIP_OBSERVERS:
+                self.AddObserverTimeSeriesWithLabel(
+                    name=f"{prefix}.{var}",
+                    slaveName=self.ship_slave(prefix, block),
+                    variable=var,
+                    var_label=label
+                )
 
         
     def PreSolverFunctionCall(self):
@@ -469,11 +500,11 @@ class ShipInTransitCoSimulation(CoSimInstance):
     def PostSolverFunctionCall(self):
         """
         Stop the simulator once the stop flag is received
-        """
-        pass        
+        """   
 
 
     def Simulate(self):
+        self.stop = False     
         while self.time < self.stopTime and (not self.stop):
             self.CoSimManipulate()
             self.SetInputFromExternal()
