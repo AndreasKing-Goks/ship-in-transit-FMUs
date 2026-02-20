@@ -53,8 +53,10 @@ class ShipDraw:
         return x_t, y_t
     
     
-def ship_snap_shot(north, east, yaw_angle):
-    draw = ShipDraw()
+def ship_snap_shot(north, 
+                   east, 
+                   yaw_angle,
+                   draw : ShipDraw):
     x, y = draw.local_coords()
     x_ned, y_ned = draw.rotate_coords(x, y, yaw_angle)
     x_ned_trans, y_ned_trans = draw.translate_coords(x_ned, y_ned, north, east)

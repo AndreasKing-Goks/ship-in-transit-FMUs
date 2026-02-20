@@ -16,7 +16,8 @@ from libcosimpy.CosimManipulator import CosimManipulator
 from libcosimpy.CosimObserver import CosimObserver
 from libcosimpy.CosimEnums import CosimVariableType
 
-from utils import ShipDraw, compile_ship_params
+from utils import ShipDraw, ship_snap_shot, compile_ship_params
+import time
 
 
 def GetVariableIndex(variables, name):
@@ -421,6 +422,9 @@ class ShipInTransitCoSimulation(CoSimInstance):
                  ship_configs,
                  ROOT: Path ):
         
+        # Store ship configs as the class attribute
+        self.ship_configs = ship_configs
+        
         for ship_config in ship_configs:
             prefix              = ship_config.get("id")
             role                = ship_config.get("role")
@@ -482,7 +486,8 @@ class ShipInTransitCoSimulation(CoSimInstance):
                         slaveOutputName=self.ship_slave(tgt_prefix, "SHIP_MODEL"),
                         slaveOutputVar="total_ship_speed",
                     )
-
+                    
+            
             # Add observers (namespaced keys)
             for block, var, label in SHIP_OBSERVERS:
                 self.AddObserverTimeSeriesWithLabel(
@@ -492,6 +497,12 @@ class ShipInTransitCoSimulation(CoSimInstance):
                     var_label=label
                 )
 
+            # Add ShipDraw class
+            draw_attr = f"{prefix}_draw"
+            setattr(self, 
+                    draw_attr, 
+                    ShipDraw(fmu_params["SHIP_MODEL"].get("length_of_ship"), fmu_params["SHIP_MODEL"].get("width_of_ship")))
+            
         
     def PreSolverFunctionCall(self):
         pass
@@ -500,15 +511,218 @@ class ShipInTransitCoSimulation(CoSimInstance):
     def PostSolverFunctionCall(self):
         """
         Stop the simulator once the stop flag is received
-        """   
-
+        """
+        # Get the reach end point and collision flag for all assets
+        rep_flags       = []
+        collision_flags = []
+        
+        for ship_config in self.ship_configs:
+            prefix = ship_config.get("id")
+            rep_flag  = self.GetLastValue(slaveName=self.ship_slave(prefix, "MISSION_MANAGER"), 
+                                         slaveVar="reach_wp_end")
+            rep_flags.append(rep_flag)
+            
+            if ship_config.get("enable_colav"):
+                colav_active = self.GetLastValue(slaveName=self.ship_slave(prefix, "COLAV"), 
+                                         slaveVar="colav_active")
+                collision_flag = self.GetLastValue(slaveName=self.ship_slave(prefix, "COLAV"), 
+                                         slaveVar="ship_collision")
+                # collision_flags.append(collision_flag)
+                collision_flags.append(False)
+        
+        all_ship_reaches_end_point = np.all(np.array(rep_flags))
+        any_ship_collides          = np.any(np.array(collision_flags))
+        
+        # print(rep_flags)
+        # print(collision_flags)
+        
+        # print("flag1:", all_ship_reaches_end_point)
+        # print("flag2:", any_ship_collides)
+        
+        # Conclude the stop flag
+        self.stop = all_ship_reaches_end_point or any_ship_collides
+        
+        # print("stop:", self.stop)
+        
 
     def Simulate(self):
-        self.stop = False     
-        while self.time < self.stopTime and (not self.stop):
+        """
+        Output simulation time
+        """
+        # Start timer
+        start_time = time.perf_counter()
+        
+        while self.time < self.stopTime: 
+            # Simulate
             self.CoSimManipulate()
             self.SetInputFromExternal()
             self.PreSolverFunctionCall()
             self.execution.step()
             self.PostSolverFunctionCall()
-            self.time +=self.stepSize
+            
+            # Integrate or stop the simulator
+            if not self.stop:
+                self.time +=self.stepSize
+            else:
+                break
+        
+        # Stop timer
+        end_time = time.perf_counter()
+        
+        # Compute elapsed time
+        elapsed_time = end_time -start_time
+        
+        print(f"Simulation took {elapsed_time:.6f} seconds.")
+        
+            
+    def _get_ship_timeseries(self, ship_id: str, var: str):
+        key = f"{ship_id}.{var}"
+        t, step, samples = self.GetObserverTimeSeries(key)
+        return np.asarray(t), np.asarray(step), np.asarray(samples)
+
+    
+    def PlotFleetTrajectory(
+        self,
+        ship_ids=None,          # None = plot all ships in self.ship_configs
+        show=True,
+        mode="quick",
+        block=True,
+        fig_width=10.0,
+        every_n=25,
+        margin_frac=0.08,
+        equal_aspect=True,
+        save_path=None,
+        plot_routes=True,
+        plot_waypoints=True,
+        plot_outlines=True,
+    ):
+        # Pick ships
+        if ship_ids is None:
+            ship_ids = [sc.get("id") for sc in self.ship_configs]
+        ship_ids = [sid for sid in ship_ids if sid is not None]
+
+        # Plot configurations (reuse yours)
+        if mode == "paper":
+            own_lw, route_lw, ship_lw = 2.4, 1.8, 2.0
+            title_fs, label_fs, tick_fs, legend_fs = 12, 11, 10, 9
+            grid_alpha, roa_alpha, dpi = 0.4, 0.25, 500
+        elif mode == "quick":
+            own_lw, route_lw, ship_lw = 1.2, 1.0, 1.6
+            title_fs, label_fs, tick_fs, legend_fs = 9, 8, 7, 7
+            grid_alpha, roa_alpha, dpi = 0.2, 0.15, 110
+        else:
+            raise ValueError("mode must be 'quick' or 'paper'")
+
+        every_n = max(1, int(every_n))
+
+        # Figure
+        fig, ax = plt.subplots(figsize=(fig_width, fig_width), dpi=dpi)
+
+        # simple palette (you can replace with your own, incl. colorblind-safe)
+        palette = ["#0c3c78", "#d90808", "#2a9d8f", "#f4a261", "#6a4c93", "#264653"]
+
+        # track global extents (route or traj)
+        all_x, all_y = [], []
+
+        # per-ship plotting
+        for k, sid in enumerate(ship_ids):
+            color = palette[k % len(palette)]
+
+            # --- time series ---
+            _, _, north = self._get_ship_timeseries(sid, "north")
+            _, _, east  = self._get_ship_timeseries(sid, "east")
+            _, _, yaw   = self._get_ship_timeseries(sid, "yaw_angle_rad")
+            
+            n = min(len(north), len(east), len(yaw))
+            north, east, yaw = north[1:n], east[1:n], yaw[1:n]
+
+            all_x.append(east)
+            all_y.append(north)
+            
+            # --- trajectory ---
+            ax.plot(east, north, lw=own_lw, color=color, label=f"{sid} trajectory")
+
+            # --- route per ship (from config) ---
+            if plot_routes:
+                print("Drawing routes ...")
+                cfg = next((sc for sc in self.ship_configs if sc.get("id") == sid), None)
+                if cfg and "route" in cfg:
+                    rN = cfg["route"].get("north", [])
+                    rE = cfg["route"].get("east", [])
+                    if len(rN) and len(rE):
+                        ax.plot(rE, rN, lw=route_lw, ls="--", color=color, alpha=0.7,
+                                label=f"{sid} route")
+                        if plot_waypoints:
+                            ax.scatter(rE, rN,
+                                    s=18 if mode == "quick" else 30,
+                                    marker="x", color=color)
+
+                            # RoA circles
+                            ra = cfg["fmu_params"].get("mission_manager", {}).get("ra", None)
+                            if ra is not None:
+                                print("Drawing RoA ...")
+                                for n_wp, e_wp in zip(rN[1:], rE[1:]):
+                                    circ = patches.Circle(
+                                        (e_wp, n_wp),
+                                        radius=ra,
+                                        fill=True,
+                                        color=color,
+                                        alpha=roa_alpha
+                                    )
+                                    ax.add_patch(circ)
+
+            # --- ship outlines ---
+            if plot_outlines:
+                print("Drawing ship outlines ...")
+                idx = np.arange(0, n, every_n)
+                draw_attr = f"{sid}_draw"
+                draw = getattr(self, draw_attr)
+                for i in idx[::6]:  # extra subsample for speed
+                    x, y = draw.local_coords()
+                    x_ned, y_ned = draw.rotate_coords(x, y, yaw[i])
+                    x_tr,  y_tr  = draw.translate_coords(x_ned, y_ned, north[i], east[i])
+                    ax.plot(y_tr, x_tr, lw=ship_lw, color=color, alpha=0.6)
+
+        # Zoom (global)
+        X = np.concatenate(all_x) if len(all_x) else np.array([0.0, 1.0])
+        Y = np.concatenate(all_y) if len(all_y) else np.array([0.0, 1.0])
+
+        x_min, x_max = float(np.min(X)), float(np.max(X))
+        y_min, y_max = float(np.min(Y)), float(np.max(Y))
+
+        dx = max(1e-9, x_max - x_min)
+        dy = max(1e-9, y_max - y_min)
+
+        ax.set_xlim(x_min - margin_frac * dx, x_max + margin_frac * dx)
+        ax.set_ylim(y_min - margin_frac * dy, y_max + margin_frac * dy)
+
+        # Styling
+        ax.set_title("Fleet trajectories", fontsize=title_fs, pad=4)
+        ax.set_xlabel("East position (m)", fontsize=label_fs)
+        ax.set_ylabel("North position (m)", fontsize=label_fs)
+
+        ax.tick_params(axis="both", which="major", labelsize=tick_fs, length=3)
+        ax.grid(True, which="major", linewidth=0.6, alpha=grid_alpha)
+
+        leg = ax.legend(fontsize=legend_fs, frameon=True, framealpha=0.75,
+                        borderpad=0.4, handlelength=2.2, loc="lower center")
+        leg.get_frame().set_linewidth(0.6)
+
+        ax.ticklabel_format(style='sci', axis='both', scilimits=(0,0))
+        ax.xaxis.get_offset_text().set_fontsize(tick_fs-1)
+        ax.yaxis.get_offset_text().set_fontsize(tick_fs-1)
+
+        if equal_aspect:
+            ax.set_aspect("equal", adjustable="box")
+
+        fig.tight_layout(pad=0.05)
+
+        if save_path:
+            fig.savefig(save_path, dpi=dpi, bbox_inches="tight")
+
+        if show:
+            print("Plot is finished!")
+            plt.show(block=block)
+
+        return fig, ax
+

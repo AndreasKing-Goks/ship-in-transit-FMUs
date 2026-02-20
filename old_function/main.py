@@ -1,8 +1,8 @@
 # MANDATORY TO LOCATE THE .dll FILES
 import os, sys
 from pathlib import Path
-from utils import CoSimInstance
-from utils_draw import ShipDraw
+from old_function.utils import CoSimInstance
+from old_function.utils_draw import ShipDraw
 
 dll_dir = Path(sys.prefix) / "Lib" / "site-packages" / "libcosimpy" / "libcosimc"
 os.add_dll_directory(str(dll_dir))
@@ -69,7 +69,7 @@ class ShipInTransitCoSimulation(CoSimInstance):
         """
         Stop the simulator once the stop flag is received
         """
-        # Get the flag
+        # Get the flag for all assets
         reach_wp_end    = self.GetLastValue(slaveName="MISSION_MANAGER", slaveVar="reach_wp_end")
         
         # If all ships reach the end point, stop the simulation

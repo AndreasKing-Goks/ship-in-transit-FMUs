@@ -175,7 +175,7 @@ ships:
 
       collision_avoidance:
         throttle_scale_factor: 0.5
-        rud_ang_increment_deg: 15.0
+        rud_ang_increment_deg: 2.3
         danger_zone_radius: 926.0
         collision_zone_radius: 100.0
         max_target_ship_count: 1

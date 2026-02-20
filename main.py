@@ -12,7 +12,6 @@ ROOT = Path(__file__).resolve().parents[0]
 sys.path.insert(0, str(ROOT))
 
 from sit_cosim import ShipInTransitCoSimulation
-from utils import compile_ship_params
 
 # =========================
 # Load the Configuration
@@ -51,3 +50,16 @@ instance.add_ship(ship_configs=ship_configs, ROOT=ROOT)
 # Simulate
 # =========================
 instance.Simulate()
+
+# print("north:", instance.GetObserverTimeSeries("OS0.north"))
+# print("east:", instance.GetObserverTimeSeries("OS0.east"))
+# print("yaw:", instance.GetObserverTimeSeries("OS0.yaw_angle_rad"))
+# print("#####")
+# print("north:", instance.GetObserverTimeSeries("TS1.north"))
+# print("east:", instance.GetObserverTimeSeries("TS1.east"))
+# print("yaw:", instance.GetObserverTimeSeries("TS1.yaw_angle_rad"))
+
+# # =========================
+# # Plot
+# # =========================
+instance.PlotFleetTrajectory()
