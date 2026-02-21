@@ -118,6 +118,14 @@ ships:
       - [SHIP_MODEL, d_sideways_speed, "Acceleration [m/s2]"]
       - [SHIP_MODEL, d_yaw_rate, "Angular Acc. [rad/s2]"]
 
+      - [COLAV, new_throttle_cmd, "Throttle [%]"]
+      - [COLAV, new_rudder_angle_deg, "Angle [deg]"]
+      - [COLAV, beta_own_to_tar_1, "Angle [rad]"]
+      - [COLAV, tcpa_own_to_tar_1, "Time [sec]"]
+      - [COLAV, dcpa_own_to_tar_1, "Distance [m]"]
+      - [COLAV, dist_own_to_tar_1, "Distance [m]"]
+      - [COLAV, rr_own_to_tar_1, "Range Rate [m/s]"]
+
     fmu_params:
       mission_manager:
         ra: 300

@@ -32,20 +32,11 @@ class SimpleCollisionAvoidance(Fmi2Slave):
         self.own_yaw_angle          = 0.0
         self.own_measured_speed     = 0.0
         
-        self.tar_1_north            = 0.0
-        self.tar_1_east             = 0.0
-        self.tar_1_yaw_angle        = 0.0
-        self.tar_1_measured_speed   = 0.0
-        
-        self.tar_2_north            = 0.0
-        self.tar_2_east             = 0.0
-        self.tar_2_yaw_angle        = 0.0
-        self.tar_2_measured_speed   = 0.0
-        
-        self.tar_3_north            = 0.0
-        self.tar_3_east             = 0.0
-        self.tar_3_yaw_angle        = 0.0
-        self.tar_3_measured_speed   = 0.0
+        for i in range(1,4):
+            setattr(self, f"tar_{i}_north", 0.0)
+            setattr(self, f"tar_{i}_east", 0.0)
+            setattr(self, f"tar_{i}_yaw_angle", 0.0)
+            setattr(self, f"tar_{i}_measured_speed", 0.0)
         
         self.throttle_cmd           = 0.0
         self.rudder_angle_deg       = 0.0
@@ -55,6 +46,13 @@ class SimpleCollisionAvoidance(Fmi2Slave):
         self.new_rudder_angle_deg   = 0.0
         self.colav_active           = False
         self.ship_collision         = False
+        
+        for i in range (1,4):
+            setattr(self, f"beta_own_to_tar_{i}", 0.0)
+            setattr(self, f"tcpa_own_to_tar_{i}", 0.0)
+            setattr(self, f"dcpa_own_to_tar_{i}", 0.0)
+            setattr(self, f"dist_own_to_tar_{i}", 0.0)
+            setattr(self, f"rr_own_to_tar_{i}", 0.0)
         
         # Internal Variable
         self.prioritize_one_target  = False
@@ -79,26 +77,24 @@ class SimpleCollisionAvoidance(Fmi2Slave):
         self.register_variable(Real("own_yaw_angle", causality=Fmi2Causality.input))
         self.register_variable(Real("own_measured_speed", causality=Fmi2Causality.input))
         
-        self.register_variable(Real("tar_1_north", causality=Fmi2Causality.input))
-        self.register_variable(Real("tar_1_east", causality=Fmi2Causality.input))
-        self.register_variable(Real("tar_1_yaw_angle", causality=Fmi2Causality.input))
-        self.register_variable(Real("tar_1_measured_speed", causality=Fmi2Causality.input))
-        
-        self.register_variable(Real("tar_2_north", causality=Fmi2Causality.input))
-        self.register_variable(Real("tar_2_east", causality=Fmi2Causality.input))
-        self.register_variable(Real("tar_2_yaw_angle", causality=Fmi2Causality.input))
-        self.register_variable(Real("tar_2_measured_speed", causality=Fmi2Causality.input))
-        
-        self.register_variable(Real("tar_3_north", causality=Fmi2Causality.input))
-        self.register_variable(Real("tar_3_east", causality=Fmi2Causality.input))
-        self.register_variable(Real("tar_3_yaw_angle", causality=Fmi2Causality.input))
-        self.register_variable(Real("tar_3_measured_speed", causality=Fmi2Causality.input))
+        for i in range(1,4):
+            self.register_variable(Real(f"tar_{i}_north", causality=Fmi2Causality.input))
+            self.register_variable(Real(f"tar_{i}_east", causality=Fmi2Causality.input))
+            self.register_variable(Real(f"tar_{i}_yaw_angle", causality=Fmi2Causality.input))
+            self.register_variable(Real(f"tar_{i}_measured_speed", causality=Fmi2Causality.input))    
         
         # Output
         self.register_variable(Real("new_throttle_cmd", causality=Fmi2Causality.output))
         self.register_variable(Real("new_rudder_angle_deg", causality=Fmi2Causality.output))
         self.register_variable(Boolean("colav_active", causality=Fmi2Causality.output))
         self.register_variable(Boolean("ship_collision", causality=Fmi2Causality.output))
+        
+        for i in range(1,4):
+            self.register_variable(Real(f"beta_own_to_tar_{i}", causality=Fmi2Causality.output))
+            self.register_variable(Real(f"tcpa_own_to_tar_{i}", causality=Fmi2Causality.output))
+            self.register_variable(Real(f"dcpa_own_to_tar_{i}", causality=Fmi2Causality.output))
+            self.register_variable(Real(f"dist_own_to_tar_{i}", causality=Fmi2Causality.output))
+            self.register_variable(Real(f"rr_own_to_tar_{i}", causality=Fmi2Causality.output))
         
     
     def _wrap_to_pi(self, a):
@@ -107,16 +103,34 @@ class SimpleCollisionAvoidance(Fmi2Slave):
     
     def do_step(self, current_time: float, step_size: float) -> bool:
         try:
+            # To take into account issue with all-zero initial value, 
+            # Turn off the COLAV during the very first time step
+            if current_time < step_size:
+                self.new_throttle_cmd       = 0.0 
+                self.new_rudder_angle_deg   = 0.0
+                self.colav_active           = False
+                self.ship_collision         = False
+                
+                for i in range (1,4):
+                    setattr(self, f"beta_own_to_tar_{i}", 0.0)
+                    setattr(self, f"tcpa_own_to_tar_{i}", 0.0)
+                    setattr(self, f"dcpa_own_to_tar_{i}", 0.0)
+                    setattr(self, f"dist_own_to_tar_{i}", 0.0)
+                    setattr(self, f"rr_own_to_tar_{i}", 0.0)
+                
+                return True
+            
             ### INITIATE
-            self.p_own                  = np.array([self.own_north, self.own_east], dtype=float)
-            self.v_own                  = self.own_measured_speed * np.array([np.cos(self.own_yaw_angle), np.sin(self.own_yaw_angle)])
-            self.p_tar_list             = []
-            self.psi_tar_list           = []
-            self.v_tar_list             = []
-            self.beta_list              = []
-            self.tcpa_list              = []
-            self.dcpa_list              = []
-            self.range_rate_list        = []
+            p_own                  = np.array([self.own_north, self.own_east], dtype=float)
+            v_own                  = self.own_measured_speed * np.array([np.cos(self.own_yaw_angle), np.sin(self.own_yaw_angle)])
+            p_tar_list             = []
+            psi_tar_list           = []
+            v_tar_list             = []
+            beta_list              = []
+            tcpa_list              = []
+            dcpa_list              = []
+            dist_list              = []
+            range_rate_list        = []
             
             c = int(self.max_target_ship_count)
             c = max(0, min(c,3))
@@ -130,52 +144,60 @@ class SimpleCollisionAvoidance(Fmi2Slave):
                 p_tar = np.array([north, east], dtype=float)
                 v_tar = speed * np.array([np.cos(yaw), np.sin(yaw)], dtype=float)
                 
-                self.p_tar_list.append(p_tar)
-                self.psi_tar_list.append(yaw)
-                self.v_tar_list.append(v_tar)
+                p_tar_list.append(p_tar)
+                psi_tar_list.append(yaw)
+                v_tar_list.append(v_tar)
                 
             ### Compute Relative Bearing (Beta), TCPA, and DCPA, Range Rate
             for i in range(c):
                 # Relative distance
-                r = self.p_tar_list[i] - self.p_own
+                r = p_tar_list[i] - p_own
                 
                 # RELATIVE VELOCITY
-                v = self.v_tar_list[i] - self.v_own
+                v = v_tar_list[i] - v_own
                 
                 # Relative Bearing
                 theta = np.arctan2(r[1], r[0])
                 beta  = self._wrap_to_pi(theta - self.own_yaw_angle)
-                self.beta_list.append(beta)
+                setattr(self, f"beta_own_to_tar_{i+1}", beta)
+                beta_list.append(beta)
                 
                 ## TCPA and DCPA
                 v_norm_sq = np.dot(v, v)
                 
                 # If the squared norm of the speed is close to 0
                 if v_norm_sq < 1e-6:
-                    tcpa = None                # Both ships are stationary to each other
+                    tcpa = np.nan               # Both ships are stationary to each other, signify as nan
                     dcpa = np.linalg.norm(r)
                 else:
                     tcpa = - np.dot(r,v) / v_norm_sq
                     dcpa = np.linalg.norm(r + v * tcpa)
+                    
+                setattr(self, f"tcpa_own_to_tar_{i+1}", tcpa)
+                setattr(self, f"dcpa_own_to_tar_{i+1}", dcpa)
                 
-                self.tcpa_list.append(tcpa)
-                self.dcpa_list.append(dcpa)
+                tcpa_list.append(tcpa)
+                dcpa_list.append(dcpa)
                 
                 ## RANGE RATE
                 dist = np.linalg.norm(r)
+                dist_list.append(dist)
+                setattr(self, f"dist_own_to_tar_{i+1}", dist)
                 if dist < 1e-6:
                     range_rate = 0.0
                 else:
                     r_hat = r / dist
                     range_rate = float(np.dot(r_hat, v))
-                self.range_rate_list.append(range_rate)
+                setattr(self, f"rr_own_to_tar_{i+1}", range_rate)
+                range_rate_list.append(range_rate)
                 
             ### COLAV DECISION
-            dcpa_arr    = np.array(self.dcpa_list, dtype=float)
-            rr_arr      = np.array(self.range_rate_list, dtype=float)
+            dcpa_arr    = np.array(dcpa_list, dtype=float)
+            dist_arr    = np.array(dist_list, dtype=float)
+            rr_arr      = np.array(range_rate_list, dtype=float)
             
-            tcpa_check          = np.array([(t is not None) and (t > 0.0) for t in self.tcpa_list], dtype=bool)
-            dcpa_check          = dcpa_arr < self.danger_zone_radius
+            tcpa_check          = np.array([(tcpa is not np.nan) and (t > 0.0) for t in tcpa_list], dtype=bool)
+            dcpa_check          = dcpa_arr <= self.danger_zone_radius
             rr_check            = rr_arr < 0.0
             
             # Colav status
@@ -189,7 +211,7 @@ class SimpleCollisionAvoidance(Fmi2Slave):
             self.colav_active   = bool(np.any(colav_active_status))     # OUTPUT
             
             # Set the collision status
-            collision_status    = dcpa_arr < self.collision_zone_radius
+            collision_status    = dist_arr <= self.collision_zone_radius
             self.ship_collision = bool(np.any(collision_status))    # OUTPUT
             
             if self.ship_collision:
@@ -201,9 +223,9 @@ class SimpleCollisionAvoidance(Fmi2Slave):
             # Score the threat level for each target ship
             candidates = []
             for i in range(c):
-                tcpa = self.tcpa_list[i]
-                dcpa = self.dcpa_list[i]
-                rr   = self.range_rate_list[i]
+                tcpa = tcpa_list[i]
+                dcpa = dcpa_list[i]
+                rr   = range_rate_list[i]
                 
                 if tcpa is None or tcpa <= 0:
                     continue
@@ -218,8 +240,8 @@ class SimpleCollisionAvoidance(Fmi2Slave):
             
             # Index Hold Logic
             def is_still_candidate(i):
-                tcpa = self.tcpa_list[i]
-                return (tcpa is not None) and (tcpa > 0.0) and (self.range_rate_list[i] < 0.0) and (self.dcpa_list[i] <= self.danger_zone_radius)
+                tcpa = tcpa_list[i]
+                return (tcpa is not None) and (tcpa > 0.0) and (range_rate_list[i] < 0.0) and (dcpa_list[i] <= self.danger_zone_radius)
 
             # If the prioritized target is no longer a threat, (or the held target index is invalid) release the hold
             if self.prioritize_one_target:
@@ -242,7 +264,7 @@ class SimpleCollisionAvoidance(Fmi2Slave):
                 # If prioritize one target use held_target_idx, else use idx
                 use_idx = self.held_target_idx if self.prioritize_one_target else idx
                 
-                beta = self.beta_list[use_idx]
+                beta = beta_list[use_idx]
                 colav_rudder_sign = float(-np.sign(beta)) if abs(beta) > 1e-6 else -1.0
                 
                 # OUTPUTS

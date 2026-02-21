@@ -412,6 +412,9 @@ class ShipInTransitCoSimulation(CoSimInstance):
                  stopTime       : float   = 1.0, 
                  stepSize       : float   = 0.01):
         super().__init__(instanceName, stopTime, stepSize)
+        
+        # For colav_active printing flag
+        self.print_col_msg = False
 
 
     def ship_slave(self, prefix: str, block: str) -> str:
@@ -527,22 +530,22 @@ class ShipInTransitCoSimulation(CoSimInstance):
                                          slaveVar="colav_active")
                 collision_flag = self.GetLastValue(slaveName=self.ship_slave(prefix, "COLAV"), 
                                          slaveVar="ship_collision")
-                # collision_flags.append(collision_flag)
-                collision_flags.append(False)
+                collision_flags.append(collision_flag)
+                
+                if colav_active and (not collision_flag) and (not self.print_col_msg):
+                    print(f"{prefix}_COLAV is active!")
+                    self.print_col_msg = True
+                elif (not colav_active) and self.print_col_msg:
+                    print(f"{prefix}_COLAV is deactived!")
+                    self.print_col_msg = False
+                elif collision_flag:
+                    print(f"{prefix} collides!")
         
         all_ship_reaches_end_point = np.all(np.array(rep_flags))
         any_ship_collides          = np.any(np.array(collision_flags))
         
-        # print(rep_flags)
-        # print(collision_flags)
-        
-        # print("flag1:", all_ship_reaches_end_point)
-        # print("flag2:", any_ship_collides)
-        
         # Conclude the stop flag
         self.stop = all_ship_reaches_end_point or any_ship_collides
-        
-        # print("stop:", self.stop)
         
 
     def Simulate(self):

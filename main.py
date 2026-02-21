@@ -51,15 +51,20 @@ instance.add_ship(ship_configs=ship_configs, ROOT=ROOT)
 # =========================
 instance.Simulate()
 
-# print("north:", instance.GetObserverTimeSeries("OS0.north"))
-# print("east:", instance.GetObserverTimeSeries("OS0.east"))
-# print("yaw:", instance.GetObserverTimeSeries("OS0.yaw_angle_rad"))
-# print("#####")
-# print("north:", instance.GetObserverTimeSeries("TS1.north"))
-# print("east:", instance.GetObserverTimeSeries("TS1.east"))
-# print("yaw:", instance.GetObserverTimeSeries("TS1.yaw_angle_rad"))
-
 # # =========================
 # # Plot
 # # =========================
 instance.PlotFleetTrajectory()
+
+key_group_list = [
+    ["OS0.new_throttle_cmd"],
+    ["OS0.new_rudder_angle_deg"],
+    ["OS0.beta_own_to_tar_1"],
+    ["OS0.tcpa_own_to_tar_1"],
+    ["OS0.dcpa_own_to_tar_1"],
+    ["OS0.dist_own_to_tar_1"],
+    ["OS0.rr_own_to_tar_1"],
+]
+
+# Plot Time Series
+instance.JoinPlotTimeSeries(list(reversed(key_group_list)),  create_title= False, legend= True, show_instance_name=False, show=True)
