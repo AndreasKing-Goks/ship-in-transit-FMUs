@@ -25,6 +25,7 @@ class SimpleCollisionAvoidance(Fmi2Slave):
         self.collision_zone_radius  = 100.0     # Ideally ship length
         self.max_target_ship_count  = 0         # Up to three
         self.hold_time              = 600.0     # Max time for holding one target ship
+        self.T_lookahead            = 900.0     # Soon to collide  (second)
         
         ## Input
         self.own_north              = 0.0
@@ -42,10 +43,11 @@ class SimpleCollisionAvoidance(Fmi2Slave):
         self.rudder_angle_deg       = 0.0
         
         ## Output
-        self.new_throttle_cmd       = 0.0 
-        self.new_rudder_angle_deg   = 0.0
-        self.colav_active           = False
-        self.ship_collision         = False
+        self.new_throttle_cmd        = 0.0 
+        self.new_rudder_angle_deg    = 0.0
+        self.colav_rud_ang_increment = 0.0 # OUTPUT
+        self.colav_active            = False
+        self.ship_collision          = False
         
         for i in range (1,4):
             setattr(self, f"beta_own_to_tar_{i}", 0.0)
@@ -58,6 +60,7 @@ class SimpleCollisionAvoidance(Fmi2Slave):
         self.prioritize_one_target  = False
         self.held_target_idx        = 0
         self.timer                  = 0.0
+        self.colav_rudder_sign      = -1.0
         
         ## Registration
         # Parameters
@@ -67,6 +70,7 @@ class SimpleCollisionAvoidance(Fmi2Slave):
         self.register_variable(Real("collision_zone_radius", causality=Fmi2Causality.parameter, variability=Fmi2Variability.tunable))
         self.register_variable(Integer("max_target_ship_count", causality=Fmi2Causality.parameter, variability=Fmi2Variability.fixed))
         self.register_variable(Real("hold_time", causality=Fmi2Causality.parameter, variability=Fmi2Variability.tunable))
+        self.register_variable(Real("T_lookahead", causality=Fmi2Causality.parameter, variability=Fmi2Variability.tunable))
         
         # Input
         self.register_variable(Real("throttle_cmd", causality=Fmi2Causality.input))
@@ -86,6 +90,7 @@ class SimpleCollisionAvoidance(Fmi2Slave):
         # Output
         self.register_variable(Real("new_throttle_cmd", causality=Fmi2Causality.output))
         self.register_variable(Real("new_rudder_angle_deg", causality=Fmi2Causality.output))
+        self.register_variable(Real("colav_rud_ang_increment", causality=Fmi2Causality.output))
         self.register_variable(Boolean("colav_active", causality=Fmi2Causality.output))
         self.register_variable(Boolean("ship_collision", causality=Fmi2Causality.output))
         
@@ -192,25 +197,8 @@ class SimpleCollisionAvoidance(Fmi2Slave):
                 range_rate_list.append(range_rate)
                 
             ### COLAV DECISION
-            dcpa_arr    = np.array(dcpa_list, dtype=float)
-            dist_arr    = np.array(dist_list, dtype=float)
-            rr_arr      = np.array(range_rate_list, dtype=float)
-            
-            tcpa_check          = np.array([(tcpa is not np.nan) and (t > 0.0) for t in tcpa_list], dtype=bool)
-            dcpa_check          = dcpa_arr <= self.danger_zone_radius
-            rr_check            = rr_arr < 0.0
-            
-            # Colav status
-            # Active if there exists target with:
-            # tcpa > 0                  -> Collision will happen in the future
-            # dcpa < danger_zone_radius -> Violate the safety region
-            # rr   < 0 (ideally)        -> Ideally is closing in
-            
-            # Set the colav flag
-            colav_active_status = tcpa_check & dcpa_check & rr_check    # OPERATOR "&" IS FOR NUMPY ARRAYS
-            self.colav_active   = bool(np.any(colav_active_status))     # OUTPUT
-            
             # Set the collision status
+            dist_arr    = np.array(dist_list, dtype=float)
             collision_status    = dist_arr <= self.collision_zone_radius
             self.ship_collision = bool(np.any(collision_status))    # OUTPUT
             
@@ -227,12 +215,27 @@ class SimpleCollisionAvoidance(Fmi2Slave):
                 dcpa = dcpa_list[i]
                 rr   = range_rate_list[i]
                 
+                # Colav status
+                # Active if there exists target with (in order):
+                # dcpa < danger_zone_radius -> If it going to violate the safety region
+                # tcpa > 0                  -> If collision will happen in the future
+                # tcpa < T_lookahead        -> If collision will happen soon
+                # rr   < 0 (ideally)        -> Ideally is closing in
+                
+                # Initial colav status
+                self.colav_active   = False     # OUTPUT
+                
+                if dcpa > self.danger_zone_radius:
+                    continue
                 if tcpa is None or tcpa <= 0:
+                    continue
+                if tcpa > self.T_lookahead:
                     continue
                 if rr >= 0:
                     continue
-                if dcpa > self.danger_zone_radius:
-                    continue
+                
+                # Set colav is active if it passed through the logic gate
+                self.colav_active   = True     # OUTPUT
                 
                 # Risk score
                 score = (1.0/(tcpa+1e-3) + (1.0/(dcpa+1e-3)) + 0.1*(-rr))
@@ -260,16 +263,20 @@ class SimpleCollisionAvoidance(Fmi2Slave):
                     self.held_target_idx = idx
                     self.prioritize_one_target = True   # PRIORITIZING ONLY HAPPEN WHEN WE HAVE >1 CANDIDATES
                     self.timer = 0.0
+                    
+                    # Also held the colav rudder sign
+                    beta = beta_list[use_idx]
+                    self.colav_rudder_sign      = float(-np.sign(beta)) if abs(beta) > 1e-6 else -1.0
                 
                 # If prioritize one target use held_target_idx, else use idx
                 use_idx = self.held_target_idx if self.prioritize_one_target else idx
                 
-                beta = beta_list[use_idx]
-                colav_rudder_sign = float(-np.sign(beta)) if abs(beta) > 1e-6 else -1.0
+                # Accrue the rudder angle increment
+                self.colav_rud_ang_increment += self.colav_rudder_sign * self.rud_ang_increment_deg # OUTPUT
                 
                 # OUTPUTS
-                self.new_throttle_cmd       = float(np.clip(self.throttle_scale_factor * self.throttle_cmd, 0.0, 1.0))  # clamp after scaling
-                self.new_rudder_angle_deg   = colav_rudder_sign * self.rud_ang_increment_deg + self.rudder_angle_deg
+                self.new_throttle_cmd        = float(np.clip(self.throttle_scale_factor * self.throttle_cmd, 0.0, 1.0))  # clamp after scaling
+                self.new_rudder_angle_deg    =  self.rudder_angle_deg + self.colav_rud_ang_increment
                     
                 if self.prioritize_one_target:                        
                     self.timer += step_size
@@ -279,8 +286,9 @@ class SimpleCollisionAvoidance(Fmi2Slave):
             
             else:
                 # OUTPUTS
-                self.new_throttle_cmd       = float(np.clip(self.throttle_cmd, 0.0, 1.0))   # OUTPUT, clamp after scaling
-                self.new_rudder_angle_deg   = self.rudder_angle_deg     # OUTPUT
+                self.new_throttle_cmd        = float(np.clip(self.throttle_cmd, 0.0, 1.0))   # OUTPUT, clamp after scaling
+                self.new_rudder_angle_deg    = self.rudder_angle_deg     # OUTPUT
+                self.colav_rud_ang_increment = 0.0 # OUTPUT
             
         except Exception as e:
             # IMPORTANT: do not crash host
@@ -288,10 +296,11 @@ class SimpleCollisionAvoidance(Fmi2Slave):
             print(traceback.format_exc())
             
             # Freeze dynamics (keep last state/outputs)
-            self.new_throttle_cmd       = float(np.clip(self.throttle_cmd, 0.0, 1.0))     # clamp after scaling
-            self.new_rudder_angle_deg   = self.rudder_angle_deg
-            self.colav_active           = False
-            self.ship_collision         = False
+            self.new_throttle_cmd        = float(np.clip(self.throttle_cmd, 0.0, 1.0))     # clamp after scaling
+            self.new_rudder_angle_deg    = self.rudder_angle_deg
+            self.colav_rud_ang_increment = 0.0 # OUTPUT
+            self.colav_active            = False
+            self.ship_collision          = False
             
         return True
             

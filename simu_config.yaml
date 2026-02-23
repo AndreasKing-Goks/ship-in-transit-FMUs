@@ -120,6 +120,7 @@ ships:
 
       - [COLAV, new_throttle_cmd, "Throttle [%]"]
       - [COLAV, new_rudder_angle_deg, "Angle [deg]"]
+      - [COLAV, colav_rud_ang_increment, "Angle [deg]"]
       - [COLAV, beta_own_to_tar_1, "Angle [rad]"]
       - [COLAV, tcpa_own_to_tar_1, "Time [sec]"]
       - [COLAV, dcpa_own_to_tar_1, "Distance [m]"]
@@ -183,11 +184,12 @@ ships:
 
       collision_avoidance:
         throttle_scale_factor: 0.5
-        rud_ang_increment_deg: 2.3
+        rud_ang_increment_deg: 0.05
         danger_zone_radius: 926.0
         collision_zone_radius: 100.0
         max_target_ship_count: 1
         hold_time: 600.0
+        T_lookahead: 600.0
 
       ship_model_base:
         dead_weight_tonnage: 3850000

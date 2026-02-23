@@ -7,400 +7,19 @@ os.add_dll_directory(str(dll_dir))
 
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
+from matplotlib.animation import FuncAnimation, FFMpegWriter
+
 import numpy as np
-import ctypes
 
-from libcosimpy.CosimExecution import CosimExecution
-from libcosimpy.CosimSlave import CosimLocalSlave
-from libcosimpy.CosimManipulator import CosimManipulator
-from libcosimpy.CosimObserver import CosimObserver
-from libcosimpy.CosimEnums import CosimVariableType
-
-from utils import ShipDraw, ship_snap_shot, compile_ship_params
+from cosim_instance import *
+from utils import ShipDraw, compile_ship_params
 import time
 
-
-def GetVariableIndex(variables, name):
-    try:
-        index = 0
-        for var in variables:
-            if var.name == str.encode(name):
-                return index
-            index +=1
-    except:
-        raise Exception("Could not locate the variable %s in the model" %(name))
-
-
-def GetVariableInfo(variables, name):
-    try:
-        index = GetVariableIndex(variables,name)
-        vr = variables[index].reference
-        var_type = CosimVariableType(variables[index].type)
-        return vr, var_type
-    except:
-        raise Exception("Could not locate the variable %s in the model" %(name))
-
-
-class ObserverStruct:
-    var = None
-    var_vr = None
-    var_type = None
-    slave = None
-    variable = None
-
-
-class CoSimInstance:
-    '''
-        instanceName is the name of the co-simulation instance (str)
-        stopTime is the stop time of the co-simulation (seconds)
-        stepSize is the macro step size of the co-simulation (seconds)
-    '''
-    def __init__(self, instanceName: str="simulation", stopTime: float=1.0, stepSize: float = 0.01):
-        self.instanceName = instanceName
-        self.stopTime = int(stopTime*1e9)
-        self.stepSize = int(stepSize*1e9)
-        self.time = 0
-
-        self.observer_time_series_struct = {}
-        self.observer_time_series_label = {}
-
-        self.slaves = {}
-        self.slaves_index = {}
-        self.slaves_variables = {}
-
-        self.slave_input_var = []
-        self.slave_input_name = []
-
-        self.slave_output_var = []
-        self.slave_output_name = []
-
-        self.execution = CosimExecution.from_step_size(self.stepSize)
-        self.manipulator = CosimManipulator.create_override()
-        self.execution.add_manipulator(self.manipulator)
-
-        self.observer_time_series = CosimObserver.create_time_series(buffer_size=int(self.stopTime/self.stepSize))
-        self.execution.add_observer(self.observer_time_series)
-
-        self.observer_last_value = CosimObserver.create_last_value()
-        self.execution.add_observer(self.observer_last_value)
-
-        self.first_plot = True
-
-        self.fromExternalSlaveName = []
-        self.fromExternalSlaveVar = []
-        self.fromExternalSlaveFunc = []
-    
-
-    def AddObserverTimeSeries(self, name: str, slaveName: str, variable: str):
-        try:
-            self.observer_time_series_struct[name]             = ObserverStruct()
-            self.observer_time_series_struct[name].slave       = slaveName
-            self.observer_time_series_struct[name].var         = variable
-            self.observer_time_series_struct[name].var_vr, self.observer_time_series_struct[name].var_type = GetVariableInfo(self.slaves_variables[slaveName],
-                                                                                                               variable)
-            self.observer_time_series.start_time_series(self.slaves_index[slaveName],
-                                                                   value_reference=self.observer_time_series_struct[name].var_vr,
-                                                                   variable_type=self.observer_time_series_struct[name].var_type)
-        except Exception as error:
-            print("An error occured while adding an observer: ", name, "-",slaveName, "-",variable,": ", type(error).__name__, "-", error)
-            sys.exit(1)
-         
-            
-    def AddObserverTimeSeriesWithLabel(self, name: str, slaveName: str, variable: str, var_label: str=None):
-        try:
-            self.observer_time_series_struct[name]             = ObserverStruct()
-            self.observer_time_series_struct[name].slave       = slaveName
-            self.observer_time_series_struct[name].var         = variable
-            self.observer_time_series_struct[name].var_vr, self.observer_time_series_struct[name].var_type = GetVariableInfo(self.slaves_variables[slaveName],
-                                                                                                               variable)
-            self.observer_time_series.start_time_series(self.slaves_index[slaveName],
-                                                                   value_reference=self.observer_time_series_struct[name].var_vr,
-                                                                   variable_type=self.observer_time_series_struct[name].var_type)
-            self.observer_time_series_label[name]               = var_label
-        except Exception as error:
-            print("An error occured while adding an observer: ", name, "-",slaveName, "-",variable,": ", type(error).__name__, "-", error)
-            sys.exit(1)
-
-
-    def GetObserverTimeSeries(self, name: str, from_step: int = 0):
-
-        try:
-            sample_count = np.int64(self.stopTime / self.stepSize)
-            vr = self.observer_time_series_struct[name].var_vr
-            var_type = self.observer_time_series_struct[name].var_type
-            slave = self.slaves_index[self.observer_time_series_struct[name].slave]
-            if var_type == CosimVariableType.REAL:
-                time_points, step_numbers, samples = self.observer_time_series.time_series_real_samples(slave_index = slave,
-                                                                                         value_reference = vr,
-                                                                                         sample_count = sample_count,
-                                                                                         from_step = from_step)
-                time_seconds = [x*1e-9 for x in time_points]
-                return time_seconds, step_numbers, samples
-            elif var_type == CosimVariableType.BOOLEAN:
-                time_points, step_numbers, samples = self.observer_time_series.time_series_boolean_samples(slave_index = slave,
-                                                                                            value_reference = vr,
-                                                                                            sample_count = sample_count,
-                                                                                            from_step = from_step)
-                time_seconds = [x*1e-9 for x in time_points]
-                return time_seconds, step_numbers, samples
-            elif var_type == CosimVariableType.INTEGER:
-                time_points, step_numbers, samples = self.observer_time_series.time_series_integer_samples(slave_index = slave,
-                                                                                            value_reference = vr,
-                                                                                            sample_count = sample_count,
-                                                                                            from_step = from_step)
-                time_seconds = [x*1e-9 for x in time_points]
-                return time_seconds, step_numbers, samples
-            else:
-                time_points, step_numbers, samples = self.observer_time_series.time_series_string_samples(slave_index = slave,
-                                                                                           value_reference = vr,
-                                                                                           sample_count = sample_count,
-                                                                                           from_step = from_step)
-                time_seconds = [x*1e-9 for x in time_points]
-                return time_seconds, step_numbers, samples
-        except Exception as error:
-            print("An error occured while obtaining a time series: ", name," - ", type(error).__name__, "-", error)
-            sys.exit(1)
-
-
-    def PlotTimeSeries(self, separate_plots: bool = False, create_window: bool = True, create_title: bool = False, show: bool = True, legend: bool = True, show_instance_name: bool=False):
-        for key in self.observer_time_series_struct:
-            time_points, step_number, samples = self.GetObserverTimeSeries(key)
-            if create_window:
-                if self.first_plot:
-                    plt.figure()
-                    self.first_plot = False
-                else:
-                    if separate_plots:
-                        plt.legend()
-                        plt.grid()
-                        plt.xlabel("Time [s]")
-                        plt.ylabel(self.observer_time_series_label[key])
-                        if create_title:
-                            plt.title("Time series form co-simulation instance \"%s\"" %(self.instanceName))
-                        plt.figure()
-
-            label = str(key)
-            if show_instance_name:
-                label = self.instanceName + ": " + str(key)
-    
-            plt.plot(time_points, samples, label=label)
-        if legend:
-            plt.legend()
-        plt.xlabel("Time [s]")
-        plt.ylabel(self.observer_time_series_label[key])
-        if create_title:
-            plt.title("Time series form co-simulation instance \"%s\"" %(self.instanceName))
-        plt.grid(True)
-        if show:
-            plt.show()
-          
-            
-    def JoinPlotTimeSeries(self, key_group_list, create_title: bool = False, legend: bool = True, show_instance_name: bool=False, show_separately: bool=False, show=True):
-        for key_group in key_group_list:
-            struct_time_points  = []
-            struct_step_number  = []
-            struct_samples      = []
-            struct_lables       = []
-            
-            for key in key_group:
-                time_points, step_number, samples = self.GetObserverTimeSeries(key)
-                struct_time_points.append(time_points)
-                struct_step_number.append(step_number)
-                struct_samples.append(samples)
-                lable = str(key)
-                if show_instance_name:
-                    lable = self.instanceName + ": " + str(key)
-                struct_lables.append(lable)
-            
-            plt.figure(figsize=(9,7))
-            for i in range(len(key_group)):
-                plt.plot(struct_time_points[i], struct_samples[i], label=struct_lables[i])
-            if legend:
-                plt.legend(fontsize=8)
-            plt.grid()
-            plt.xticks(fontsize=8)
-            plt.yticks(fontsize=8)
-            plt.xlabel("Time [s]", fontsize=9)
-            plt.ylabel(self.observer_time_series_label[key_group[0]], fontsize=9)
-            if create_title:
-                plt.title("Time series form co-simulation instance \"%s\"" %(self.instanceName))
-            # plt.tight_layout()
-            if show_separately and show:
-                plt.show()
-
-        if not show_separately and show:
-            plt.show()
-
-
-    def AddSlave(self, path: str, name: str):
-        try:
-            self.slaves[name] = CosimLocalSlave(fmu_path=path, instance_name = name)
-            self.slaves_index[name] = self.execution.add_local_slave(local_slave = self.slaves[name])
-            self.slaves_variables[name] = self.execution.slave_variables(slave_index = self.slaves_index[name])
-        except Exception as error:
-            print("An error occured while adding a slave: ", name, "-",path,": ", type(error).__name__, "-", error)
-            sys.exit(1)
-
-
-    def AddSlaveConnection(self, slaveInputName: str, slaveInputVar: str, slaveOutputName: str, slaveOutputVar: str):
-        try:
-            self.slave_input_name.append(slaveInputName)
-            self.slave_input_var.append(slaveInputVar)
-            self.slave_output_name.append(slaveOutputName)
-            self.slave_output_var.append(slaveOutputVar)
-        except Exception as error:
-            print("An error occured while adding a connection: ", slaveInputName, ".",slaveInputVar, " = ",slaveOutputName, ".", slaveOutputVar,": ", type(error).__name__, "-", error)
-            sys.exit(1)
-
-
-    def GetLastValue(self, slaveName: str, slaveVar: str):
-        try:
-            out_vr, out_type = GetVariableInfo(self.slaves_variables[slaveName], slaveVar)
-            if out_type == CosimVariableType.REAL:
-                return self.observer_last_value.last_real_values(slave_index = self.slaves_index[slaveName], 
-                                                                 variable_references = [out_vr])[0]
-            if out_type == CosimVariableType.BOOLEAN:
-                return self.observer_last_value.last_boolean_values(slave_index = self.slaves_index[slaveName], 
-                                                                 variable_references = [out_vr])[0]
-            if out_type == CosimVariableType.INTEGER:
-                return self.observer_last_value.last_integer_values(slave_index = self.slaves_index[slaveName], 
-                                                                 variable_references = [out_vr])[0]
-            if out_type == CosimVariableType.STRING:
-                return self.observer_last_value.last_string_values(slave_index = self.slaves_index[slaveName], 
-                                                             variable_references = [out_vr])[0]
-        except Exception as error:
-            print("An error occured while obtaing last value: ", slaveName, ".", slaveVar, ": ", type(error).__name__, "-", error)
-            sys.exit(1)
-
-
-    def CoSimManipulate(self):
-        for i in range(0,len(self.slave_input_name)):
-            try:
-                out_vr, out_type = GetVariableInfo(self.slaves_variables[self.slave_output_name[i]], self.slave_output_var[i])
-                out_val = [self.GetLastValue(slaveName = self.slave_output_name[i],
-                                            slaveVar = self.slave_output_var[i])]
-
-                if out_type == CosimVariableType.REAL:
-                    in_vr, in_type = GetVariableInfo(self.slaves_variables[self.slave_input_name[i]], self.slave_input_var[i])
-                    if out_type == in_type:
-                        self.manipulator.slave_real_values(self.slaves_index[self.slave_input_name[i]], [in_vr], out_val)
-                elif out_type == CosimVariableType.BOOLEAN:
-                    in_vr, in_type = GetVariableInfo(self.slaves_variables[self.slave_input_name[i]], self.slave_input_var[i])
-                    if out_type == in_type:
-                        self.manipulator.slave_boolean_values(self.slaves_index[self.slave_input_name[i]], [in_vr], out_val)
-                elif out_type == CosimVariableType.INTEGER:
-                    in_vr, in_type = GetVariableInfo(self.slaves_variables[self.slave_input_name[i]], self.slave_input_var[i])
-                    if out_type == in_type:
-                        self.manipulator.slave_integer_values(self.slaves_index[self.slave_input_name[i]], [in_vr], out_val)
-                else:
-                    in_vr, in_type = GetVariableInfo(self.slaves_variables[self.slave_input_name[i]], self.slave_input_var[i])
-                    if out_type == in_type:
-                        self.manipulator.slave_string_values(self.slaves_index[self.slave_input_name[i]], [in_vr], out_val)
-            except Exception as error:
-                print("An error occured during signal manipulation: ", self.slave_input_name[i],".",self.slave_input_var[i]," = ",self.slave_output_name[i],".", self.slave_output_var[i], " :", type(error).__name__, "-", error)
-                sys.exit(1)
-    
-    
-    def SingleVariableManipulation(self, slaveName: str, slaveVar: str, value):    
-        try:
-            var_vr, var_type = GetVariableInfo(self.slaves_variables[slaveName], slaveVar)
-            if var_type == CosimVariableType.REAL:
-                self.manipulator.slave_real_values(slave_index=self.slaves_index[slaveName], 
-                                                   variable_references=[var_vr], values=[value])
-
-            if var_type == CosimVariableType.BOOLEAN:
-                self.manipulator.slave_boolean_values(slave_index=self.slaves_index[slaveName], 
-                                                      variable_references=[var_vr], values=[value])
-
-            if var_type == CosimVariableType.INTEGER:
-                self.manipulator.slave_integer_values(slave_index=self.slaves_index[slaveName], 
-                                                      variable_references=[var_vr], values=[value])
-
-            if var_type == CosimVariableType.STRING:
-                self.manipulator.slave_string_values(slave_index=self.slaves_index[slaveName], 
-                                                     variable_references=[var_vr], values=[value])
-        except Exception as error:
-            print("An error occured during single variable manipulation: ", slaveName,".", slaveVar, " = ", value, ": ", type(error).__name__, "-", error)
-            sys.exit(1)
-
-
-    def AddInputFromExternal(self, slaveName: str, slaveVar: str, func):    
-        try:
-            self.fromExternalSlaveName.append(slaveName)
-            self.fromExternalSlaveVar.append(slaveVar)
-            self.fromExternalSlaveFunc.append(func)
-
-        except Exception as error:
-            print("An error occured while setting an external input: ", slaveName, ".", slaveVar, ": ", type(error).__name__, "-", error)
-            sys.exit(1)
-
-
-    def SetInputFromExternal(self):    
-        for i in range(0,len(self.fromExternalSlaveName)):
-            try:
-                var_vr, var_type = GetVariableInfo(self.slaves_variables[self.fromExternalSlaveName[i]], self.fromExternalSlaveVar[i])
-                val =[self.fromExternalSlaveFunc[i]()]
-                if var_type == CosimVariableType.REAL:
-                    self.manipulator.slave_real_values(self.slaves_index[self.fromExternalSlaveName[i]], [var_vr], val)
-
-                if var_type == CosimVariableType.BOOLEAN:
-                    self.manipulator.slave_boolean_values(self.slaves_index[self.fromExternalSlaveName[i]], [var_vr], val)
-
-                if var_type == CosimVariableType.INTEGER:
-                    self.manipulator.slave_integer_values(self.slaves_index[self.fromExternalSlaveName[i]], [var_vr], val)
-
-                if var_type == CosimVariableType.STRING:
-                    self.manipulator.slave_string_values(self.slaves_index[self.fromExternalSlaveName[i]], [var_vr], val)
-            except Exception as error:
-                print("An error occured during signal manipulation from external: ", self.fromExternalSlaveName[i],".",self.fromExternalSlaveVar[i], " = ", val, ": ", type(error).__name__, "-", error)
-                sys.exit(1)
-
-
-    def SetInitialValue(self, slaveName: str, slaveVar: str, initValue):
-        try:
-            var_vr, var_type = GetVariableInfo(self.slaves_variables[slaveName], slaveVar)
-            if var_type == CosimVariableType.REAL:
-                self.execution.real_initial_value(slave_index = self.slaves_index[slaveName],
-                                                  variable_reference = var_vr, value = initValue)
-
-            if var_type == CosimVariableType.BOOLEAN:
-                self.execution.boolean_initial_value(slave_index = self.slaves_index[slaveName],
-                                                  variable_reference = var_vr, value = initValue)
-
-            if var_type == CosimVariableType.INTEGER:
-                self.execution.integer_initial_value(slave_index = self.slaves_index[slaveName],
-                                                  variable_reference = var_vr, value = initValue)
-
-            if var_type == CosimVariableType.STRING:
-                self.execution.string_initial_value(slave_index = self.slaves_index[slaveName],
-                                                  variable_reference = var_vr, value = initValue)
-        except Exception as error:
-            print("An error occured while setting an initial value: ", slaveName, ".", slaveVar, " = ", initValue, ": ", type(error).__name__, "-", error)
-            sys.exit(1)
-         
-            
-    def SetInitialValues(self, slaveName: str, params: dict):
-        for var_name, value in params.items():
-            self.SetInitialValue(slaveName, var_name, value)
-
-
-    def PreSolverFunctionCall(self):
-        pass
-
-
-    def PostSolverFunctionCall(self):
-        pass
-
-
-    def Simulate(self):
-        while self.time < self.stopTime:
-            self.CoSimManipulate()
-            self.SetInputFromExternal()
-            self.PreSolverFunctionCall()
-            self.execution.step()
-            self.PostSolverFunctionCall()
-            self.time +=self.stepSize
-            
+# =============================================================================================================
+# =============================================================================================================
+# Scheduler Instance
+# =============================================================================================================
+# =============================================================================================================
 
 class ShipInTransitCoSimulation(CoSimInstance):
     '''
@@ -490,7 +109,6 @@ class ShipInTransitCoSimulation(CoSimInstance):
                         slaveOutputVar="total_ship_speed",
                     )
                     
-            
             # Add observers (namespaced keys)
             for block, var, label in SHIP_OBSERVERS:
                 self.AddObserverTimeSeriesWithLabel(
@@ -536,7 +154,7 @@ class ShipInTransitCoSimulation(CoSimInstance):
                     print(f"{prefix}_COLAV is active!")
                     self.print_col_msg = True
                 elif (not colav_active) and self.print_col_msg:
-                    print(f"{prefix}_COLAV is deactived!")
+                    print(f"{prefix}_COLAV is deactivated!")
                     self.print_col_msg = False
                 elif collision_flag:
                     print(f"{prefix} collides!")
@@ -576,8 +194,11 @@ class ShipInTransitCoSimulation(CoSimInstance):
         elapsed_time = end_time -start_time
         
         print(f"Simulation took {elapsed_time:.6f} seconds.")
-        
-            
+
+
+# =============================================================================================================
+# Static Plot
+# =============================================================================================================
     def _get_ship_timeseries(self, ship_id: str, var: str):
         key = f"{ship_id}.{var}"
         t, step, samples = self.GetObserverTimeSeries(key)
@@ -728,4 +349,239 @@ class ShipInTransitCoSimulation(CoSimInstance):
             plt.show(block=block)
 
         return fig, ax
+    
 
+# =============================================================================================================
+# Animation
+# =============================================================================================================
+    def _prepare_playback_data(self, ship_ids):
+        data = {}
+        
+        for sid in ship_ids:
+            # Unload data
+            _, _, north   = self._get_ship_timeseries(sid, "north")
+            _, _, east    = self._get_ship_timeseries(sid, "east")
+            _, _, yaw     = self._get_ship_timeseries(sid, "yaw_angle_rad")
+            
+            # Align data lengths
+            n = min(len(north), len(east), len(yaw))
+            north, east, yaw = north[1:n], east[1:n], yaw[1:n]
+            
+            # Prepare per ship datum
+            datum = {
+                "north" : north, 
+                "east"  : east, 
+                "yaw"   : yaw, 
+                "N"     : n-1
+                }
+            
+            # Add datum to data container
+            data[sid] = datum
+        
+        # Get the number of simulation frames.
+        n_frames = min(data[sid]["N"] for sid in ship_ids)
+        
+        return data, n_frames
+    
+
+    def _init_anim_figures(self, fig_width, equal_aspect, margin_frac, bounds=None):
+        # Prepare gid an axes
+        fig     = plt.figure(figsize=(1.25*fig_width, fig_width), constrained_layout=True)
+        gs      = fig.add_gridspec(nrows=2, ncols=1, height_ratios=[1.0, 0.12], hspace=0.0)
+        ax_map  = fig.add_subplot(gs[0, 0])
+        ax_status = fig.add_subplot(gs[1, 0]); ax_status.set_axis_off()
+        
+        ## Ax map styles
+        ax_map.set_title("Fleet Trajectory Animation")
+        ax_map.grid(alpha=0.25)
+        ax_map.set_xlabel("East (m)")
+        ax_map.set_ylabel("North (m)")
+        
+        # Unpack bounds
+        if bounds is not None:
+            x_min, x_max, y_min, y_max = bounds
+            
+            dx = x_max -x_min
+            dy = y_max - y_min
+            
+            # Robust minimum span
+            min_span = 1.0
+            if dx < min_span:
+                cx = 0.5 * (x_min + x_max)
+                x_min, x_max = cx - 0.5 * min_span, cx + 0.5 * min_span
+                dx = x_max - x_min
+            if dy < min_span:
+                cy = 0.5 * (y_min + y_max)
+                y_min, y_max = cy - 0.5 * min_span, cy + 0.5 * min_span
+                dy = y_max - y_min
+            
+            ax_map.set_xlim(x_min - margin_frac*dx, x_max + margin_frac*dx)
+            ax_map.set_ylim(y_min - margin_frac*dy, y_max + margin_frac*dy)
+            
+        # Set equal aspect if told so
+        if equal_aspect:
+            ax_map.set_aspect("equal", adjustable="box")
+            
+        return fig, ax_map, ax_status
+    
+
+    def _draw_static(self, ax_map, ship_ids, plot_routes, plot_waypoints, plot_roa, palette=None):
+        '''
+            Return static_artists as a list for static plot
+        '''
+        if (not plot_routes) and (not plot_waypoints) and (not plot_roa):
+            static_artists = []
+            return static_artists
+        
+        if palette is None:
+            palette = ["#0c3c78", "#d90808", "#2a9d8f", "#f4a261", "#6a4c93", "#264653"]
+        
+        static_artists = []
+        
+        for k, sid in enumerate(ship_ids):
+            color = palette[k % len(palette)]
+            
+            cfg = next((sc for sc in self.ship_configs if sc.get("id") == sid), None)
+            
+            if not cfg:
+                continue
+            
+            route = cfg.get("route", None)
+            if not route:
+                continue
+            
+            rN = route.get("north", [])
+            rE = route.get("east", [])
+            
+            m = min(len(rN), len(rE))
+            if m == 0:
+                continue
+            
+            # Trajectory
+            if plot_routes:
+                traj, = ax_map.plot(rE, rN, alpha=0.7, color=color, label=f"{sid} route")
+                static_artists.append(traj)
+            
+            # Waypoint and RoA
+            if plot_waypoints:
+                waypoint, = ax_map.scatter(rE, rN, marker="x", color=color)
+                static_artists.append(waypoint)
+                
+            if plot_roa:
+                fmu_params  = cfg.get("fmu params", {})
+                mm          = fmu_params.get("mission_manager", {})
+                ra          = mm.get("ra", None)
+                
+                if ra is not None and ra > 0:
+                    for n_wp, e_wp in zip(rN[1:], rE[1:]):
+                        circ = patches.Circle(
+                            (e_wp, n_wp),
+                            radius=ra,
+                            fill=True,
+                            alpha = 0.25,
+                            color=color
+                        )
+                        ax_map.add_patch(circ)
+                        static_artists.append(circ)
+                        
+        return static_artists
+
+    
+    def _init_dynamic_artists(self, ax_map, ax_status, ship_ids, palette=None, with_labels=True):
+        # palette is optional; just keep consistent colors per ship
+        if palette is None:
+            palette = ["#0c3c78", "#d90808", "#2a9d8f", "#f4a261", "#6a4c93", "#264653"]
+
+        # Artists container
+        artists = {
+            "trail": {},            # sid -> Line2D
+            "outline": {},          # sid -> Polygon (or Line2D)
+            "label": {},            # sid -> Text. Id label for the ship.
+            "status_text": None,    # Text (global)
+            "dynamic_list": []      # flat list of dynamic artists (for returning)
+        }
+
+        # Compute each artist
+        for k, sid in enumerate(ship_ids):
+            color = palette[k % len(palette)]
+
+            # Trail line (empty initially)
+            trail_line, = ax_map.plot([], [], lw=2.0, alpha=0.9, color=color)
+            artists["trail"][sid] = trail_line
+            artists["dynamic_list"].append(trail_line)
+
+            # Ship outline as Polygon patch (empty placeholder vertices)
+            # Use a small dummy triangle; you will replace it in update() via set_xy()
+            dummy_xy = np.array([[0.0, 0.0],
+                                [0.0, 0.0],
+                                [0.0, 0.0]])
+            poly = patches.Polygon(dummy_xy, closed=True, fill=False, lw=1.5, ec=color, alpha=0.8)
+            ax_map.add_patch(poly)
+            artists["outline"][sid] = poly
+            artists["dynamic_list"].append(poly)
+
+            # Optional label near ship
+            if with_labels:
+                txt = ax_map.text(0.0, 0.0, sid, fontsize=9, color=color)
+                artists["label"][sid] = txt
+                artists["dynamic_list"].append(txt)
+
+        # Status bar text (global)
+        status_txt = ax_status.text(
+            0.01, 0.5, "", transform=ax_status.transAxes,
+            va="center", ha="left", fontsize=10
+        )
+        artists["status_text"] = status_txt
+        artists["dynamic_list"].append(status_txt)
+
+        return artists
+    
+    
+    def _update_dynamic(self, i, ship_ids, artists, source, data=None, trail_len=None, every_N_outline=1):
+        # for each ship:
+            #   (n,e,yaw) = _get_pose(...)
+            #   update trail line with history up to frame_idx (or last trail_len)
+            #   update outline every_n_outline frames:
+            #       local coords -> rotate -> translate -> set outline vertices
+            #   update label if used
+            # return flattened list of updated artists
+        
+        # Status message
+        artists["status_text"].set_text(f"frame={i}")
+
+        for sid in ship_ids:
+            east  = data[sid]["east"]
+            north = data[sid]["north"]
+            yaw   = data[sid]["yaw"]
+
+            # Choose trail segment
+            if trail_len is None:
+                j0 = 0
+            else:
+                j0 = max(0, i - int(trail_len))
+
+            # Update trail line
+            artists["trail"][sid].set_data(east[j0:i+1], north[j0:i+1])
+
+            # Update ship outline (compute hull vertices)
+            # You already have ShipDraw stored as f"{sid}_draw"
+            draw = getattr(self, f"{sid}_draw")
+
+            # local hull coords -> rotate by yaw -> translate by (north,east)
+            # IMPORTANT: keep axis convention consistent:
+            # x-axis = East, y-axis = North
+            x_local, y_local = draw.local_coords()                  # local frame
+            x_rot,   y_rot   = draw.rotate_coords(x_local, y_local, yaw[i])
+            x_tr,    y_tr    = draw.translate_coords(x_rot, y_rot, north[i], east[i])
+
+            # Your draw functions might return north/east ordering; ensure xy = [east, north]
+            # If x_tr corresponds to north and y_tr to east in your current code, swap accordingly.
+            xy = np.column_stack([y_tr, x_tr])  # <-- adjust if needed to match your convention
+
+            artists["outline"][sid].set_xy(xy)
+
+            # 3) Update label position (optional)
+            if sid in artists["label"]:
+                artists["label"][sid].set_position((east[i], north[i]))
+
+        return artists["dynamic_list"]
