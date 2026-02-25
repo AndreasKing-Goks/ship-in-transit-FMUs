@@ -19,7 +19,8 @@ from sit_cosim import ShipInTransitCoSimulation
 import yaml
 
 # Get the path
-config_path = ROOT / "simu_config.yaml"
+# config_path = ROOT / "simu_config.yaml"
+config_path = ROOT / "multi_ship_config.yaml"
 
 with config_path.open("r", encoding="utf-8") as f:
     config = yaml.safe_load(f)
@@ -52,10 +53,32 @@ instance.add_ship(ship_configs=ship_configs, ROOT=ROOT)
 instance.Simulate()
 
 # =========================
-# Plot
+# Animation and Plot
 # =========================
+# Animate Simulation
+instance.AnimateFleetTrajectory(
+    ship_ids=None,
+    fig_width=10.0,
+    margin_frac=0.08, 
+    equal_aspect=True,
+    anim_fps=360,
+    trail_len=300,
+    plot_routes=True,
+    plot_waypoints=True,
+    plot_roa=True,
+    with_labels=True,
+    precompute_outlines=True,
+    save_path=None,
+    writer_fps=120,
+    show=True,
+    block=True,
+    palette=None
+    )
+
+# Plot Trajectory
 instance.PlotFleetTrajectory()
 
+# Plot Simulation Results
 key_group_list = [
     ["OS0.new_throttle_cmd"],
     ["OS0.new_rudder_angle_deg"],

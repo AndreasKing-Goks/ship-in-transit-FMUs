@@ -160,7 +160,12 @@ class MissionManager(Fmi2Slave):
                 # Check if the ship reaches the end point (three-quarter way inside the waypoint's RoA)
                 if self._dist2_to_next() <= ra2 / 16:
                     self.last_wp_active = True
-                    self.reach_wp_end   = True           
+                    self.reach_wp_end   = True
+                    
+                    # Set the speed set point to 0 (Stopping)
+                    self.prev_wp_speed  = 0.0
+                    self.next_wp_speed  = 0.0
+                           
                 return True
 
             # Switch ONLY when close to the NEXT waypoint

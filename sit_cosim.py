@@ -354,6 +354,71 @@ class ShipInTransitCoSimulation(CoSimInstance):
 # =============================================================================================================
 # Animation
 # =============================================================================================================
+    def _resolve_ship_ids(self, ship_ids):
+        if ship_ids is None:
+            ship_ids = [sc.get("id") for sc in self.ship_configs]
+        # filter None + keep order + remove duplicates
+        out = []
+        seen = set()
+        for sid in ship_ids:
+            if sid is None:
+                continue
+            if sid in seen:
+                continue
+            seen.add(sid)
+            out.append(sid)
+        return out
+    
+    
+    def _compute_bounds_from_playback_data(self, data, ship_ids):
+        all_e = []
+        all_n = []
+        for sid in ship_ids:
+            all_e.append(np.asarray(data[sid]["east"]))
+            all_n.append(np.asarray(data[sid]["north"]))
+
+        E = np.concatenate(all_e) if all_e else np.array([0.0, 1.0])
+        N = np.concatenate(all_n) if all_n else np.array([0.0, 1.0])
+
+        x_min, x_max = float(np.min(E)), float(np.max(E))
+        y_min, y_max = float(np.min(N)), float(np.max(N))
+        return (x_min, x_max, y_min, y_max)
+    
+    
+    def _precompute_outlines(self, data, ship_ids, n_frames):
+        """
+        Returns:
+            outlines[sid] = list of xy arrays, length n_frames
+            where xy is shape (n_pts, 2) in [east, north] columns.
+        """
+        outlines = {}
+
+        for sid in ship_ids:
+            draw = getattr(self, f"{sid}_draw")
+            east  = np.asarray(data[sid]["east"])
+            north = np.asarray(data[sid]["north"])
+            yaw   = np.asarray(data[sid]["yaw"])
+
+            # local hull coords (constant per ship)
+            x_local, y_local = draw.local_coords()
+
+            xy_frames = []
+            for i in range(n_frames):
+                x_rot, y_rot = draw.rotate_coords(x_local, y_local, yaw[i])
+                x_tr,  y_tr  = draw.translate_coords(x_rot, y_rot, north[i], east[i])
+
+                # IMPORTANT:
+                # In your earlier plotting you used ax.plot(y_tr, x_tr),
+                # meaning y_tr behaves like East and x_tr behaves like North.
+                # Therefore: xy = [East, North] = [y_tr, x_tr]
+                xy = np.column_stack([y_tr, x_tr])
+                xy_frames.append(xy)
+
+            outlines[sid] = xy_frames
+
+        return outlines
+    
+    
     def _prepare_playback_data(self, ship_ids):
         data = {}
         
@@ -426,64 +491,53 @@ class ShipInTransitCoSimulation(CoSimInstance):
     
 
     def _draw_static(self, ax_map, ship_ids, plot_routes, plot_waypoints, plot_roa, palette=None):
-        '''
-            Return static_artists as a list for static plot
-        '''
         if (not plot_routes) and (not plot_waypoints) and (not plot_roa):
-            static_artists = []
-            return static_artists
-        
+            return []
+
         if palette is None:
             palette = ["#0c3c78", "#d90808", "#2a9d8f", "#f4a261", "#6a4c93", "#264653"]
-        
+
         static_artists = []
-        
+
         for k, sid in enumerate(ship_ids):
             color = palette[k % len(palette)]
-            
+
             cfg = next((sc for sc in self.ship_configs if sc.get("id") == sid), None)
-            
             if not cfg:
                 continue
-            
+
             route = cfg.get("route", None)
             if not route:
                 continue
-            
+
             rN = route.get("north", [])
-            rE = route.get("east", [])
-            
+            rE = route.get("east",  [])
             m = min(len(rN), len(rE))
             if m == 0:
                 continue
-            
-            # Trajectory
+            rN = rN[:m]
+            rE = rE[:m]
+
             if plot_routes:
-                traj, = ax_map.plot(rE, rN, alpha=0.7, color=color, label=f"{sid} route")
-                static_artists.append(traj)
-            
-            # Waypoint and RoA
+                line, = ax_map.plot(rE, rN, alpha=0.7, color=color, ls="--", label=f"{sid} route", zorder=2)
+                static_artists.append(line)
+
             if plot_waypoints:
-                waypoint, = ax_map.scatter(rE, rN, marker="x", color=color)
-                static_artists.append(waypoint)
-                
+                wp = ax_map.scatter(rE, rN, marker="x", color=color, zorder=3)
+                static_artists.append(wp)
+
             if plot_roa:
-                fmu_params  = cfg.get("fmu params", {})
-                mm          = fmu_params.get("mission_manager", {})
-                ra          = mm.get("ra", None)
-                
+                fmu_params = cfg.get("fmu_params", {})  # <-- underscore
+                mm = fmu_params.get("mission_manager", {})
+                ra = mm.get("ra", None)
+
                 if ra is not None and ra > 0:
                     for n_wp, e_wp in zip(rN[1:], rE[1:]):
-                        circ = patches.Circle(
-                            (e_wp, n_wp),
-                            radius=ra,
-                            fill=True,
-                            alpha = 0.25,
-                            color=color
-                        )
+                        circ = patches.Circle((e_wp, n_wp), radius=ra, fill=True,
+                                            alpha=0.25, color=color, zorder=1)
                         ax_map.add_patch(circ)
                         static_artists.append(circ)
-                        
+
         return static_artists
 
     
@@ -537,51 +591,131 @@ class ShipInTransitCoSimulation(CoSimInstance):
         return artists
     
     
-    def _update_dynamic(self, i, ship_ids, artists, source, data=None, trail_len=None, every_N_outline=1):
-        # for each ship:
-            #   (n,e,yaw) = _get_pose(...)
-            #   update trail line with history up to frame_idx (or last trail_len)
-            #   update outline every_n_outline frames:
-            #       local coords -> rotate -> translate -> set outline vertices
-            #   update label if used
-            # return flattened list of updated artists
-        
-        # Status message
-        artists["status_text"].set_text(f"frame={i}")
+    def _update_dynamic(self, i, ship_ids, artists, data, precomputed_outlines=None, trail_len=None):
+        # status message (customize later)
+        artists["status_text"].set_text(f"time={i*self.stepSize/1e9} s | frame={i}")
 
         for sid in ship_ids:
             east  = data[sid]["east"]
             north = data[sid]["north"]
-            yaw   = data[sid]["yaw"]
 
-            # Choose trail segment
-            if trail_len is None:
-                j0 = 0
-            else:
-                j0 = max(0, i - int(trail_len))
-
-            # Update trail line
+            # trail segment
+            j0 = 0 if trail_len is None else max(0, i - int(trail_len))
             artists["trail"][sid].set_data(east[j0:i+1], north[j0:i+1])
 
-            # Update ship outline (compute hull vertices)
-            # You already have ShipDraw stored as f"{sid}_draw"
-            draw = getattr(self, f"{sid}_draw")
+            # outline: precomputed
+            if precomputed_outlines is not None:
+                artists["outline"][sid].set_xy(precomputed_outlines[sid][i])
+            else:
+                # fallback: compute on the fly (kept as backup)
+                yaw = data[sid]["yaw"]
+                draw = getattr(self, f"{sid}_draw")
+                x_local, y_local = draw.local_coords()
+                x_rot, y_rot = draw.rotate_coords(x_local, y_local, yaw[i])
+                x_tr,  y_tr  = draw.translate_coords(x_rot, y_rot, north[i], east[i])
+                xy = np.column_stack([y_tr, x_tr])
+                artists["outline"][sid].set_xy(xy)
 
-            # local hull coords -> rotate by yaw -> translate by (north,east)
-            # IMPORTANT: keep axis convention consistent:
-            # x-axis = East, y-axis = North
-            x_local, y_local = draw.local_coords()                  # local frame
-            x_rot,   y_rot   = draw.rotate_coords(x_local, y_local, yaw[i])
-            x_tr,    y_tr    = draw.translate_coords(x_rot, y_rot, north[i], east[i])
-
-            # Your draw functions might return north/east ordering; ensure xy = [east, north]
-            # If x_tr corresponds to north and y_tr to east in your current code, swap accordingly.
-            xy = np.column_stack([y_tr, x_tr])  # <-- adjust if needed to match your convention
-
-            artists["outline"][sid].set_xy(xy)
-
-            # 3) Update label position (optional)
+            # label
             if sid in artists["label"]:
                 artists["label"][sid].set_position((east[i], north[i]))
 
         return artists["dynamic_list"]
+    
+    
+    def AnimateFleetTrajectory(
+        self,
+        ship_ids=None,
+        fig_width=10.0,
+        margin_frac=0.08,
+        equal_aspect=True,
+        anim_fps=50,
+        trail_len=300,
+        plot_routes=True,
+        plot_waypoints=True,
+        plot_roa=True,
+        with_labels=True,
+        precompute_outlines=True,
+        save_path=None,
+        writer_fps=20,
+        show=True,
+        block=True,
+        palette=None
+    ):
+        ship_ids = self._resolve_ship_ids(ship_ids)
+        if len(ship_ids) == 0:
+            raise ValueError("No valid ship ids to animate.")
+
+        # Load playback arrays
+        data, n_frames = self._prepare_playback_data(ship_ids)
+
+        # Bounds
+        bounds = self._compute_bounds_from_playback_data(data, ship_ids)
+
+        # 3) Figure + axes
+        fig, ax_map, ax_status = self._init_anim_figures(
+            fig_width=fig_width,
+            equal_aspect=equal_aspect,
+            margin_frac=margin_frac,
+            bounds=bounds
+        )
+
+        # Static layer
+        static_artists = self._draw_static(
+            ax_map=ax_map,
+            ship_ids=ship_ids,
+            plot_routes=plot_routes,
+            plot_waypoints=plot_waypoints,
+            plot_roa=plot_roa,
+            palette=palette
+        )
+
+        # Create legend AFTER static exists (optional)
+        if plot_routes:
+            ax_map.legend(loc="upper right")
+
+        # Dynamic artists (trail + hull + labels + status text)
+        artists = self._init_dynamic_artists(
+            ax_map=ax_map,
+            ax_status=ax_status,
+            ship_ids=ship_ids,
+            palette=palette,
+            with_labels=with_labels
+        )
+
+        # Precompute outlines for smoothness (your request)
+        outlines = None
+        if precompute_outlines:
+            outlines = self._precompute_outlines(data, ship_ids, n_frames)
+
+        # Animation update callback
+        def update(i):
+            return self._update_dynamic(
+                i=i,
+                ship_ids=ship_ids,
+                artists=artists,
+                data=data,
+                precomputed_outlines=outlines,
+                trail_len=trail_len
+            )
+
+        # Create animation (store on self to avoid GC)
+        interval_ms = 1000.0 / anim_fps
+        self.ani = FuncAnimation(
+            fig,
+            update,
+            repeat=False,
+            frames=n_frames,
+            interval=interval_ms,
+            blit=False
+        )
+
+        # Save (optional)
+        if save_path:
+            writer = FFMpegWriter(fps=writer_fps)
+            self.ani.save(save_path, writer=writer)
+
+        if show:
+            plt.show(block=block)
+
+        return fig, ax_map, ax_status, self.ani

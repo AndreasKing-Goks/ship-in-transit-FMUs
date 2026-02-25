@@ -1,0 +1,786 @@
+simulation:
+  instanceName: Ship-Path Following Test
+  stopTime: 10000
+  stepSize: 1.0
+
+ships:
+  - id: OS0
+    role: own
+    enable_colav: true
+
+    route:
+      north: [0, 10000]
+      east:  [0, 10000]
+      speed: [5, 5    ]
+
+    SHIP_BLOCKS:
+      - [MISSION_MANAGER, FMUs/MissionManager.fmu]
+      - [AUTOPILOT, FMUs/Autopilot.fmu]
+      - [SHAFT_SPEED_CONTROLLER, FMUs/ShaftSpeedController.fmu]
+      - [THROTTLE_CONTROLLER, FMUs/ThrottleController.fmu]
+      - [MACHINERY_SYSTEM, FMUs/MachinerySystem.fmu]
+      - [RUDDER, FMUs/Rudder.fmu]
+      - [SHIP_MODEL, FMUs/ShipModel.fmu]
+      - [COLAV, FMUs/SimpleCollisionAvoidance.fmu]
+
+    SHIP_CONNECTIONS:
+      # Mission manager
+      - [MISSION_MANAGER, north, SHIP_MODEL, north]
+      - [MISSION_MANAGER, east,  SHIP_MODEL, east]
+
+      # Autopilot
+      - [AUTOPILOT, north,         SHIP_MODEL,      north]
+      - [AUTOPILOT, east,          SHIP_MODEL,      east]
+      - [AUTOPILOT, yaw_angle_rad, SHIP_MODEL,      yaw_angle_rad]
+      - [AUTOPILOT, prev_wp_north, MISSION_MANAGER, prev_wp_north]
+      - [AUTOPILOT, prev_wp_east,  MISSION_MANAGER, prev_wp_east]
+      - [AUTOPILOT, next_wp_north, MISSION_MANAGER, next_wp_north]
+      - [AUTOPILOT, next_wp_east,  MISSION_MANAGER, next_wp_east]
+
+      # Shaft speed controller
+      - [SHAFT_SPEED_CONTROLLER, desired_ship_speed,  MISSION_MANAGER,  next_wp_speed]
+      - [SHAFT_SPEED_CONTROLLER, measured_ship_speed, SHIP_MODEL,       forward_speed]
+
+      # Throttle controller
+      - [THROTTLE_CONTROLLER, desired_shaft_speed_rpm,  SHAFT_SPEED_CONTROLLER, shaft_speed_cmd_rpm]
+      - [THROTTLE_CONTROLLER, measured_shaft_speed_rpm, MACHINERY_SYSTEM,       shaft_speed_rpm]
+
+      # Machinery
+      - [MACHINERY_SYSTEM, load_perc, COLAV, new_throttle_cmd]
+
+      # Rudder
+      - [RUDDER, rudder_angle_deg, COLAV,      new_rudder_angle_deg]
+      - [RUDDER, yaw_angle_rad,    SHIP_MODEL, yaw_angle_rad]
+      - [RUDDER, forward_speed,    SHIP_MODEL, forward_speed]
+
+      # Ship model
+      - [SHIP_MODEL, thrust_force,   MACHINERY_SYSTEM, thrust_force]
+      - [SHIP_MODEL, rudder_force_v, RUDDER,           rudder_force_v]
+      - [SHIP_MODEL, rudder_force_r, RUDDER,           rudder_force_r]
+
+      # Collision Avoidance (Only Internal Ports)
+      - [COLAV, own_north,          SHIP_MODEL,           north]
+      - [COLAV, own_east,           SHIP_MODEL,           east]
+      - [COLAV, own_yaw_angle,      SHIP_MODEL,           yaw_angle_rad]
+      - [COLAV, own_measured_speed, SHIP_MODEL,           total_ship_speed]
+      - [COLAV, throttle_cmd,       THROTTLE_CONTROLLER,  throttle_cmd]
+      - [COLAV, rudder_angle_deg,   AUTOPILOT,            rudder_angle_deg]
+
+    SHIP_OBSERVERS:
+      - [MISSION_MANAGER, prev_wp_north, "Waypoint [m]"]
+      - [MISSION_MANAGER, prev_wp_east, "Waypoint [m]"]
+      - [MISSION_MANAGER, prev_wp_speed, "Speed [m/s]"]
+      - [MISSION_MANAGER, next_wp_north, "Waypoint [m]"]
+      - [MISSION_MANAGER, next_wp_east, "Waypoint [m]"]
+      - [MISSION_MANAGER, next_wp_speed, "Speed [m/s]"]
+
+      - [AUTOPILOT, yaw_angle_ref_rad, "Angle [rad]"]
+      - [AUTOPILOT, rudder_angle_deg, "Angle [deg]"]
+      - [AUTOPILOT, e_ct, "Error [m]"]
+
+      - [SHAFT_SPEED_CONTROLLER, shaft_speed_cmd_rpm, "Shaft Speed [rpm]"]
+
+      - [THROTTLE_CONTROLLER, throttle_cmd, "Throttle [%]"]
+
+      - [MACHINERY_SYSTEM, thrust_force, "Force [kN]"]
+      - [MACHINERY_SYSTEM, shaft_speed_rpm, "Shaft Speed [rpm]"]
+      - [MACHINERY_SYSTEM, cmd_load_fraction_me, "Load Fraction [%]"]
+      - [MACHINERY_SYSTEM, cmd_load_fraction_hsg, "Load Fraction [%]"]
+      - [MACHINERY_SYSTEM, power_me, "Power [kW]"]
+      - [MACHINERY_SYSTEM, available_power_me, "Power [kW]"]
+      - [MACHINERY_SYSTEM, power_electrical, "Power [kW]"]
+      - [MACHINERY_SYSTEM, available_power_electrical, "Power [kW]"]
+      - [MACHINERY_SYSTEM, power, "Power [kW]"]
+      - [MACHINERY_SYSTEM, propulsion_power, "Power [kW]"]
+      - [MACHINERY_SYSTEM, fuel_rate_me, "Fuel Rate [kg/s]"]
+      - [MACHINERY_SYSTEM, fuel_rate_hsg, "Fuel Rate [kg/s]"]
+      - [MACHINERY_SYSTEM, fuel_rate, "Fuel Rate [kg/s]"]
+      - [MACHINERY_SYSTEM, fuel_consumption_me, "Fuel Mass [kg]"]
+      - [MACHINERY_SYSTEM, fuel_consumption_hsg, "Fuel Mass [kg]"]
+      - [MACHINERY_SYSTEM, fuel_consumption, "Fuel Mass [kg]"]
+      - [MACHINERY_SYSTEM, motor_torque, "Torque [Nm]"]
+      - [MACHINERY_SYSTEM, hybrid_shaft_generator_torque, "Torque [Nm]"]
+
+      - [RUDDER, rudder_force_v, "Force [kN]"]
+      - [RUDDER, rudder_force_r, "Moment [Nm]"]
+
+      - [SHIP_MODEL, north, "Position [m]"]
+      - [SHIP_MODEL, east, "Position [m]"]
+      - [SHIP_MODEL, yaw_angle_rad, "Angle [rad]"]
+      - [SHIP_MODEL, forward_speed, "Speed [m/s]"]
+      - [SHIP_MODEL, sideways_speed, "Speed [m/s]"]
+      - [SHIP_MODEL, yaw_rate, "Angular Speed [rad/s]"]
+      - [SHIP_MODEL, total_ship_speed, "Speed [m/s]"]
+      - [SHIP_MODEL, d_north, "Speed [m/s]"]
+      - [SHIP_MODEL, d_east, "Speed [m/s]"]
+      - [SHIP_MODEL, d_yaw_angle_rad, "Angular Speed [rad/s]"]
+      - [SHIP_MODEL, d_forward_speed, "Acceleration [m/s2]"]
+      - [SHIP_MODEL, d_sideways_speed, "Acceleration [m/s2]"]
+      - [SHIP_MODEL, d_yaw_rate, "Angular Acc. [rad/s2]"]
+
+      - [COLAV, new_throttle_cmd, "Throttle [%]"]
+      - [COLAV, new_rudder_angle_deg, "Angle [deg]"]
+      - [COLAV, colav_rud_ang_increment, "Angle [deg]"]
+      - [COLAV, beta_own_to_tar_1, "Angle [rad]"]
+      - [COLAV, tcpa_own_to_tar_1, "Time [sec]"]
+      - [COLAV, dcpa_own_to_tar_1, "Distance [m]"]
+      - [COLAV, dist_own_to_tar_1, "Distance [m]"]
+      - [COLAV, rr_own_to_tar_1, "Range Rate [m/s]"]
+
+    fmu_params:
+      mission_manager:
+        ra: 300
+        max_inter_wp: 0
+
+      autopilot:
+        r: 1000
+        ki_ct: 0.002
+        integrator_limit: 5000
+        kp: 1.5
+        ki: 0.0001
+        kd: 75
+        max_rudder_rate_deg_per_sec: 2.3
+        max_rudder_angle_deg: 30
+
+      shaft_speed_controller:
+        kp: 100
+        ki: 15
+        rated_speed_main_engine_rpm: 1000
+        gear_ratio_between_main_engine_and_propeller: 0.6
+        idle_rpm_fraction: 0.1
+
+      throttle_controller:
+        kp: 0.005
+        ki: 0.00005
+
+      machinery_system:
+        hotel_load: 200000
+        rated_speed_main_engine_rpm: 1000
+        linear_friction_main_engine: 68
+        linear_friction_hybrid_shaft_generator: 57
+        gear_ratio_between_main_engine_and_propeller: 0.6
+        gear_ratio_between_hybrid_shaft_generator_and_propeller: 0.6
+        propeller_inertia: 6000
+        propeller_speed_to_torque_coefficient: 7.5
+        propeller_diameter: 3.1
+        propeller_speed_to_thrust_force_coefficient: 1.7
+        specific_fuel_consumption_coefficients_me_a_coeff: 128.89
+        specific_fuel_consumption_coefficients_me_b_coeff: -168.93
+        specific_fuel_consumption_coefficients_me_c_coeff: 246.76
+        specific_fuel_consumption_coefficients_dg_a_coeff: 180.71
+        specific_fuel_consumption_coefficients_dg_b_coeff: -289.90
+        specific_fuel_consumption_coefficients_dg_c_coeff: 324.90
+        omega: 0.0
+        d_omega: 0.0
+        main_engine_capacity_spec: 2160000.0
+        diesel_gen_capacity_spec: 510000.0
+        mso_mode: 0
+
+      rudder:
+        rudder_angle_to_sway_force_coefficient: 50000
+        rudder_angle_to_yaw_force_coefficient: 500000
+        max_rudder_angle_negative_deg: -30
+        max_rudder_angle_positive_deg: 30
+
+      collision_avoidance:
+        throttle_scale_factor: 0.5
+        rud_ang_increment_deg: 0.05
+        danger_zone_radius: 926.0
+        collision_zone_radius: 100.0
+        max_target_ship_count: 1
+        hold_time: 600.0
+        T_lookahead: 600.0
+
+      ship_model_base:
+        dead_weight_tonnage: 3850000
+        coefficient_of_deadweight_to_displacement: 0.7
+        bunkers: 200000
+        ballast: 200000
+        length_of_ship: 80
+        width_of_ship: 16
+        added_mass_coefficient_in_surge: 0.4
+        added_mass_coefficient_in_sway: 0.4
+        added_mass_coefficient_in_yaw: 0.4
+        mass_over_linear_friction_coefficient_in_surge: 130
+        mass_over_linear_friction_coefficient_in_sway: 18
+        mass_over_linear_friction_coefficient_in_yaw: 90
+        nonlinear_friction_coefficient_in_surge: 2400
+        nonlinear_friction_coefficient_in_sway: 4000
+        nonlinear_friction_coefficient_in_yaw: 400
+        rho_seawater: 1025
+        rho_air: 1.2
+        front_above_water_height: 8
+        side_above_water_height: 8
+        cx: 0.5
+        cy: 0.7
+        cn: 0.08
+        initial_forward_speed_m_per_s: 0.0
+        initial_sideways_speed_m_per_s: 0.0
+        initial_yaw_rate_rad_per_s: 0.0
+
+  ##########################################################
+
+  - id: TS1
+    role: target_1
+    enable_colav: false
+
+    route:
+      north: [10000 , 0    ]
+      east:  [0     , 10000]
+      speed: [5     , 5    ]
+
+    SHIP_BLOCKS:
+      - [MISSION_MANAGER, FMUs/MissionManager.fmu]
+      - [AUTOPILOT, FMUs/Autopilot.fmu]
+      - [SHAFT_SPEED_CONTROLLER, FMUs/ShaftSpeedController.fmu]
+      - [THROTTLE_CONTROLLER, FMUs/ThrottleController.fmu]
+      - [MACHINERY_SYSTEM, FMUs/MachinerySystem.fmu]
+      - [RUDDER, FMUs/Rudder.fmu]
+      - [SHIP_MODEL, FMUs/ShipModel.fmu]
+
+    SHIP_CONNECTIONS:
+      # Mission manager
+      - [MISSION_MANAGER, north, SHIP_MODEL, north]
+      - [MISSION_MANAGER, east,  SHIP_MODEL, east]
+
+      # Autopilot
+      - [AUTOPILOT, north,         SHIP_MODEL,      north]
+      - [AUTOPILOT, east,          SHIP_MODEL,      east]
+      - [AUTOPILOT, yaw_angle_rad, SHIP_MODEL,      yaw_angle_rad]
+      - [AUTOPILOT, prev_wp_north, MISSION_MANAGER, prev_wp_north]
+      - [AUTOPILOT, prev_wp_east,  MISSION_MANAGER, prev_wp_east]
+      - [AUTOPILOT, next_wp_north, MISSION_MANAGER, next_wp_north]
+      - [AUTOPILOT, next_wp_east,  MISSION_MANAGER, next_wp_east]
+
+      # Shaft speed controller
+      - [SHAFT_SPEED_CONTROLLER, desired_ship_speed,  MISSION_MANAGER,  next_wp_speed]
+      - [SHAFT_SPEED_CONTROLLER, measured_ship_speed, SHIP_MODEL,       forward_speed]
+
+      # Throttle controller
+      - [THROTTLE_CONTROLLER, desired_shaft_speed_rpm,  SHAFT_SPEED_CONTROLLER, shaft_speed_cmd_rpm]
+      - [THROTTLE_CONTROLLER, measured_shaft_speed_rpm, MACHINERY_SYSTEM,       shaft_speed_rpm]
+
+      # Machinery
+      - [MACHINERY_SYSTEM, load_perc, THROTTLE_CONTROLLER, throttle_cmd]
+
+      # Rudder
+      - [RUDDER, rudder_angle_deg, AUTOPILOT,  rudder_angle_deg]
+      - [RUDDER, yaw_angle_rad,    SHIP_MODEL, yaw_angle_rad]
+      - [RUDDER, forward_speed,    SHIP_MODEL, forward_speed]
+
+      # Ship model
+      - [SHIP_MODEL, thrust_force,   MACHINERY_SYSTEM, thrust_force]
+      - [SHIP_MODEL, rudder_force_v, RUDDER,           rudder_force_v]
+      - [SHIP_MODEL, rudder_force_r, RUDDER,           rudder_force_r]
+
+    SHIP_OBSERVERS:
+      - [MISSION_MANAGER, prev_wp_north, "Waypoint [m]"]
+      - [MISSION_MANAGER, prev_wp_east, "Waypoint [m]"]
+      - [MISSION_MANAGER, prev_wp_speed, "Speed [m/s]"]
+      - [MISSION_MANAGER, next_wp_north, "Waypoint [m]"]
+      - [MISSION_MANAGER, next_wp_east, "Waypoint [m]"]
+      - [MISSION_MANAGER, next_wp_speed, "Speed [m/s]"]
+
+      - [AUTOPILOT, yaw_angle_ref_rad, "Angle [rad]"]
+      - [AUTOPILOT, rudder_angle_deg, "Angle [deg]"]
+      - [AUTOPILOT, e_ct, "Error [m]"]
+
+      - [SHAFT_SPEED_CONTROLLER, shaft_speed_cmd_rpm, "Shaft Speed [rpm]"]
+
+      - [THROTTLE_CONTROLLER, throttle_cmd, "Throttle [%]"]
+
+      - [MACHINERY_SYSTEM, thrust_force, "Force [kN]"]
+      - [MACHINERY_SYSTEM, shaft_speed_rpm, "Shaft Speed [rpm]"]
+      - [MACHINERY_SYSTEM, cmd_load_fraction_me, "Load Fraction [%]"]
+      - [MACHINERY_SYSTEM, cmd_load_fraction_hsg, "Load Fraction [%]"]
+      - [MACHINERY_SYSTEM, power_me, "Power [kW]"]
+      - [MACHINERY_SYSTEM, available_power_me, "Power [kW]"]
+      - [MACHINERY_SYSTEM, power_electrical, "Power [kW]"]
+      - [MACHINERY_SYSTEM, available_power_electrical, "Power [kW]"]
+      - [MACHINERY_SYSTEM, power, "Power [kW]"]
+      - [MACHINERY_SYSTEM, propulsion_power, "Power [kW]"]
+      - [MACHINERY_SYSTEM, fuel_rate_me, "Fuel Rate [kg/s]"]
+      - [MACHINERY_SYSTEM, fuel_rate_hsg, "Fuel Rate [kg/s]"]
+      - [MACHINERY_SYSTEM, fuel_rate, "Fuel Rate [kg/s]"]
+      - [MACHINERY_SYSTEM, fuel_consumption_me, "Fuel Mass [kg]"]
+      - [MACHINERY_SYSTEM, fuel_consumption_hsg, "Fuel Mass [kg]"]
+      - [MACHINERY_SYSTEM, fuel_consumption, "Fuel Mass [kg]"]
+      - [MACHINERY_SYSTEM, motor_torque, "Torque [Nm]"]
+      - [MACHINERY_SYSTEM, hybrid_shaft_generator_torque, "Torque [Nm]"]
+
+      - [RUDDER, rudder_force_v, "Force [kN]"]
+      - [RUDDER, rudder_force_r, "Moment [Nm]"]
+
+      - [SHIP_MODEL, north, "Position [m]"]
+      - [SHIP_MODEL, east, "Position [m]"]
+      - [SHIP_MODEL, yaw_angle_rad, "Angle [rad]"]
+      - [SHIP_MODEL, forward_speed, "Speed [m/s]"]
+      - [SHIP_MODEL, sideways_speed, "Speed [m/s]"]
+      - [SHIP_MODEL, yaw_rate, "Angular Speed [rad/s]"]
+      - [SHIP_MODEL, total_ship_speed, "Speed [m/s]"]
+      - [SHIP_MODEL, d_north, "Speed [m/s]"]
+      - [SHIP_MODEL, d_east, "Speed [m/s]"]
+      - [SHIP_MODEL, d_yaw_angle_rad, "Angular Speed [rad/s]"]
+      - [SHIP_MODEL, d_forward_speed, "Acceleration [m/s2]"]
+      - [SHIP_MODEL, d_sideways_speed, "Acceleration [m/s2]"]
+      - [SHIP_MODEL, d_yaw_rate, "Angular Acc. [rad/s2]"]
+
+    fmu_params:
+      mission_manager:
+        ra: 300
+        max_inter_wp: 0
+
+      autopilot:
+        r: 1000
+        ki_ct: 0.002
+        integrator_limit: 5000
+        kp: 1.5
+        ki: 0.0001
+        kd: 75
+        max_rudder_rate_deg_per_sec: 2.3
+        max_rudder_angle_deg: 30
+
+      shaft_speed_controller:
+        kp: 100
+        ki: 15
+        rated_speed_main_engine_rpm: 1000
+        gear_ratio_between_main_engine_and_propeller: 0.6
+        idle_rpm_fraction: 0.1
+
+      throttle_controller:
+        kp: 0.005
+        ki: 0.00005
+
+      machinery_system:
+        hotel_load: 200000
+        rated_speed_main_engine_rpm: 1000
+        linear_friction_main_engine: 68
+        linear_friction_hybrid_shaft_generator: 57
+        gear_ratio_between_main_engine_and_propeller: 0.6
+        gear_ratio_between_hybrid_shaft_generator_and_propeller: 0.6
+        propeller_inertia: 6000
+        propeller_speed_to_torque_coefficient: 7.5
+        propeller_diameter: 3.1
+        propeller_speed_to_thrust_force_coefficient: 1.7
+        specific_fuel_consumption_coefficients_me_a_coeff: 128.89
+        specific_fuel_consumption_coefficients_me_b_coeff: -168.93
+        specific_fuel_consumption_coefficients_me_c_coeff: 246.76
+        specific_fuel_consumption_coefficients_dg_a_coeff: 180.71
+        specific_fuel_consumption_coefficients_dg_b_coeff: -289.90
+        specific_fuel_consumption_coefficients_dg_c_coeff: 324.90
+        omega: 0.0
+        d_omega: 0.0
+        main_engine_capacity_spec: 2160000.0
+        diesel_gen_capacity_spec: 510000.0
+        mso_mode: 0
+
+      rudder:
+        rudder_angle_to_sway_force_coefficient: 50000
+        rudder_angle_to_yaw_force_coefficient: 500000
+        max_rudder_angle_negative_deg: -30
+        max_rudder_angle_positive_deg: 30
+
+      ship_model_base:
+        dead_weight_tonnage: 3850000
+        coefficient_of_deadweight_to_displacement: 0.7
+        bunkers: 200000
+        ballast: 200000
+        length_of_ship: 80
+        width_of_ship: 16
+        added_mass_coefficient_in_surge: 0.4
+        added_mass_coefficient_in_sway: 0.4
+        added_mass_coefficient_in_yaw: 0.4
+        mass_over_linear_friction_coefficient_in_surge: 130
+        mass_over_linear_friction_coefficient_in_sway: 18
+        mass_over_linear_friction_coefficient_in_yaw: 90
+        nonlinear_friction_coefficient_in_surge: 2400
+        nonlinear_friction_coefficient_in_sway: 4000
+        nonlinear_friction_coefficient_in_yaw: 400
+        rho_seawater: 1025
+        rho_air: 1.2
+        front_above_water_height: 8
+        side_above_water_height: 8
+        cx: 0.5
+        cy: 0.7
+        cn: 0.08
+        initial_forward_speed_m_per_s: 0.0
+        initial_sideways_speed_m_per_s: 0.0
+        initial_yaw_rate_rad_per_s: 0.0
+
+  ##########################################################
+
+  - id: TS2
+    role: target_2
+    enable_colav: false
+
+    route:
+      north: [10000 , 0   ]
+      east:  [5000  , 5000]
+      speed: [5     , 5   ]
+
+    SHIP_BLOCKS:
+      - [MISSION_MANAGER, FMUs/MissionManager.fmu]
+      - [AUTOPILOT, FMUs/Autopilot.fmu]
+      - [SHAFT_SPEED_CONTROLLER, FMUs/ShaftSpeedController.fmu]
+      - [THROTTLE_CONTROLLER, FMUs/ThrottleController.fmu]
+      - [MACHINERY_SYSTEM, FMUs/MachinerySystem.fmu]
+      - [RUDDER, FMUs/Rudder.fmu]
+      - [SHIP_MODEL, FMUs/ShipModel.fmu]
+
+    SHIP_CONNECTIONS:
+      # Mission manager
+      - [MISSION_MANAGER, north, SHIP_MODEL, north]
+      - [MISSION_MANAGER, east,  SHIP_MODEL, east]
+
+      # Autopilot
+      - [AUTOPILOT, north,         SHIP_MODEL,      north]
+      - [AUTOPILOT, east,          SHIP_MODEL,      east]
+      - [AUTOPILOT, yaw_angle_rad, SHIP_MODEL,      yaw_angle_rad]
+      - [AUTOPILOT, prev_wp_north, MISSION_MANAGER, prev_wp_north]
+      - [AUTOPILOT, prev_wp_east,  MISSION_MANAGER, prev_wp_east]
+      - [AUTOPILOT, next_wp_north, MISSION_MANAGER, next_wp_north]
+      - [AUTOPILOT, next_wp_east,  MISSION_MANAGER, next_wp_east]
+
+      # Shaft speed controller
+      - [SHAFT_SPEED_CONTROLLER, desired_ship_speed,  MISSION_MANAGER,  next_wp_speed]
+      - [SHAFT_SPEED_CONTROLLER, measured_ship_speed, SHIP_MODEL,       forward_speed]
+
+      # Throttle controller
+      - [THROTTLE_CONTROLLER, desired_shaft_speed_rpm,  SHAFT_SPEED_CONTROLLER, shaft_speed_cmd_rpm]
+      - [THROTTLE_CONTROLLER, measured_shaft_speed_rpm, MACHINERY_SYSTEM,       shaft_speed_rpm]
+
+      # Machinery
+      - [MACHINERY_SYSTEM, load_perc, THROTTLE_CONTROLLER, throttle_cmd]
+
+      # Rudder
+      - [RUDDER, rudder_angle_deg, AUTOPILOT,  rudder_angle_deg]
+      - [RUDDER, yaw_angle_rad,    SHIP_MODEL, yaw_angle_rad]
+      - [RUDDER, forward_speed,    SHIP_MODEL, forward_speed]
+
+      # Ship model
+      - [SHIP_MODEL, thrust_force,   MACHINERY_SYSTEM, thrust_force]
+      - [SHIP_MODEL, rudder_force_v, RUDDER,           rudder_force_v]
+      - [SHIP_MODEL, rudder_force_r, RUDDER,           rudder_force_r]
+
+    SHIP_OBSERVERS:
+      - [MISSION_MANAGER, prev_wp_north, "Waypoint [m]"]
+      - [MISSION_MANAGER, prev_wp_east, "Waypoint [m]"]
+      - [MISSION_MANAGER, prev_wp_speed, "Speed [m/s]"]
+      - [MISSION_MANAGER, next_wp_north, "Waypoint [m]"]
+      - [MISSION_MANAGER, next_wp_east, "Waypoint [m]"]
+      - [MISSION_MANAGER, next_wp_speed, "Speed [m/s]"]
+
+      - [AUTOPILOT, yaw_angle_ref_rad, "Angle [rad]"]
+      - [AUTOPILOT, rudder_angle_deg, "Angle [deg]"]
+      - [AUTOPILOT, e_ct, "Error [m]"]
+
+      - [SHAFT_SPEED_CONTROLLER, shaft_speed_cmd_rpm, "Shaft Speed [rpm]"]
+
+      - [THROTTLE_CONTROLLER, throttle_cmd, "Throttle [%]"]
+
+      - [MACHINERY_SYSTEM, thrust_force, "Force [kN]"]
+      - [MACHINERY_SYSTEM, shaft_speed_rpm, "Shaft Speed [rpm]"]
+      - [MACHINERY_SYSTEM, cmd_load_fraction_me, "Load Fraction [%]"]
+      - [MACHINERY_SYSTEM, cmd_load_fraction_hsg, "Load Fraction [%]"]
+      - [MACHINERY_SYSTEM, power_me, "Power [kW]"]
+      - [MACHINERY_SYSTEM, available_power_me, "Power [kW]"]
+      - [MACHINERY_SYSTEM, power_electrical, "Power [kW]"]
+      - [MACHINERY_SYSTEM, available_power_electrical, "Power [kW]"]
+      - [MACHINERY_SYSTEM, power, "Power [kW]"]
+      - [MACHINERY_SYSTEM, propulsion_power, "Power [kW]"]
+      - [MACHINERY_SYSTEM, fuel_rate_me, "Fuel Rate [kg/s]"]
+      - [MACHINERY_SYSTEM, fuel_rate_hsg, "Fuel Rate [kg/s]"]
+      - [MACHINERY_SYSTEM, fuel_rate, "Fuel Rate [kg/s]"]
+      - [MACHINERY_SYSTEM, fuel_consumption_me, "Fuel Mass [kg]"]
+      - [MACHINERY_SYSTEM, fuel_consumption_hsg, "Fuel Mass [kg]"]
+      - [MACHINERY_SYSTEM, fuel_consumption, "Fuel Mass [kg]"]
+      - [MACHINERY_SYSTEM, motor_torque, "Torque [Nm]"]
+      - [MACHINERY_SYSTEM, hybrid_shaft_generator_torque, "Torque [Nm]"]
+
+      - [RUDDER, rudder_force_v, "Force [kN]"]
+      - [RUDDER, rudder_force_r, "Moment [Nm]"]
+
+      - [SHIP_MODEL, north, "Position [m]"]
+      - [SHIP_MODEL, east, "Position [m]"]
+      - [SHIP_MODEL, yaw_angle_rad, "Angle [rad]"]
+      - [SHIP_MODEL, forward_speed, "Speed [m/s]"]
+      - [SHIP_MODEL, sideways_speed, "Speed [m/s]"]
+      - [SHIP_MODEL, yaw_rate, "Angular Speed [rad/s]"]
+      - [SHIP_MODEL, total_ship_speed, "Speed [m/s]"]
+      - [SHIP_MODEL, d_north, "Speed [m/s]"]
+      - [SHIP_MODEL, d_east, "Speed [m/s]"]
+      - [SHIP_MODEL, d_yaw_angle_rad, "Angular Speed [rad/s]"]
+      - [SHIP_MODEL, d_forward_speed, "Acceleration [m/s2]"]
+      - [SHIP_MODEL, d_sideways_speed, "Acceleration [m/s2]"]
+      - [SHIP_MODEL, d_yaw_rate, "Angular Acc. [rad/s2]"]
+
+    fmu_params:
+      mission_manager:
+        ra: 300
+        max_inter_wp: 0
+
+      autopilot:
+        r: 1000
+        ki_ct: 0.002
+        integrator_limit: 5000
+        kp: 1.5
+        ki: 0.0001
+        kd: 75
+        max_rudder_rate_deg_per_sec: 2.3
+        max_rudder_angle_deg: 30
+
+      shaft_speed_controller:
+        kp: 100
+        ki: 15
+        rated_speed_main_engine_rpm: 1000
+        gear_ratio_between_main_engine_and_propeller: 0.6
+        idle_rpm_fraction: 0.1
+
+      throttle_controller:
+        kp: 0.005
+        ki: 0.00005
+
+      machinery_system:
+        hotel_load: 200000
+        rated_speed_main_engine_rpm: 1000
+        linear_friction_main_engine: 68
+        linear_friction_hybrid_shaft_generator: 57
+        gear_ratio_between_main_engine_and_propeller: 0.6
+        gear_ratio_between_hybrid_shaft_generator_and_propeller: 0.6
+        propeller_inertia: 6000
+        propeller_speed_to_torque_coefficient: 7.5
+        propeller_diameter: 3.1
+        propeller_speed_to_thrust_force_coefficient: 1.7
+        specific_fuel_consumption_coefficients_me_a_coeff: 128.89
+        specific_fuel_consumption_coefficients_me_b_coeff: -168.93
+        specific_fuel_consumption_coefficients_me_c_coeff: 246.76
+        specific_fuel_consumption_coefficients_dg_a_coeff: 180.71
+        specific_fuel_consumption_coefficients_dg_b_coeff: -289.90
+        specific_fuel_consumption_coefficients_dg_c_coeff: 324.90
+        omega: 0.0
+        d_omega: 0.0
+        main_engine_capacity_spec: 2160000.0
+        diesel_gen_capacity_spec: 510000.0
+        mso_mode: 0
+
+      rudder:
+        rudder_angle_to_sway_force_coefficient: 50000
+        rudder_angle_to_yaw_force_coefficient: 500000
+        max_rudder_angle_negative_deg: -30
+        max_rudder_angle_positive_deg: 30
+
+      ship_model_base:
+        dead_weight_tonnage: 3850000
+        coefficient_of_deadweight_to_displacement: 0.7
+        bunkers: 200000
+        ballast: 200000
+        length_of_ship: 80
+        width_of_ship: 16
+        added_mass_coefficient_in_surge: 0.4
+        added_mass_coefficient_in_sway: 0.4
+        added_mass_coefficient_in_yaw: 0.4
+        mass_over_linear_friction_coefficient_in_surge: 130
+        mass_over_linear_friction_coefficient_in_sway: 18
+        mass_over_linear_friction_coefficient_in_yaw: 90
+        nonlinear_friction_coefficient_in_surge: 2400
+        nonlinear_friction_coefficient_in_sway: 4000
+        nonlinear_friction_coefficient_in_yaw: 400
+        rho_seawater: 1025
+        rho_air: 1.2
+        front_above_water_height: 8
+        side_above_water_height: 8
+        cx: 0.5
+        cy: 0.7
+        cn: 0.08
+        initial_forward_speed_m_per_s: 0.0
+        initial_sideways_speed_m_per_s: 0.0
+        initial_yaw_rate_rad_per_s: 0.0
+
+  ##########################################################
+
+  - id: TS3
+    role: target_3
+    enable_colav: false
+
+    route:
+      north: [5000  , 5000 ]
+      east:  [10000 , 0    ]
+      speed: [5     , 5    ]
+
+    SHIP_BLOCKS:
+      - [MISSION_MANAGER, FMUs/MissionManager.fmu]
+      - [AUTOPILOT, FMUs/Autopilot.fmu]
+      - [SHAFT_SPEED_CONTROLLER, FMUs/ShaftSpeedController.fmu]
+      - [THROTTLE_CONTROLLER, FMUs/ThrottleController.fmu]
+      - [MACHINERY_SYSTEM, FMUs/MachinerySystem.fmu]
+      - [RUDDER, FMUs/Rudder.fmu]
+      - [SHIP_MODEL, FMUs/ShipModel.fmu]
+
+    SHIP_CONNECTIONS:
+      # Mission manager
+      - [MISSION_MANAGER, north, SHIP_MODEL, north]
+      - [MISSION_MANAGER, east,  SHIP_MODEL, east]
+
+      # Autopilot
+      - [AUTOPILOT, north,         SHIP_MODEL,      north]
+      - [AUTOPILOT, east,          SHIP_MODEL,      east]
+      - [AUTOPILOT, yaw_angle_rad, SHIP_MODEL,      yaw_angle_rad]
+      - [AUTOPILOT, prev_wp_north, MISSION_MANAGER, prev_wp_north]
+      - [AUTOPILOT, prev_wp_east,  MISSION_MANAGER, prev_wp_east]
+      - [AUTOPILOT, next_wp_north, MISSION_MANAGER, next_wp_north]
+      - [AUTOPILOT, next_wp_east,  MISSION_MANAGER, next_wp_east]
+
+      # Shaft speed controller
+      - [SHAFT_SPEED_CONTROLLER, desired_ship_speed,  MISSION_MANAGER,  next_wp_speed]
+      - [SHAFT_SPEED_CONTROLLER, measured_ship_speed, SHIP_MODEL,       forward_speed]
+
+      # Throttle controller
+      - [THROTTLE_CONTROLLER, desired_shaft_speed_rpm,  SHAFT_SPEED_CONTROLLER, shaft_speed_cmd_rpm]
+      - [THROTTLE_CONTROLLER, measured_shaft_speed_rpm, MACHINERY_SYSTEM,       shaft_speed_rpm]
+
+      # Machinery
+      - [MACHINERY_SYSTEM, load_perc, THROTTLE_CONTROLLER, throttle_cmd]
+
+      # Rudder
+      - [RUDDER, rudder_angle_deg, AUTOPILOT,  rudder_angle_deg]
+      - [RUDDER, yaw_angle_rad,    SHIP_MODEL, yaw_angle_rad]
+      - [RUDDER, forward_speed,    SHIP_MODEL, forward_speed]
+
+      # Ship model
+      - [SHIP_MODEL, thrust_force,   MACHINERY_SYSTEM, thrust_force]
+      - [SHIP_MODEL, rudder_force_v, RUDDER,           rudder_force_v]
+      - [SHIP_MODEL, rudder_force_r, RUDDER,           rudder_force_r]
+
+    SHIP_OBSERVERS:
+      - [MISSION_MANAGER, prev_wp_north, "Waypoint [m]"]
+      - [MISSION_MANAGER, prev_wp_east, "Waypoint [m]"]
+      - [MISSION_MANAGER, prev_wp_speed, "Speed [m/s]"]
+      - [MISSION_MANAGER, next_wp_north, "Waypoint [m]"]
+      - [MISSION_MANAGER, next_wp_east, "Waypoint [m]"]
+      - [MISSION_MANAGER, next_wp_speed, "Speed [m/s]"]
+
+      - [AUTOPILOT, yaw_angle_ref_rad, "Angle [rad]"]
+      - [AUTOPILOT, rudder_angle_deg, "Angle [deg]"]
+      - [AUTOPILOT, e_ct, "Error [m]"]
+
+      - [SHAFT_SPEED_CONTROLLER, shaft_speed_cmd_rpm, "Shaft Speed [rpm]"]
+
+      - [THROTTLE_CONTROLLER, throttle_cmd, "Throttle [%]"]
+
+      - [MACHINERY_SYSTEM, thrust_force, "Force [kN]"]
+      - [MACHINERY_SYSTEM, shaft_speed_rpm, "Shaft Speed [rpm]"]
+      - [MACHINERY_SYSTEM, cmd_load_fraction_me, "Load Fraction [%]"]
+      - [MACHINERY_SYSTEM, cmd_load_fraction_hsg, "Load Fraction [%]"]
+      - [MACHINERY_SYSTEM, power_me, "Power [kW]"]
+      - [MACHINERY_SYSTEM, available_power_me, "Power [kW]"]
+      - [MACHINERY_SYSTEM, power_electrical, "Power [kW]"]
+      - [MACHINERY_SYSTEM, available_power_electrical, "Power [kW]"]
+      - [MACHINERY_SYSTEM, power, "Power [kW]"]
+      - [MACHINERY_SYSTEM, propulsion_power, "Power [kW]"]
+      - [MACHINERY_SYSTEM, fuel_rate_me, "Fuel Rate [kg/s]"]
+      - [MACHINERY_SYSTEM, fuel_rate_hsg, "Fuel Rate [kg/s]"]
+      - [MACHINERY_SYSTEM, fuel_rate, "Fuel Rate [kg/s]"]
+      - [MACHINERY_SYSTEM, fuel_consumption_me, "Fuel Mass [kg]"]
+      - [MACHINERY_SYSTEM, fuel_consumption_hsg, "Fuel Mass [kg]"]
+      - [MACHINERY_SYSTEM, fuel_consumption, "Fuel Mass [kg]"]
+      - [MACHINERY_SYSTEM, motor_torque, "Torque [Nm]"]
+      - [MACHINERY_SYSTEM, hybrid_shaft_generator_torque, "Torque [Nm]"]
+
+      - [RUDDER, rudder_force_v, "Force [kN]"]
+      - [RUDDER, rudder_force_r, "Moment [Nm]"]
+
+      - [SHIP_MODEL, north, "Position [m]"]
+      - [SHIP_MODEL, east, "Position [m]"]
+      - [SHIP_MODEL, yaw_angle_rad, "Angle [rad]"]
+      - [SHIP_MODEL, forward_speed, "Speed [m/s]"]
+      - [SHIP_MODEL, sideways_speed, "Speed [m/s]"]
+      - [SHIP_MODEL, yaw_rate, "Angular Speed [rad/s]"]
+      - [SHIP_MODEL, total_ship_speed, "Speed [m/s]"]
+      - [SHIP_MODEL, d_north, "Speed [m/s]"]
+      - [SHIP_MODEL, d_east, "Speed [m/s]"]
+      - [SHIP_MODEL, d_yaw_angle_rad, "Angular Speed [rad/s]"]
+      - [SHIP_MODEL, d_forward_speed, "Acceleration [m/s2]"]
+      - [SHIP_MODEL, d_sideways_speed, "Acceleration [m/s2]"]
+      - [SHIP_MODEL, d_yaw_rate, "Angular Acc. [rad/s2]"]
+
+    fmu_params:
+      mission_manager:
+        ra: 300
+        max_inter_wp: 0
+
+      autopilot:
+        r: 1000
+        ki_ct: 0.002
+        integrator_limit: 5000
+        kp: 1.5
+        ki: 0.0001
+        kd: 75
+        max_rudder_rate_deg_per_sec: 2.3
+        max_rudder_angle_deg: 30
+
+      shaft_speed_controller:
+        kp: 100
+        ki: 15
+        rated_speed_main_engine_rpm: 1000
+        gear_ratio_between_main_engine_and_propeller: 0.6
+        idle_rpm_fraction: 0.1
+
+      throttle_controller:
+        kp: 0.005
+        ki: 0.00005
+
+      machinery_system:
+        hotel_load: 200000
+        rated_speed_main_engine_rpm: 1000
+        linear_friction_main_engine: 68
+        linear_friction_hybrid_shaft_generator: 57
+        gear_ratio_between_main_engine_and_propeller: 0.6
+        gear_ratio_between_hybrid_shaft_generator_and_propeller: 0.6
+        propeller_inertia: 6000
+        propeller_speed_to_torque_coefficient: 7.5
+        propeller_diameter: 3.1
+        propeller_speed_to_thrust_force_coefficient: 1.7
+        specific_fuel_consumption_coefficients_me_a_coeff: 128.89
+        specific_fuel_consumption_coefficients_me_b_coeff: -168.93
+        specific_fuel_consumption_coefficients_me_c_coeff: 246.76
+        specific_fuel_consumption_coefficients_dg_a_coeff: 180.71
+        specific_fuel_consumption_coefficients_dg_b_coeff: -289.90
+        specific_fuel_consumption_coefficients_dg_c_coeff: 324.90
+        omega: 0.0
+        d_omega: 0.0
+        main_engine_capacity_spec: 2160000.0
+        diesel_gen_capacity_spec: 510000.0
+        mso_mode: 0
+
+      rudder:
+        rudder_angle_to_sway_force_coefficient: 50000
+        rudder_angle_to_yaw_force_coefficient: 500000
+        max_rudder_angle_negative_deg: -30
+        max_rudder_angle_positive_deg: 30
+
+      ship_model_base:
+        dead_weight_tonnage: 3850000
+        coefficient_of_deadweight_to_displacement: 0.7
+        bunkers: 200000
+        ballast: 200000
+        length_of_ship: 80
+        width_of_ship: 16
+        added_mass_coefficient_in_surge: 0.4
+        added_mass_coefficient_in_sway: 0.4
+        added_mass_coefficient_in_yaw: 0.4
+        mass_over_linear_friction_coefficient_in_surge: 130
+        mass_over_linear_friction_coefficient_in_sway: 18
+        mass_over_linear_friction_coefficient_in_yaw: 90
+        nonlinear_friction_coefficient_in_surge: 2400
+        nonlinear_friction_coefficient_in_sway: 4000
+        nonlinear_friction_coefficient_in_yaw: 400
+        rho_seawater: 1025
+        rho_air: 1.2
+        front_above_water_height: 8
+        side_above_water_height: 8
+        cx: 0.5
+        cy: 0.7
+        cn: 0.08
+        initial_forward_speed_m_per_s: 0.0
+        initial_sideways_speed_m_per_s: 0.0
+        initial_yaw_rate_rad_per_s: 0.0
