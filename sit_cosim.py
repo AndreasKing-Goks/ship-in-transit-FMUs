@@ -629,7 +629,8 @@ class ShipInTransitCoSimulation(CoSimInstance):
         fig_width=10.0,
         margin_frac=0.08,
         equal_aspect=True,
-        anim_fps=50,
+        interval_ms=20,
+        frame_step=1,
         trail_len=300,
         plot_routes=True,
         plot_waypoints=True,
@@ -640,19 +641,16 @@ class ShipInTransitCoSimulation(CoSimInstance):
         writer_fps=20,
         show=True,
         block=True,
-        palette=None
+        palette=None,
+        blit=False
     ):
         ship_ids = self._resolve_ship_ids(ship_ids)
         if len(ship_ids) == 0:
             raise ValueError("No valid ship ids to animate.")
 
-        # Load playback arrays
         data, n_frames = self._prepare_playback_data(ship_ids)
-
-        # Bounds
         bounds = self._compute_bounds_from_playback_data(data, ship_ids)
 
-        # 3) Figure + axes
         fig, ax_map, ax_status = self._init_anim_figures(
             fig_width=fig_width,
             equal_aspect=equal_aspect,
@@ -660,7 +658,6 @@ class ShipInTransitCoSimulation(CoSimInstance):
             bounds=bounds
         )
 
-        # Static layer
         static_artists = self._draw_static(
             ax_map=ax_map,
             ship_ids=ship_ids,
@@ -670,11 +667,9 @@ class ShipInTransitCoSimulation(CoSimInstance):
             palette=palette
         )
 
-        # Create legend AFTER static exists (optional)
         if plot_routes:
             ax_map.legend(loc="upper right")
 
-        # Dynamic artists (trail + hull + labels + status text)
         artists = self._init_dynamic_artists(
             ax_map=ax_map,
             ax_status=ax_status,
@@ -683,12 +678,17 @@ class ShipInTransitCoSimulation(CoSimInstance):
             with_labels=with_labels
         )
 
-        # Precompute outlines for smoothness (your request)
         outlines = None
         if precompute_outlines:
             outlines = self._precompute_outlines(data, ship_ids, n_frames)
 
-        # Animation update callback
+        # Frame skipping
+        frame_step = max(1, int(frame_step))
+        frames = range(0, n_frames, frame_step)
+
+        # Interval in ms for GUI playback
+        interval_ms = interval_ms
+
         def update(i):
             return self._update_dynamic(
                 i=i,
@@ -699,18 +699,15 @@ class ShipInTransitCoSimulation(CoSimInstance):
                 trail_len=trail_len
             )
 
-        # Create animation (store on self to avoid GC)
-        interval_ms = 1000.0 / anim_fps
         self.ani = FuncAnimation(
             fig,
             update,
             repeat=False,
-            frames=n_frames,
+            frames=frames,
             interval=interval_ms,
-            blit=False
+            blit=blit
         )
 
-        # Save (optional)
         if save_path:
             writer = FFMpegWriter(fps=writer_fps)
             self.ani.save(save_path, writer=writer)

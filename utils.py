@@ -40,17 +40,16 @@ def compile_ship_params(ship_cfg: dict) -> dict:
     iw_speed = speed[1:-1]
 
     # If you want to enforce max_inter_wp:
-    max_inter = int(mm.get("max_inter_wp", len(iw_north)))
+    max_inter_wp = int(len(iw_north))
     if len(iw_north) != len(iw_east) or len(iw_north) != len(iw_speed):
         raise ValueError("Route north/east/speed lengths mismatch.")
-    if len(iw_north) != max_inter:
-        # either raise or allow smaller:
-        raise ValueError(f"Expected {max_inter} intermediate waypoints but got {len(iw_north)}")
+    mm["max_inter_wp"] = max_inter_wp
 
-    for i, (n_i, e_i, s_i) in enumerate(zip(iw_north, iw_east, iw_speed), start=1):
-        mm[f"wp_{i}_north"] = float(n_i)
-        mm[f"wp_{i}_east"]  = float(e_i)
-        mm[f"wp_{i}_speed"] = float(s_i)
+    if max_inter_wp > 0:
+        for i, (n_i, e_i, s_i) in enumerate(zip(iw_north, iw_east, iw_speed), start=1):
+            mm[f"wp_{i}_north"] = float(n_i)
+            mm[f"wp_{i}_east"]  = float(e_i)
+            mm[f"wp_{i}_speed"] = float(s_i)
 
     # ---- Ship Model params (base + derived) ----
     sm = dict(ship_cfg["fmu_params"]["ship_model_base"])

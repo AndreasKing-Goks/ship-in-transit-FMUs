@@ -9,9 +9,9 @@ ships:
     enable_colav: true
 
     route:
-      north: [0, 10000]
-      east:  [0, 10000]
-      speed: [5, 5    ]
+      north: [0, 8000 , 10000 ]
+      east:  [0, 8000 , 10000 ]
+      speed: [5, 5    , 3.5   ]
 
     SHIP_BLOCKS:
       - [MISSION_MANAGER, FMUs/MissionManager.fmu]
@@ -130,7 +130,6 @@ ships:
     fmu_params:
       mission_manager:
         ra: 300
-        max_inter_wp: 0
 
       autopilot:
         r: 1000
@@ -225,9 +224,9 @@ ships:
     enable_colav: false
 
     route:
-      north: [10000 , 0    ]
-      east:  [0     , 10000]
-      speed: [5     , 5    ]
+      north: [10000 , 2000, 0     ]
+      east:  [0     , 8000, 10000 ]
+      speed: [5     , 5   , 3.5   ]
 
     SHIP_BLOCKS:
       - [MISSION_MANAGER, FMUs/MissionManager.fmu]
@@ -328,7 +327,6 @@ ships:
     fmu_params:
       mission_manager:
         ra: 300
-        max_inter_wp: 0
 
       autopilot:
         r: 1000
@@ -414,9 +412,9 @@ ships:
     enable_colav: false
 
     route:
-      north: [10000 , 0   ]
-      east:  [5000  , 5000]
-      speed: [5     , 5   ]
+      north: [10000 , 2000 , 0    ]
+      east:  [5000  , 5000 , 5000 ]
+      speed: [5     , 5    , 2    ]
 
     SHIP_BLOCKS:
       - [MISSION_MANAGER, FMUs/MissionManager.fmu]
@@ -517,7 +515,6 @@ ships:
     fmu_params:
       mission_manager:
         ra: 300
-        max_inter_wp: 0
 
       autopilot:
         r: 1000
@@ -603,9 +600,9 @@ ships:
     enable_colav: false
 
     route:
-      north: [5000  , 5000 ]
-      east:  [10000 , 0    ]
-      speed: [5     , 5    ]
+      north: [5000  , 5000 , 5000 ]
+      east:  [10000 , 2000 , 0    ]
+      speed: [5     , 5    , 2    ]
 
     SHIP_BLOCKS:
       - [MISSION_MANAGER, FMUs/MissionManager.fmu]
@@ -706,7 +703,6 @@ ships:
     fmu_params:
       mission_manager:
         ra: 300
-        max_inter_wp: 0
 
       autopilot:
         r: 1000

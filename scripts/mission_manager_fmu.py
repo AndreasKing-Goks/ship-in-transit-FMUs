@@ -155,10 +155,10 @@ class MissionManager(Fmi2Slave):
             # while keep checking if the ship reaches the end point
             if self._idx >= len(self._traj) - 2:
                 self.last_wp_active = True
-                self.reach_wp_end   = False
+                self.reach_wp_end   = False if self.reach_wp_end is False else True # If it's already switched to True, stay True.
                 
                 # Check if the ship reaches the end point (three-quarter way inside the waypoint's RoA)
-                if self._dist2_to_next() <= ra2 / 16:
+                if self._dist2_to_next() <= ra2:
                     self.last_wp_active = True
                     self.reach_wp_end   = True
                     

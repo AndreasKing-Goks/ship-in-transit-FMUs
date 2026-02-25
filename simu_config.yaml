@@ -130,7 +130,6 @@ ships:
     fmu_params:
       mission_manager:
         ra: 300
-        max_inter_wp: 4
 
       autopilot:
         r: 1000
@@ -328,7 +327,6 @@ ships:
     fmu_params:
       mission_manager:
         ra: 300
-        max_inter_wp: 4
 
       autopilot:
         r: 1000
