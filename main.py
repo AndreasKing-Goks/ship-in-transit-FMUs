@@ -19,8 +19,8 @@ from sit_cosim import ShipInTransitCoSimulation
 import yaml
 
 # Get the path
-# config_path = ROOT / "simu_config.yaml"
-config_path = ROOT / "multi_ship_config.yaml"
+# config_path = ROOT / "ship_config" / "single_target_ship_config.yaml"
+config_path = ROOT / "ship_config" / "multi_target_ship_config.yaml"
 
 with config_path.open("r", encoding="utf-8") as f:
     config = yaml.safe_load(f)
@@ -55,6 +55,14 @@ instance.Simulate()
 # =========================
 # Animation and Plot
 # =========================
+# Available formats:
+# - .mp4
+# - .gif
+# - .avi
+# - .mov
+save_path = ROOT / "saved_animation" / "multi_target_ship.mp4"
+# save_path = ROOT / "saved_animation" / "single_target_ship.mp4"
+
 # Animate Simulation
 instance.AnimateFleetTrajectory(
         ship_ids=None,

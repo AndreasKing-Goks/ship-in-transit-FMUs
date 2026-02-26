@@ -188,7 +188,7 @@ ships:
         collision_zone_radius: 100.0
         max_target_ship_count: 1
         hold_time: 600.0
-        T_lookahead: 600.0
+        T_lookahead: 10.0
 
       ship_model_base:
         dead_weight_tonnage: 3850000
@@ -414,7 +414,7 @@ ships:
     route:
       north: [10000 , 2000 , 0    ]
       east:  [5000  , 5000 , 5000 ]
-      speed: [5     , 5    , 2    ]
+      speed: [4     , 4    , 2    ]
 
     SHIP_BLOCKS:
       - [MISSION_MANAGER, FMUs/MissionManager.fmu]
@@ -602,7 +602,7 @@ ships:
     route:
       north: [5000  , 5000 , 5000 ]
       east:  [10000 , 2000 , 0    ]
-      speed: [5     , 5    , 2    ]
+      speed: [4.5   , 4.5  , 2    ]
 
     SHIP_BLOCKS:
       - [MISSION_MANAGER, FMUs/MissionManager.fmu]
