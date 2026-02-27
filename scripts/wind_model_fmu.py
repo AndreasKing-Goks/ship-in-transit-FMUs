@@ -30,9 +30,9 @@ class WindModel(Fmi2Slave):
         self.mean_wind_speed_decay_rate                 = 0.0
         self.mean_wind_speed_standard_deviation         = 0.0
         
-        self.initial_wind_direction                     = 0.0
-        self.wind_direction_decay_rate                  = 0.0
-        self.wind_direction_standard_deviation          = 0.0
+        self.initial_wind_direction_deg                 = 0.0
+        self.wind_direction_deg_decay_rate              = 0.0
+        self.wind_direction_deg_standard_deviation      = 0.0
         
         self.minimum_mean_wind_speed                    = 0.0
         self.maximum_mean_wind_speed                    = 0.0
@@ -57,13 +57,14 @@ class WindModel(Fmi2Slave):
         # Inputs (time-varying commands from RL/master)
         # =========================
         self.mean_wind_speed                            = 0.0
-        self.mean_wind_direction                        = 0.0
+        self.mean_wind_direction_deg                    = 0.0
         
         # =========================
         # Outputs
         # =========================
         self.wind_speed                                 = 0.0
-        self.wind_direction                             = 0.0
+        self.wind_direction_rad                         = 0.0
+        self.wind_direction_deg                         = 0.0
         self.wind_valid                                 = True
         
         # Internal state
@@ -96,9 +97,9 @@ class WindModel(Fmi2Slave):
         self.register_variable(Real("mean_wind_speed_standard_deviation", causality=Fmi2Causality.parameter, variability=Fmi2Variability.fixed))
 
         # Wind direction parameters
-        self.register_variable(Real("initial_wind_direction", causality=Fmi2Causality.parameter, variability=Fmi2Variability.fixed))
-        self.register_variable(Real("wind_direction_decay_rate", causality=Fmi2Causality.parameter, variability=Fmi2Variability.fixed))
-        self.register_variable(Real("wind_direction_standard_deviation", causality=Fmi2Causality.parameter, variability=Fmi2Variability.fixed))
+        self.register_variable(Real("initial_wind_direction_deg", causality=Fmi2Causality.parameter, variability=Fmi2Variability.fixed))
+        self.register_variable(Real("wind_direction_deg_decay_rate", causality=Fmi2Causality.parameter, variability=Fmi2Variability.fixed))
+        self.register_variable(Real("wind_direction_deg_standard_deviation", causality=Fmi2Causality.parameter, variability=Fmi2Variability.fixed))
 
         # Wind constraints and gust parameters
         self.register_variable(Real("minimum_mean_wind_speed", causality=Fmi2Causality.parameter, variability=Fmi2Variability.fixed))
@@ -119,11 +120,12 @@ class WindModel(Fmi2Slave):
 
         # Inputs (recommended for RL-driven mid-sim changes)
         self.register_variable(Real("mean_wind_speed", causality=Fmi2Causality.input))
-        self.register_variable(Real("mean_wind_direction", causality=Fmi2Causality.input))
+        self.register_variable(Real("mean_wind_direction_deg", causality=Fmi2Causality.input))
 
         # Outputs
         self.register_variable(Real("wind_speed", causality=Fmi2Causality.output))
-        self.register_variable(Real("wind_direction", causality=Fmi2Causality.output))
+        self.register_variable(Real("wind_direction_rad", causality=Fmi2Causality.output))
+        self.register_variable(Real("wind_direction_deg", causality=Fmi2Causality.output))
         self.register_variable(Boolean("wind_valid", causality=Fmi2Causality.output))
 
     # =========================
@@ -155,8 +157,12 @@ class WindModel(Fmi2Slave):
         self.f_min  = float(self.minimum_wind_gust_frequency)
         self.f_max  = float(self.maximum_wind_gust_frequency)
         self.N_f    = int(self.wind_gust_frequency_discrete_unit_count)
-        self.f      = np.linspace(self.f_min, self.f_max, self.N_f)   # Hz
-        self.df     = self.f[1] - self.f[0]
+        if self.N_f >= 2 and self.f_max > self.f_min:
+            self.f      = np.linspace(self.f_min, self.f_max, self.N_f)   # Hz
+            self.df     = self.f[1] - self.f[0]
+        else:
+            self.f      = None
+            self.df     = None
         
         # Get the initial mean wind speed, available with two mode:
         # 1. Mean wind at height z
@@ -173,9 +179,9 @@ class WindModel(Fmi2Slave):
         self.sigma_Ubar = float(self.mean_wind_speed_standard_deviation)
             
         # Get the initial wind direction
-        self.dir        = self.wrap_pi(float(self.initial_wind_direction))
-        self.mu_dir     = float(self.wind_direction_decay_rate)
-        self.sigma_dir  = float(self.wind_direction_standard_deviation)
+        self.dir        = self.wrap_pi(float(np.deg2rad(self.initial_wind_direction_deg)))
+        self.mu_dir     = float(self.wind_direction_deg_decay_rate)
+        self.sigma_dir  = float(np.deg2rad(self.wind_direction_deg_standard_deviation))
         
         # Wind speed bound
         self.Ubar_min   = self.minimum_mean_wind_speed
@@ -241,7 +247,7 @@ class WindModel(Fmi2Slave):
 
             # Read inputs (master can keep them constant for many steps and change anytime)
             mean_speed  = 0.0 if self.mean_wind_speed is None else float(self.mean_wind_speed)
-            mean_dir    = 0.0 if self.mean_wind_direction is None else float(self.mean_wind_direction)
+            mean_dir    = 0.0 if self.mean_wind_direction_deg is None else float(np.deg2rad(self.mean_wind_direction_deg))
             
             ## Compute wind speed
             # Ubar
@@ -251,7 +257,7 @@ class WindModel(Fmi2Slave):
             
             # Wind gust
             Ug          = 0.0
-            if self.spectrum_is_computed and (self.f is not None):
+            if self.spectrum_is_computed and (self.f is not None) and (self.U10 > 0.0) and (self.z > 0.0):
                 Ug          = self.compute_wind_gust(dt)
                 
             # Total wind speed
@@ -271,19 +277,20 @@ class WindModel(Fmi2Slave):
             self.dir    = self.wrap_pi(mean_dir + err_new)
             
             # Assign the results to the output variables
-            self.wind_speed     = float(wind_speed)
-            self.wind_direction = float(self.dir)
-            self.wind_valid     = True
+            self.wind_speed         = float(wind_speed)
+            self.wind_direction_rad = float(self.dir)
+            self.wind_direction_deg = float(np.rad2deg(self.dir))
+            self.wind_valid         = True
         
         except Exception as e:
             print(f"[WindModel] Exception t={current_time}, dt={step_size}: {type(e).__name__}: {e}")
             print(traceback.format_exc())
             
-            self.current_valid = False
+            self.wind_valid = False
             if self.fail_outputs_zero:
-                self.current_speed = 0.0
-                self.current_direction = 0.0
+                self.wind_speed         = 0.0
+                self.wind_direction_rad = 0.0
+                self.wind_direction_deg = 0.0
             # else: hold last outputs (do nothing)
             
-        
         return True
