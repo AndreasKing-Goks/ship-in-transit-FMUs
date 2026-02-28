@@ -220,7 +220,7 @@ class CoSimInstance:
             plt.ylabel(self.observer_time_series_label[key_group[0]], fontsize=9)
             if create_title:
                 plt.title("Time series form co-simulation instance \"%s\"" %(self.instanceName))
-            # plt.tight_layout()
+            plt.tight_layout()
             if show_separately and show:
                 plt.show()
 

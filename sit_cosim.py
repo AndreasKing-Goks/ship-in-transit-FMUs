@@ -50,11 +50,11 @@ class ShipInTransitCoSimulation(CoSimInstance):
         for ship_config in ship_configs:
             prefix              = ship_config.get("id")
             role                = ship_config.get("role")
-            enable_colav        = ship_config.get("enable_colav")
             SHIP_BLOCKS         = ship_config.get("SHIP_BLOCKS")
             SHIP_CONNECTIONS    = ship_config.get("SHIP_CONNECTIONS")
             SHIP_OBSERVERS      = ship_config.get("SHIP_OBSERVERS")
             fmu_params          = compile_ship_params(ship_config)
+            enable_colav        = ship_config.get("enable_colav")
             
             # Add slaves
             for block, relpath in SHIP_BLOCKS:
@@ -126,12 +126,19 @@ class ShipInTransitCoSimulation(CoSimInstance):
             
         
     def PreSolverFunctionCall(self):
+        """
+        Function to handle:
+        - External input handling (such as RL-action)
+        - Additional FMU manipulation using given external input
+        """
         pass
 
 
     def PostSolverFunctionCall(self):
         """
-        Stop the simulator once the stop flag is received
+        Function to handle:
+        - Simulation termination assesment and handling
+        - Reward Function for reward signal (RL only)
         """
         # Get the reach end point and collision flag for all assets
         rep_flags       = []
@@ -282,7 +289,7 @@ class ShipInTransitCoSimulation(CoSimInstance):
                                     marker="x", color=color)
 
                             # RoA circles
-                            ra = cfg["fmu_params"].get("mission_manager", {}).get("ra", None)
+                            ra = cfg["fmu_params"].get("MISSION_MANAGER", {}).get("ra", None)
                             if ra is not None:
                                 print("Drawing RoA ...")
                                 for n_wp, e_wp in zip(rN[1:], rE[1:]):
@@ -346,6 +353,7 @@ class ShipInTransitCoSimulation(CoSimInstance):
 
         if show:
             print("Plot is finished!")
+            plt.tight_layout()
             plt.show(block=block)
 
         return fig, ax
@@ -528,7 +536,7 @@ class ShipInTransitCoSimulation(CoSimInstance):
 
             if plot_roa:
                 fmu_params = cfg.get("fmu_params", {})  # <-- underscore
-                mm = fmu_params.get("mission_manager", {})
+                mm = fmu_params.get("MISSION_MANAGER", {})
                 ra = mm.get("ra", None)
 
                 if ra is not None and ra > 0:

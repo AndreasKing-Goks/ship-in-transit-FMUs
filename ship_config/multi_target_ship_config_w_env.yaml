@@ -21,6 +21,8 @@ ships:
       - [RUDDER, FMUs/Rudder.fmu]
       - [SHIP_MODEL, FMUs/ShipModel.fmu]
       - [COLAV, FMUs/SimpleCollisionAvoidance.fmu]
+      - [SURFACE_CURRENT, FMUs/SurfaceCurrentModel.fmu]
+      - [WIND, FMUs/WindModel.fmu]
 
     SHIP_CONNECTIONS:
       # Mission manager
@@ -53,9 +55,13 @@ ships:
       - [RUDDER, forward_speed,    SHIP_MODEL, forward_speed]
 
       # Ship model
-      - [SHIP_MODEL, thrust_force,   MACHINERY_SYSTEM, thrust_force]
-      - [SHIP_MODEL, rudder_force_v, RUDDER,           rudder_force_v]
-      - [SHIP_MODEL, rudder_force_r, RUDDER,           rudder_force_r]
+      - [SHIP_MODEL, thrust_force,     MACHINERY_SYSTEM, thrust_force]
+      - [SHIP_MODEL, rudder_force_v,   RUDDER,           rudder_force_v]
+      - [SHIP_MODEL, rudder_force_r,   RUDDER,           rudder_force_r]
+      - [SHIP_MODEL, current_speed ,   SURFACE_CURRENT,  current_speed]
+      - [SHIP_MODEL, current_dir_rad , SURFACE_CURRENT,  current_direction_rad]
+      - [SHIP_MODEL, wind_speed,       WIND,             wind_speed]
+      - [SHIP_MODEL, wind_dir_rad ,    WIND,             wind_direction_rad]
 
       # Collision Avoidance (Only Internal Ports)
       - [COLAV, own_north,          SHIP_MODEL,           north]
@@ -125,6 +131,12 @@ ships:
       - [COLAV, dcpa_own_to_tar_1, "Distance [m]"]
       - [COLAV, dist_own_to_tar_1, "Distance [m]"]
       - [COLAV, rr_own_to_tar_1, "Range Rate [m/s]"]
+
+      - [SURFACE_CURRENT, current_speed, "Speed [m/s]"]
+      - [SURFACE_CURRENT, current_direction_deg, "Angle [deg]"]
+
+      - [WIND, wind_speed, "Speed [m/s]"]
+      - [WIND, wind_direction_deg, "Angle [deg]"]
 
     fmu_params:
       MISSION_MANAGER:
@@ -216,6 +228,37 @@ ships:
         initial_sideways_speed_m_per_s: 0.0
         initial_yaw_rate_rad_per_s: 0.0
 
+      SURFACE_CURRENT:
+        seed: 0
+        initial_current_speed: 0.01
+        current_speed_decay_rate: 0.5
+        current_speed_standard_deviation: 0.15
+        initial_current_direction_deg: 0.0
+        current_direction_deg_decay_rate: 0.5 
+        current_direction_deg_standard_deviation: 5.0
+        clip_speed_nonnegative: True
+        fail_outputs_zero: True
+
+      WIND:
+        seed: 0
+        initial_mean_wind_speed: 5.0
+        mean_wind_speed_decay_rate: 0.5
+        mean_wind_speed_standard_deviation: 1.5
+        initial_wind_direction_deg: 0.0
+        wind_direction_deg_decay_rate: 0.5
+        wind_direction_deg_standard_deviation: 5.0
+        minimum_mean_wind_speed: 0.0
+        maximum_mean_wind_speed: 42.0
+        minimum_wind_gust_frequency: 0.06
+        maximum_wind_gust_frequency: 0.4
+        wind_gust_frequency_discrete_unit_count: 100
+        wind_evaluation_height: 5.0
+        U10: 10.0
+        kappa_parameter: 0.0026
+        clip_speed_nonnegative: True
+        manual_mean_wind_speed: True
+        fail_outputs_zero: True
+
   ##########################################################
 
   - id: TS1
@@ -234,6 +277,8 @@ ships:
       - [MACHINERY_SYSTEM, FMUs/MachinerySystem.fmu]
       - [RUDDER, FMUs/Rudder.fmu]
       - [SHIP_MODEL, FMUs/ShipModel.fmu]
+      - [SURFACE_CURRENT, FMUs/SurfaceCurrentModel.fmu]
+      - [WIND, FMUs/WindModel.fmu]
 
     SHIP_CONNECTIONS:
       # Mission manager
@@ -269,6 +314,10 @@ ships:
       - [SHIP_MODEL, thrust_force,   MACHINERY_SYSTEM, thrust_force]
       - [SHIP_MODEL, rudder_force_v, RUDDER,           rudder_force_v]
       - [SHIP_MODEL, rudder_force_r, RUDDER,           rudder_force_r]
+      - [SHIP_MODEL, current_speed ,   SURFACE_CURRENT,  current_speed]
+      - [SHIP_MODEL, current_dir_rad , SURFACE_CURRENT,  current_direction_rad]
+      - [SHIP_MODEL, wind_speed,       WIND,             wind_speed]
+      - [SHIP_MODEL, wind_dir_rad ,    WIND,             wind_direction_rad]
 
     SHIP_OBSERVERS:
       - [MISSION_MANAGER, prev_wp_north, "Waypoint [m]"]
@@ -321,6 +370,12 @@ ships:
       - [SHIP_MODEL, d_forward_speed, "Acceleration [m/s2]"]
       - [SHIP_MODEL, d_sideways_speed, "Acceleration [m/s2]"]
       - [SHIP_MODEL, d_yaw_rate, "Angular Acc. [rad/s2]"]
+
+      - [SURFACE_CURRENT, current_speed, "Speed [m/s]"]
+      - [SURFACE_CURRENT, current_direction_deg, "Angle [deg]"]
+
+      - [WIND, wind_speed, "Speed [m/s]"]
+      - [WIND, wind_direction_deg, "Angle [deg]"]
 
     fmu_params:
       MISSION_MANAGER:
@@ -402,6 +457,37 @@ ships:
         initial_forward_speed_m_per_s: 0.0
         initial_sideways_speed_m_per_s: 0.0
         initial_yaw_rate_rad_per_s: 0.0
+      
+      SURFACE_CURRENT:
+        seed: 0
+        initial_current_speed: 0.01
+        current_speed_decay_rate: 0.5
+        current_speed_standard_deviation: 0.15
+        initial_current_direction_deg: 0.0
+        current_direction_deg_decay_rate: 0.5 
+        current_direction_deg_standard_deviation: 5.0
+        clip_speed_nonnegative: True
+        fail_outputs_zero: True
+
+      WIND:
+        seed: 0
+        initial_mean_wind_speed: 5.0
+        mean_wind_speed_decay_rate: 0.5
+        mean_wind_speed_standard_deviation: 1.5
+        initial_wind_direction_deg: 0.0
+        wind_direction_deg_decay_rate: 0.5
+        wind_direction_deg_standard_deviation: 5.0
+        minimum_mean_wind_speed: 0.0
+        maximum_mean_wind_speed: 42.0
+        minimum_wind_gust_frequency: 0.06
+        maximum_wind_gust_frequency: 0.4
+        wind_gust_frequency_discrete_unit_count: 100
+        wind_evaluation_height: 5.0
+        U10: 10.0
+        kappa_parameter: 0.0026
+        clip_speed_nonnegative: True
+        manual_mean_wind_speed: True
+        fail_outputs_zero: True
 
   ##########################################################
 
@@ -421,6 +507,8 @@ ships:
       - [MACHINERY_SYSTEM, FMUs/MachinerySystem.fmu]
       - [RUDDER, FMUs/Rudder.fmu]
       - [SHIP_MODEL, FMUs/ShipModel.fmu]
+      - [SURFACE_CURRENT, FMUs/SurfaceCurrentModel.fmu]
+      - [WIND, FMUs/WindModel.fmu]
 
     SHIP_CONNECTIONS:
       # Mission manager
@@ -456,6 +544,10 @@ ships:
       - [SHIP_MODEL, thrust_force,   MACHINERY_SYSTEM, thrust_force]
       - [SHIP_MODEL, rudder_force_v, RUDDER,           rudder_force_v]
       - [SHIP_MODEL, rudder_force_r, RUDDER,           rudder_force_r]
+      - [SHIP_MODEL, current_speed ,   SURFACE_CURRENT,  current_speed]
+      - [SHIP_MODEL, current_dir_rad , SURFACE_CURRENT,  current_direction_rad]
+      - [SHIP_MODEL, wind_speed,       WIND,             wind_speed]
+      - [SHIP_MODEL, wind_dir_rad ,    WIND,             wind_direction_rad]
 
     SHIP_OBSERVERS:
       - [MISSION_MANAGER, prev_wp_north, "Waypoint [m]"]
@@ -508,6 +600,12 @@ ships:
       - [SHIP_MODEL, d_forward_speed, "Acceleration [m/s2]"]
       - [SHIP_MODEL, d_sideways_speed, "Acceleration [m/s2]"]
       - [SHIP_MODEL, d_yaw_rate, "Angular Acc. [rad/s2]"]
+
+      - [SURFACE_CURRENT, current_speed, "Speed [m/s]"]
+      - [SURFACE_CURRENT, current_direction_deg, "Angle [deg]"]
+
+      - [WIND, wind_speed, "Speed [m/s]"]
+      - [WIND, wind_direction_deg, "Angle [deg]"]
 
     fmu_params:
       MISSION_MANAGER:
@@ -589,6 +687,37 @@ ships:
         initial_forward_speed_m_per_s: 0.0
         initial_sideways_speed_m_per_s: 0.0
         initial_yaw_rate_rad_per_s: 0.0
+      
+      SURFACE_CURRENT:
+        seed: 0
+        initial_current_speed: 0.01
+        current_speed_decay_rate: 0.5
+        current_speed_standard_deviation: 0.15
+        initial_current_direction_deg: 0.0
+        current_direction_deg_decay_rate: 0.5 
+        current_direction_deg_standard_deviation: 5.0
+        clip_speed_nonnegative: True
+        fail_outputs_zero: True
+
+      WIND:
+        seed: 0
+        initial_mean_wind_speed: 5.0
+        mean_wind_speed_decay_rate: 0.5
+        mean_wind_speed_standard_deviation: 1.5
+        initial_wind_direction_deg: 0.0
+        wind_direction_deg_decay_rate: 0.5
+        wind_direction_deg_standard_deviation: 5.0
+        minimum_mean_wind_speed: 0.0
+        maximum_mean_wind_speed: 42.0
+        minimum_wind_gust_frequency: 0.06
+        maximum_wind_gust_frequency: 0.4
+        wind_gust_frequency_discrete_unit_count: 100
+        wind_evaluation_height: 5.0
+        U10: 10.0
+        kappa_parameter: 0.0026
+        clip_speed_nonnegative: True
+        manual_mean_wind_speed: True
+        fail_outputs_zero: True
 
   ##########################################################
 
@@ -608,6 +737,8 @@ ships:
       - [MACHINERY_SYSTEM, FMUs/MachinerySystem.fmu]
       - [RUDDER, FMUs/Rudder.fmu]
       - [SHIP_MODEL, FMUs/ShipModel.fmu]
+      - [SURFACE_CURRENT, FMUs/SurfaceCurrentModel.fmu]
+      - [WIND, FMUs/WindModel.fmu]
 
     SHIP_CONNECTIONS:
       # Mission manager
@@ -643,6 +774,10 @@ ships:
       - [SHIP_MODEL, thrust_force,   MACHINERY_SYSTEM, thrust_force]
       - [SHIP_MODEL, rudder_force_v, RUDDER,           rudder_force_v]
       - [SHIP_MODEL, rudder_force_r, RUDDER,           rudder_force_r]
+      - [SHIP_MODEL, current_speed ,   SURFACE_CURRENT,  current_speed]
+      - [SHIP_MODEL, current_dir_rad , SURFACE_CURRENT,  current_direction_rad]
+      - [SHIP_MODEL, wind_speed,       WIND,             wind_speed]
+      - [SHIP_MODEL, wind_dir_rad ,    WIND,             wind_direction_rad]
 
     SHIP_OBSERVERS:
       - [MISSION_MANAGER, prev_wp_north, "Waypoint [m]"]
@@ -695,6 +830,12 @@ ships:
       - [SHIP_MODEL, d_forward_speed, "Acceleration [m/s2]"]
       - [SHIP_MODEL, d_sideways_speed, "Acceleration [m/s2]"]
       - [SHIP_MODEL, d_yaw_rate, "Angular Acc. [rad/s2]"]
+
+      - [SURFACE_CURRENT, current_speed, "Speed [m/s]"]
+      - [SURFACE_CURRENT, current_direction_deg, "Angle [deg]"]
+
+      - [WIND, wind_speed, "Speed [m/s]"]
+      - [WIND, wind_direction_deg, "Angle [deg]"]
 
     fmu_params:
       MISSION_MANAGER:
@@ -776,3 +917,34 @@ ships:
         initial_forward_speed_m_per_s: 0.0
         initial_sideways_speed_m_per_s: 0.0
         initial_yaw_rate_rad_per_s: 0.0
+      
+      SURFACE_CURRENT:
+        seed: 0
+        initial_current_speed: 0.01
+        current_speed_decay_rate: 0.5
+        current_speed_standard_deviation: 0.15
+        initial_current_direction_deg: 0.0
+        current_direction_deg_decay_rate: 0.5 
+        current_direction_deg_standard_deviation: 5.0
+        clip_speed_nonnegative: True
+        fail_outputs_zero: True
+
+      WIND:
+        seed: 0
+        initial_mean_wind_speed: 5.0
+        mean_wind_speed_decay_rate: 0.5
+        mean_wind_speed_standard_deviation: 1.5
+        initial_wind_direction_deg: 0.0
+        wind_direction_deg_decay_rate: 0.5
+        wind_direction_deg_standard_deviation: 5.0
+        minimum_mean_wind_speed: 0.0
+        maximum_mean_wind_speed: 42.0
+        minimum_wind_gust_frequency: 0.06
+        maximum_wind_gust_frequency: 0.4
+        wind_gust_frequency_discrete_unit_count: 100
+        wind_evaluation_height: 5.0
+        U10: 10.0
+        kappa_parameter: 0.0026
+        clip_speed_nonnegative: True
+        manual_mean_wind_speed: True
+        fail_outputs_zero: True

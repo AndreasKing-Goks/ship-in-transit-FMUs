@@ -6,7 +6,6 @@ simulation:
 ships:
   - id: OS0
     role: own
-    enable_colav: true
 
     route:
       north: [0, 2500, 2500, 7500, 7500, 10000]
@@ -54,9 +53,9 @@ ships:
       - [RUDDER, forward_speed,    SHIP_MODEL, forward_speed]
 
       # Ship model
-      - [SHIP_MODEL, thrust_force,   MACHINERY_SYSTEM, thrust_force]
-      - [SHIP_MODEL, rudder_force_v, RUDDER,           rudder_force_v]
-      - [SHIP_MODEL, rudder_force_r, RUDDER,           rudder_force_r]
+      - [SHIP_MODEL, thrust_force,     MACHINERY_SYSTEM, thrust_force]
+      - [SHIP_MODEL, rudder_force_v,   RUDDER,           rudder_force_v]
+      - [SHIP_MODEL, rudder_force_r,   RUDDER,           rudder_force_r]
 
       # Collision Avoidance (Only Internal Ports)
       - [COLAV, own_north,          SHIP_MODEL,           north]
@@ -128,10 +127,10 @@ ships:
       - [COLAV, rr_own_to_tar_1, "Range Rate [m/s]"]
 
     fmu_params:
-      mission_manager:
+      MISSION_MANAGER:
         ra: 300
 
-      autopilot:
+      AUTOPILOT:
         r: 1000
         ki_ct: 0.002
         integrator_limit: 5000
@@ -141,18 +140,18 @@ ships:
         max_rudder_rate_deg_per_sec: 2.3
         max_rudder_angle_deg: 30
 
-      shaft_speed_controller:
+      SHAFT_SPEED_CONTROLLER:
         kp: 100
         ki: 15
         rated_speed_main_engine_rpm: 1000
         gear_ratio_between_main_engine_and_propeller: 0.6
         idle_rpm_fraction: 0.1
 
-      throttle_controller:
+      THROTTLE_CONTROLLER:
         kp: 0.005
         ki: 0.00005
 
-      machinery_system:
+      MACHINERY_SYSTEM:
         hotel_load: 200000
         rated_speed_main_engine_rpm: 1000
         linear_friction_main_engine: 68
@@ -175,13 +174,13 @@ ships:
         diesel_gen_capacity_spec: 510000.0
         mso_mode: 0
 
-      rudder:
+      RUDDER:
         rudder_angle_to_sway_force_coefficient: 50000
         rudder_angle_to_yaw_force_coefficient: 500000
         max_rudder_angle_negative_deg: -30
         max_rudder_angle_positive_deg: 30
 
-      collision_avoidance:
+      COLAV:
         throttle_scale_factor: 0.5
         rud_ang_increment_deg: 0.05
         danger_zone_radius: 926.0
@@ -190,7 +189,7 @@ ships:
         hold_time: 600.0
         T_lookahead: 600.0
 
-      ship_model_base:
+      SHIP_MODEL:
         dead_weight_tonnage: 3850000
         coefficient_of_deadweight_to_displacement: 0.7
         bunkers: 200000
@@ -221,7 +220,6 @@ ships:
 
   - id: TS1
     role: target_1
-    enable_colav: false
 
     route:
       north: [10000, 7500, 7500, 2500, 2500, 0]
@@ -325,10 +323,10 @@ ships:
       - [SHIP_MODEL, d_yaw_rate, "Angular Acc. [rad/s2]"]
 
     fmu_params:
-      mission_manager:
+      MISSION_MANAGER:
         ra: 300
 
-      autopilot:
+      AUTOPILOT:
         r: 1000
         ki_ct: 0.002
         integrator_limit: 5000
@@ -338,18 +336,18 @@ ships:
         max_rudder_rate_deg_per_sec: 2.3
         max_rudder_angle_deg: 30
 
-      shaft_speed_controller:
+      SHAFT_SPEED_CONTROLLER:
         kp: 100
         ki: 15
         rated_speed_main_engine_rpm: 1000
         gear_ratio_between_main_engine_and_propeller: 0.6
         idle_rpm_fraction: 0.1
 
-      throttle_controller:
+      THROTTLE_CONTROLLER:
         kp: 0.005
         ki: 0.00005
 
-      machinery_system:
+      MACHINERY_SYSTEM:
         hotel_load: 200000
         rated_speed_main_engine_rpm: 1000
         linear_friction_main_engine: 68
@@ -372,13 +370,13 @@ ships:
         diesel_gen_capacity_spec: 510000.0
         mso_mode: 0
 
-      rudder:
+      RUDDER:
         rudder_angle_to_sway_force_coefficient: 50000
         rudder_angle_to_yaw_force_coefficient: 500000
         max_rudder_angle_negative_deg: -30
         max_rudder_angle_positive_deg: 30
 
-      ship_model_base:
+      SHIP_MODEL:
         dead_weight_tonnage: 3850000
         coefficient_of_deadweight_to_displacement: 0.7
         bunkers: 200000

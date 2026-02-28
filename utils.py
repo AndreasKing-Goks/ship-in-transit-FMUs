@@ -8,6 +8,7 @@ import numpy as np
 # =============================================================================================================
 # Ship Parameters Compiler
 # =============================================================================================================
+
 def compile_ship_params(ship_cfg: dict) -> dict:
     route = ship_cfg["route"]
     north = route["north"]
@@ -26,7 +27,7 @@ def compile_ship_params(ship_cfg: dict) -> dict:
     initial_east  = float(east[0])
 
     # ---- Mission Manager params ----
-    mm = dict(ship_cfg["fmu_params"].get("mission_manager", {}))  # ra, max_inter_wp, etc.
+    mm = dict(ship_cfg["fmu_params"].get("MISSION_MANAGER", {}))  # ra, max_inter_wp, etc.
     mm["wp_start_north"] = float(north[0])
     mm["wp_start_east"]  = float(east[0])
     mm["wp_start_speed"] = float(speed[0])
@@ -52,37 +53,31 @@ def compile_ship_params(ship_cfg: dict) -> dict:
             mm[f"wp_{i}_speed"] = float(s_i)
 
     # ---- Ship Model params (base + derived) ----
-    sm = dict(ship_cfg["fmu_params"]["ship_model_base"])
+    sm = dict(ship_cfg["fmu_params"]["SHIP_MODEL"])
     sm["initial_north_position_m"] = initial_north
     sm["initial_east_position_m"]  = initial_east
     sm["initial_yaw_angle_rad"]    = initial_yaw
-
-    # Optional: also store these for debugging
-    # sm["_derived_initial_d_north"] = float(d_north)
-    # sm["_derived_initial_d_east"]  = float(d_east)
     
-    if ship_cfg.get("enable_colav"):
-        params = {
-            "MISSION_MANAGER": mm, 
-            "AUTOPILOT": dict(ship_cfg["fmu_params"]["autopilot"]),
-            "SHAFT_SPEED_CONTROLLER": dict(ship_cfg["fmu_params"]["shaft_speed_controller"]),
-            "THROTTLE_CONTROLLER": dict(ship_cfg["fmu_params"]["throttle_controller"]),
-            "MACHINERY_SYSTEM": dict(ship_cfg["fmu_params"]["machinery_system"]),
-            "RUDDER": dict(ship_cfg["fmu_params"]["rudder"]),
-            "SHIP_MODEL": sm,
-            "COLAV": dict(ship_cfg["fmu_params"]["collision_avoidance"])
-            }
+    # Initial parameters (For the altered MISSION_MANAGER and SHIP_MODEL params)
+    params = {
+        "MISSION_MANAGER": mm,
+        "SHIP_MODEL": sm,
+    }
+    
+    # Repopulate the unaltered parameters into params_dict
+    params_name_list = list(ship_cfg["fmu_params"].keys())
+    altered_params_name_list = ["MISSION_MANAGER", "SHIP_MODEL"]
+    unaltered_params_name_list = [p for p in params_name_list if (p not in altered_params_name_list)]
+        
+    for param_name in unaltered_params_name_list:
+        params[param_name] = dict(ship_cfg["fmu_params"][param_name])
+        
+    # set enable_colav flag
+    if "COLAV" in params_name_list:
+        ship_cfg["enable_colav"] = True
     else:
-        params = {
-            "MISSION_MANAGER": mm, 
-            "AUTOPILOT": dict(ship_cfg["fmu_params"]["autopilot"]),
-            "SHAFT_SPEED_CONTROLLER": dict(ship_cfg["fmu_params"]["shaft_speed_controller"]),
-            "THROTTLE_CONTROLLER": dict(ship_cfg["fmu_params"]["throttle_controller"]),
-            "MACHINERY_SYSTEM": dict(ship_cfg["fmu_params"]["machinery_system"]),
-            "RUDDER": dict(ship_cfg["fmu_params"]["rudder"]),
-            "SHIP_MODEL": sm
-            }
-
+        ship_cfg["enable_colav"] = False
+    
     # ---- Pass-through params for other FMUs ----
     return params
 
