@@ -173,6 +173,15 @@ class ShipInTransitCoSimulation(CoSimInstance):
         self.stop = all_ship_reaches_end_point or any_ship_collides
         
 
+    def Step(self):
+        # Simulate
+        self.CoSimManipulate()
+        self.SetInputFromExternal()
+        self.PreSolverFunctionCall()
+        self.execution.step()
+        self.PostSolverFunctionCall()
+    
+    
     def Simulate(self):
         """
         Output simulation time
@@ -181,14 +190,9 @@ class ShipInTransitCoSimulation(CoSimInstance):
         start_time = time.perf_counter()
         
         while self.time < self.stopTime: 
-            # Simulate
-            self.CoSimManipulate()
-            self.SetInputFromExternal()
-            self.PreSolverFunctionCall()
-            self.execution.step()
-            self.PostSolverFunctionCall()
+            self.Step()
             
-            # Integrate or stop the simulator
+             # Integrate or stop the simulator
             if not self.stop:
                 self.time +=self.stepSize
             else:
