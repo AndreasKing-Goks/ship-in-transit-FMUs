@@ -312,7 +312,7 @@ class ShipInTransitCoSimulation(CoSimInstance):
                 idx = np.arange(0, n, every_n)
                 draw_attr = f"{sid}_draw"
                 draw = getattr(self, draw_attr)
-                for i in idx[::6]:  # extra subsample for speed
+                for i in idx[::1]:  # extra subsample for speed
                     x, y = draw.local_coords()
                     x_ned, y_ned = draw.rotate_coords(x, y, yaw[i])
                     x_tr,  y_tr  = draw.translate_coords(x_ned, y_ned, north[i], east[i])
@@ -463,7 +463,7 @@ class ShipInTransitCoSimulation(CoSimInstance):
 
     def _init_anim_figures(self, fig_width, equal_aspect, margin_frac, bounds=None):
         # Prepare gid an axes
-        fig     = plt.figure(figsize=(1.25*fig_width, fig_width), constrained_layout=True)
+        fig     = plt.figure(figsize=(fig_width, 0.9 * fig_width), constrained_layout=True)
         gs      = fig.add_gridspec(nrows=2, ncols=1, height_ratios=[1.0, 0.12], hspace=0.0)
         ax_map  = fig.add_subplot(gs[0, 0])
         ax_status = fig.add_subplot(gs[1, 0]); ax_status.set_axis_off()

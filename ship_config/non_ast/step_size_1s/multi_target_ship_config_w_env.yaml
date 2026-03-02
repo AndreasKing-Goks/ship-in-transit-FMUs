@@ -1,7 +1,7 @@
 simulation:
   instanceName: Ship-Path Following Test
   stopTime: 10000
-  stepSize: 5.0
+  stepSize: 1.0
 
 ships:
   - id: OS0
@@ -21,6 +21,8 @@ ships:
       - [RUDDER, FMUs/Rudder.fmu]
       - [SHIP_MODEL, FMUs/ShipModel.fmu]
       - [COLAV, FMUs/SimpleCollisionAvoidance.fmu]
+      - [SURFACE_CURRENT, FMUs/SurfaceCurrentModel.fmu]
+      - [WIND, FMUs/WindModel.fmu]
 
     SHIP_CONNECTIONS:
       # Mission manager
@@ -53,9 +55,13 @@ ships:
       - [RUDDER, forward_speed,    SHIP_MODEL, forward_speed]
 
       # Ship model
-      - [SHIP_MODEL, thrust_force,   MACHINERY_SYSTEM, thrust_force]
-      - [SHIP_MODEL, rudder_force_v, RUDDER,           rudder_force_v]
-      - [SHIP_MODEL, rudder_force_r, RUDDER,           rudder_force_r]
+      - [SHIP_MODEL, thrust_force,     MACHINERY_SYSTEM, thrust_force]
+      - [SHIP_MODEL, rudder_force_v,   RUDDER,           rudder_force_v]
+      - [SHIP_MODEL, rudder_force_r,   RUDDER,           rudder_force_r]
+      - [SHIP_MODEL, current_speed ,   SURFACE_CURRENT,  current_speed]
+      - [SHIP_MODEL, current_dir_rad , SURFACE_CURRENT,  current_direction_rad]
+      - [SHIP_MODEL, wind_speed,       WIND,             wind_speed]
+      - [SHIP_MODEL, wind_dir_rad ,    WIND,             wind_direction_rad]
 
       # Collision Avoidance (Only Internal Ports)
       - [COLAV, own_north,          SHIP_MODEL,           north]
@@ -126,6 +132,12 @@ ships:
       - [COLAV, dist_own_to_tar_1, "Distance [m]"]
       - [COLAV, rr_own_to_tar_1, "Range Rate [m/s]"]
 
+      - [SURFACE_CURRENT, current_speed, "Speed [m/s]"]
+      - [SURFACE_CURRENT, current_direction_deg, "Angle [deg]"]
+
+      - [WIND, wind_speed, "Speed [m/s]"]
+      - [WIND, wind_direction_deg, "Angle [deg]"]
+
     fmu_params:
       MISSION_MANAGER:
         ra: 300
@@ -135,21 +147,21 @@ ships:
         ki_ct: 0.002
         integrator_limit: 5000
         kp: 1.5
-        ki: 0.00015
-        kd: 80.0
+        ki: 0.0001
+        kd: 75
         max_rudder_rate_deg_per_sec: 2.3
         max_rudder_angle_deg: 30
 
       SHAFT_SPEED_CONTROLLER:
-        kp: 175.0
-        ki: 2.25
+        kp: 100
+        ki: 15
         rated_speed_main_engine_rpm: 1000
         gear_ratio_between_main_engine_and_propeller: 0.6
         idle_rpm_fraction: 0.1
 
       THROTTLE_CONTROLLER:
-        kp: 0.000003
-        ki: 0.000065
+        kp: 0.005
+        ki: 0.00005
 
       MACHINERY_SYSTEM:
         hotel_load: 200000
@@ -182,12 +194,12 @@ ships:
 
       COLAV:
         throttle_scale_factor: 0.5
-        rud_ang_increment_deg: 0.2
+        rud_ang_increment_deg: 0.05
         danger_zone_radius: 926.0
         collision_zone_radius: 100.0
         max_target_ship_count: 1
-        hold_time: 450.0
-        T_lookahead: 900.0
+        hold_time: 600.0
+        T_lookahead: 600.0
 
       SHIP_MODEL:
         dead_weight_tonnage: 3850000
@@ -215,6 +227,37 @@ ships:
         initial_forward_speed_m_per_s: 0.0
         initial_sideways_speed_m_per_s: 0.0
         initial_yaw_rate_rad_per_s: 0.0
+
+      SURFACE_CURRENT:
+        seed: 0
+        initial_current_speed: 0.01
+        current_speed_decay_rate: 0.5
+        current_speed_standard_deviation: 0.15
+        initial_current_direction_deg: 0.0
+        current_direction_deg_decay_rate: 0.5 
+        current_direction_deg_standard_deviation: 5.0
+        clip_speed_nonnegative: True
+        fail_outputs_zero: True
+
+      WIND:
+        seed: 0
+        initial_mean_wind_speed: 5.0
+        mean_wind_speed_decay_rate: 0.5
+        mean_wind_speed_standard_deviation: 1.5
+        initial_wind_direction_deg: 0.0
+        wind_direction_deg_decay_rate: 0.5
+        wind_direction_deg_standard_deviation: 5.0
+        minimum_mean_wind_speed: 0.0
+        maximum_mean_wind_speed: 42.0
+        minimum_wind_gust_frequency: 0.06
+        maximum_wind_gust_frequency: 0.4
+        wind_gust_frequency_discrete_unit_count: 100
+        wind_evaluation_height: 5.0
+        U10: 10.0
+        kappa_parameter: 0.0026
+        clip_speed_nonnegative: True
+        manual_mean_wind_speed: True
+        fail_outputs_zero: True
 
   ##########################################################
 
@@ -234,6 +277,8 @@ ships:
       - [MACHINERY_SYSTEM, FMUs/MachinerySystem.fmu]
       - [RUDDER, FMUs/Rudder.fmu]
       - [SHIP_MODEL, FMUs/ShipModel.fmu]
+      - [SURFACE_CURRENT, FMUs/SurfaceCurrentModel.fmu]
+      - [WIND, FMUs/WindModel.fmu]
 
     SHIP_CONNECTIONS:
       # Mission manager
@@ -269,6 +314,10 @@ ships:
       - [SHIP_MODEL, thrust_force,   MACHINERY_SYSTEM, thrust_force]
       - [SHIP_MODEL, rudder_force_v, RUDDER,           rudder_force_v]
       - [SHIP_MODEL, rudder_force_r, RUDDER,           rudder_force_r]
+      - [SHIP_MODEL, current_speed ,   SURFACE_CURRENT,  current_speed]
+      - [SHIP_MODEL, current_dir_rad , SURFACE_CURRENT,  current_direction_rad]
+      - [SHIP_MODEL, wind_speed,       WIND,             wind_speed]
+      - [SHIP_MODEL, wind_dir_rad ,    WIND,             wind_direction_rad]
 
     SHIP_OBSERVERS:
       - [MISSION_MANAGER, prev_wp_north, "Waypoint [m]"]
@@ -322,6 +371,12 @@ ships:
       - [SHIP_MODEL, d_sideways_speed, "Acceleration [m/s2]"]
       - [SHIP_MODEL, d_yaw_rate, "Angular Acc. [rad/s2]"]
 
+      - [SURFACE_CURRENT, current_speed, "Speed [m/s]"]
+      - [SURFACE_CURRENT, current_direction_deg, "Angle [deg]"]
+
+      - [WIND, wind_speed, "Speed [m/s]"]
+      - [WIND, wind_direction_deg, "Angle [deg]"]
+
     fmu_params:
       MISSION_MANAGER:
         ra: 300
@@ -331,21 +386,21 @@ ships:
         ki_ct: 0.002
         integrator_limit: 5000
         kp: 1.5
-        ki: 0.00015
-        kd: 80.0
+        ki: 0.0001
+        kd: 75
         max_rudder_rate_deg_per_sec: 2.3
         max_rudder_angle_deg: 30
 
       SHAFT_SPEED_CONTROLLER:
-        kp: 175.0
-        ki: 2.25
+        kp: 100
+        ki: 15
         rated_speed_main_engine_rpm: 1000
         gear_ratio_between_main_engine_and_propeller: 0.6
         idle_rpm_fraction: 0.1
 
       THROTTLE_CONTROLLER:
-        kp: 0.000003
-        ki: 0.000065
+        kp: 0.005
+        ki: 0.00005
 
       MACHINERY_SYSTEM:
         hotel_load: 200000
@@ -402,6 +457,37 @@ ships:
         initial_forward_speed_m_per_s: 0.0
         initial_sideways_speed_m_per_s: 0.0
         initial_yaw_rate_rad_per_s: 0.0
+      
+      SURFACE_CURRENT:
+        seed: 0
+        initial_current_speed: 0.01
+        current_speed_decay_rate: 0.5
+        current_speed_standard_deviation: 0.15
+        initial_current_direction_deg: 0.0
+        current_direction_deg_decay_rate: 0.5 
+        current_direction_deg_standard_deviation: 5.0
+        clip_speed_nonnegative: True
+        fail_outputs_zero: True
+
+      WIND:
+        seed: 0
+        initial_mean_wind_speed: 5.0
+        mean_wind_speed_decay_rate: 0.5
+        mean_wind_speed_standard_deviation: 1.5
+        initial_wind_direction_deg: 0.0
+        wind_direction_deg_decay_rate: 0.5
+        wind_direction_deg_standard_deviation: 5.0
+        minimum_mean_wind_speed: 0.0
+        maximum_mean_wind_speed: 42.0
+        minimum_wind_gust_frequency: 0.06
+        maximum_wind_gust_frequency: 0.4
+        wind_gust_frequency_discrete_unit_count: 100
+        wind_evaluation_height: 5.0
+        U10: 10.0
+        kappa_parameter: 0.0026
+        clip_speed_nonnegative: True
+        manual_mean_wind_speed: True
+        fail_outputs_zero: True
 
   ##########################################################
 
@@ -421,6 +507,8 @@ ships:
       - [MACHINERY_SYSTEM, FMUs/MachinerySystem.fmu]
       - [RUDDER, FMUs/Rudder.fmu]
       - [SHIP_MODEL, FMUs/ShipModel.fmu]
+      - [SURFACE_CURRENT, FMUs/SurfaceCurrentModel.fmu]
+      - [WIND, FMUs/WindModel.fmu]
 
     SHIP_CONNECTIONS:
       # Mission manager
@@ -456,6 +544,10 @@ ships:
       - [SHIP_MODEL, thrust_force,   MACHINERY_SYSTEM, thrust_force]
       - [SHIP_MODEL, rudder_force_v, RUDDER,           rudder_force_v]
       - [SHIP_MODEL, rudder_force_r, RUDDER,           rudder_force_r]
+      - [SHIP_MODEL, current_speed ,   SURFACE_CURRENT,  current_speed]
+      - [SHIP_MODEL, current_dir_rad , SURFACE_CURRENT,  current_direction_rad]
+      - [SHIP_MODEL, wind_speed,       WIND,             wind_speed]
+      - [SHIP_MODEL, wind_dir_rad ,    WIND,             wind_direction_rad]
 
     SHIP_OBSERVERS:
       - [MISSION_MANAGER, prev_wp_north, "Waypoint [m]"]
@@ -509,6 +601,12 @@ ships:
       - [SHIP_MODEL, d_sideways_speed, "Acceleration [m/s2]"]
       - [SHIP_MODEL, d_yaw_rate, "Angular Acc. [rad/s2]"]
 
+      - [SURFACE_CURRENT, current_speed, "Speed [m/s]"]
+      - [SURFACE_CURRENT, current_direction_deg, "Angle [deg]"]
+
+      - [WIND, wind_speed, "Speed [m/s]"]
+      - [WIND, wind_direction_deg, "Angle [deg]"]
+
     fmu_params:
       MISSION_MANAGER:
         ra: 300
@@ -518,21 +616,21 @@ ships:
         ki_ct: 0.002
         integrator_limit: 5000
         kp: 1.5
-        ki: 0.00015
-        kd: 80.0
+        ki: 0.0001
+        kd: 75
         max_rudder_rate_deg_per_sec: 2.3
         max_rudder_angle_deg: 30
 
       SHAFT_SPEED_CONTROLLER:
-        kp: 175.0
-        ki: 2.25
+        kp: 100
+        ki: 15
         rated_speed_main_engine_rpm: 1000
         gear_ratio_between_main_engine_and_propeller: 0.6
         idle_rpm_fraction: 0.1
 
       THROTTLE_CONTROLLER:
-        kp: 0.000003
-        ki: 0.000065
+        kp: 0.005
+        ki: 0.00005
 
       MACHINERY_SYSTEM:
         hotel_load: 200000
@@ -589,6 +687,37 @@ ships:
         initial_forward_speed_m_per_s: 0.0
         initial_sideways_speed_m_per_s: 0.0
         initial_yaw_rate_rad_per_s: 0.0
+      
+      SURFACE_CURRENT:
+        seed: 0
+        initial_current_speed: 0.01
+        current_speed_decay_rate: 0.5
+        current_speed_standard_deviation: 0.15
+        initial_current_direction_deg: 0.0
+        current_direction_deg_decay_rate: 0.5 
+        current_direction_deg_standard_deviation: 5.0
+        clip_speed_nonnegative: True
+        fail_outputs_zero: True
+
+      WIND:
+        seed: 0
+        initial_mean_wind_speed: 5.0
+        mean_wind_speed_decay_rate: 0.5
+        mean_wind_speed_standard_deviation: 1.5
+        initial_wind_direction_deg: 0.0
+        wind_direction_deg_decay_rate: 0.5
+        wind_direction_deg_standard_deviation: 5.0
+        minimum_mean_wind_speed: 0.0
+        maximum_mean_wind_speed: 42.0
+        minimum_wind_gust_frequency: 0.06
+        maximum_wind_gust_frequency: 0.4
+        wind_gust_frequency_discrete_unit_count: 100
+        wind_evaluation_height: 5.0
+        U10: 10.0
+        kappa_parameter: 0.0026
+        clip_speed_nonnegative: True
+        manual_mean_wind_speed: True
+        fail_outputs_zero: True
 
   ##########################################################
 
@@ -608,6 +737,8 @@ ships:
       - [MACHINERY_SYSTEM, FMUs/MachinerySystem.fmu]
       - [RUDDER, FMUs/Rudder.fmu]
       - [SHIP_MODEL, FMUs/ShipModel.fmu]
+      - [SURFACE_CURRENT, FMUs/SurfaceCurrentModel.fmu]
+      - [WIND, FMUs/WindModel.fmu]
 
     SHIP_CONNECTIONS:
       # Mission manager
@@ -643,6 +774,10 @@ ships:
       - [SHIP_MODEL, thrust_force,   MACHINERY_SYSTEM, thrust_force]
       - [SHIP_MODEL, rudder_force_v, RUDDER,           rudder_force_v]
       - [SHIP_MODEL, rudder_force_r, RUDDER,           rudder_force_r]
+      - [SHIP_MODEL, current_speed ,   SURFACE_CURRENT,  current_speed]
+      - [SHIP_MODEL, current_dir_rad , SURFACE_CURRENT,  current_direction_rad]
+      - [SHIP_MODEL, wind_speed,       WIND,             wind_speed]
+      - [SHIP_MODEL, wind_dir_rad ,    WIND,             wind_direction_rad]
 
     SHIP_OBSERVERS:
       - [MISSION_MANAGER, prev_wp_north, "Waypoint [m]"]
@@ -696,6 +831,12 @@ ships:
       - [SHIP_MODEL, d_sideways_speed, "Acceleration [m/s2]"]
       - [SHIP_MODEL, d_yaw_rate, "Angular Acc. [rad/s2]"]
 
+      - [SURFACE_CURRENT, current_speed, "Speed [m/s]"]
+      - [SURFACE_CURRENT, current_direction_deg, "Angle [deg]"]
+
+      - [WIND, wind_speed, "Speed [m/s]"]
+      - [WIND, wind_direction_deg, "Angle [deg]"]
+
     fmu_params:
       MISSION_MANAGER:
         ra: 300
@@ -705,21 +846,21 @@ ships:
         ki_ct: 0.002
         integrator_limit: 5000
         kp: 1.5
-        ki: 0.00015
-        kd: 80.0
+        ki: 0.0001
+        kd: 75
         max_rudder_rate_deg_per_sec: 2.3
         max_rudder_angle_deg: 30
 
       SHAFT_SPEED_CONTROLLER:
-        kp: 175.0
-        ki: 2.25
+        kp: 100
+        ki: 15
         rated_speed_main_engine_rpm: 1000
         gear_ratio_between_main_engine_and_propeller: 0.6
         idle_rpm_fraction: 0.1
 
       THROTTLE_CONTROLLER:
-        kp: 0.000003
-        ki: 0.000065
+        kp: 0.005
+        ki: 0.00005
 
       MACHINERY_SYSTEM:
         hotel_load: 200000
@@ -776,3 +917,34 @@ ships:
         initial_forward_speed_m_per_s: 0.0
         initial_sideways_speed_m_per_s: 0.0
         initial_yaw_rate_rad_per_s: 0.0
+      
+      SURFACE_CURRENT:
+        seed: 0
+        initial_current_speed: 0.01
+        current_speed_decay_rate: 0.5
+        current_speed_standard_deviation: 0.15
+        initial_current_direction_deg: 0.0
+        current_direction_deg_decay_rate: 0.5 
+        current_direction_deg_standard_deviation: 5.0
+        clip_speed_nonnegative: True
+        fail_outputs_zero: True
+
+      WIND:
+        seed: 0
+        initial_mean_wind_speed: 5.0
+        mean_wind_speed_decay_rate: 0.5
+        mean_wind_speed_standard_deviation: 1.5
+        initial_wind_direction_deg: 0.0
+        wind_direction_deg_decay_rate: 0.5
+        wind_direction_deg_standard_deviation: 5.0
+        minimum_mean_wind_speed: 0.0
+        maximum_mean_wind_speed: 42.0
+        minimum_wind_gust_frequency: 0.06
+        maximum_wind_gust_frequency: 0.4
+        wind_gust_frequency_discrete_unit_count: 100
+        wind_evaluation_height: 5.0
+        U10: 10.0
+        kappa_parameter: 0.0026
+        clip_speed_nonnegative: True
+        manual_mean_wind_speed: True
+        fail_outputs_zero: True

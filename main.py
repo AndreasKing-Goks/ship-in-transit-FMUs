@@ -32,7 +32,7 @@ config_path = ROOT / "ship_config" / "non_ast" / "multi_target_ship_config_w_env
 # save_path = ROOT / "saved_animation" / "single_target_ship.mp4"
 # save_path = ROOT / "saved_animation" / "single_target_ship_w_env.mp4"
 # save_path = ROOT / "saved_animation" / "multi_target_ship.mp4"
-# save_path = ROOT / "saved_animation" / "multi_target_ship_w_env.mp4"
+save_path = ROOT / "saved_animation" / "multi_target_ship_w_env.mp4"
 
 
 with config_path.open("r", encoding="utf-8") as f:
@@ -81,14 +81,14 @@ instance.AnimateFleetTrajectory(
         margin_frac=0.08,
         equal_aspect=True,
         interval_ms=60,
-        frame_step=5,
-        trail_len=300,
+        frame_step=2,
+        trail_len=150,
         plot_routes=True,
         plot_waypoints=True,
         plot_roa=True,
         with_labels=True,
         precompute_outlines=True,
-        save_path=None,
+        # save_path=save_path,
         writer_fps=60,
         show=True,
         block=True,
@@ -120,10 +120,10 @@ key_group_list = [
     ["OS0.rr_own_to_tar_1"],
     
     # For environment load-enabled simulation only
-    ["OS0.current_speed"],
-    ["OS0.current_direction_deg"],
-    ["OS0.wind_speed"],
-    ["OS0.wind_direction_deg"],
+    # ["OS0.current_speed"],
+    # ["OS0.current_direction_deg"],
+    # ["OS0.wind_speed"],
+    # ["OS0.wind_direction_deg"],
 ]
 
 # Plot Time Series

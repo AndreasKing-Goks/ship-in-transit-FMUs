@@ -1,7 +1,7 @@
 simulation:
   instanceName: Ship-Path Following Test
   stopTime: 10000
-  stepSize: 5.0
+  stepSize: 1.0
 
 ships:
   - id: OS0
@@ -135,21 +135,21 @@ ships:
         ki_ct: 0.002
         integrator_limit: 5000
         kp: 1.5
-        ki: 0.00015
-        kd: 80.0
+        ki: 0.0001
+        kd: 75
         max_rudder_rate_deg_per_sec: 2.3
         max_rudder_angle_deg: 30
 
       SHAFT_SPEED_CONTROLLER:
-        kp: 175.0
-        ki: 2.25
+        kp: 100
+        ki: 15
         rated_speed_main_engine_rpm: 1000
         gear_ratio_between_main_engine_and_propeller: 0.6
         idle_rpm_fraction: 0.1
 
       THROTTLE_CONTROLLER:
-        kp: 0.000003
-        ki: 0.000065
+        kp: 0.005
+        ki: 0.00005
 
       MACHINERY_SYSTEM:
         hotel_load: 200000
@@ -182,12 +182,12 @@ ships:
 
       COLAV:
         throttle_scale_factor: 0.5
-        rud_ang_increment_deg: 0.2
+        rud_ang_increment_deg: 0.05
         danger_zone_radius: 926.0
         collision_zone_radius: 100.0
         max_target_ship_count: 1
-        hold_time: 450.0
-        T_lookahead: 900.0
+        hold_time: 600.0
+        T_lookahead: 600.0
 
       SHIP_MODEL:
         dead_weight_tonnage: 3850000
@@ -331,21 +331,21 @@ ships:
         ki_ct: 0.002
         integrator_limit: 5000
         kp: 1.5
-        ki: 0.00015
-        kd: 80.0
+        ki: 0.0001
+        kd: 75
         max_rudder_rate_deg_per_sec: 2.3
         max_rudder_angle_deg: 30
 
       SHAFT_SPEED_CONTROLLER:
-        kp: 175.0
-        ki: 2.25
+        kp: 100
+        ki: 15
         rated_speed_main_engine_rpm: 1000
         gear_ratio_between_main_engine_and_propeller: 0.6
         idle_rpm_fraction: 0.1
 
       THROTTLE_CONTROLLER:
-        kp: 0.000003
-        ki: 0.000065
+        kp: 0.005
+        ki: 0.00005
 
       MACHINERY_SYSTEM:
         hotel_load: 200000
@@ -518,21 +518,21 @@ ships:
         ki_ct: 0.002
         integrator_limit: 5000
         kp: 1.5
-        ki: 0.00015
-        kd: 80.0
+        ki: 0.0001
+        kd: 75
         max_rudder_rate_deg_per_sec: 2.3
         max_rudder_angle_deg: 30
 
       SHAFT_SPEED_CONTROLLER:
-        kp: 175.0
-        ki: 2.25
+        kp: 100
+        ki: 15
         rated_speed_main_engine_rpm: 1000
         gear_ratio_between_main_engine_and_propeller: 0.6
         idle_rpm_fraction: 0.1
 
       THROTTLE_CONTROLLER:
-        kp: 0.000003
-        ki: 0.000065
+        kp: 0.005
+        ki: 0.00005
 
       MACHINERY_SYSTEM:
         hotel_load: 200000
@@ -705,21 +705,21 @@ ships:
         ki_ct: 0.002
         integrator_limit: 5000
         kp: 1.5
-        ki: 0.00015
-        kd: 80.0
+        ki: 0.0001
+        kd: 75
         max_rudder_rate_deg_per_sec: 2.3
         max_rudder_angle_deg: 30
 
       SHAFT_SPEED_CONTROLLER:
-        kp: 175.0
-        ki: 2.25
+        kp: 100
+        ki: 15
         rated_speed_main_engine_rpm: 1000
         gear_ratio_between_main_engine_and_propeller: 0.6
         idle_rpm_fraction: 0.1
 
       THROTTLE_CONTROLLER:
-        kp: 0.000003
-        ki: 0.000065
+        kp: 0.005
+        ki: 0.00005
 
       MACHINERY_SYSTEM:
         hotel_load: 200000
