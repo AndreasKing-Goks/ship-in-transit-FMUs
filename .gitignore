@@ -26,8 +26,9 @@ share/python-wheels/
 *.egg
 MANIFEST
 trained_model/
-0_*/
 00_*/
+.vscode/
+
 
 
 # PyInstaller
