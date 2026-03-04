@@ -11,8 +11,8 @@ from matplotlib.animation import FuncAnimation, FFMpegWriter
 
 import numpy as np
 
-from cosim_instance import *
-from utils import ShipDraw, compile_ship_params
+from orchestrator.cosim_instance import *
+from orchestrator.utils import ShipDraw, compile_ship_params
 import time
 
 # =============================================================================================================

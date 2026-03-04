@@ -11,7 +11,7 @@ os.add_dll_directory(str(dll_dir))
 ROOT = Path(__file__).resolve().parents[0]
 sys.path.insert(0, str(ROOT))
 
-from sit_cosim import ShipInTransitCoSimulation
+from orchestrator.sit_cosim import ShipInTransitCoSimulation
 
 # =========================
 # Load the Configuration
@@ -20,19 +20,19 @@ import yaml
 
 # Get the path
 
-config_path = ROOT / "ship_config" / "non_ast" / "single_ship_config.yaml"
-# config_path = ROOT / "ship_config" / "non_ast" / "single_ship_config_w_env.yaml"
-# config_path = ROOT / "ship_config" / "non_ast" / "single_target_ship_config.yaml"
-# config_path = ROOT / "ship_config" / "non_ast" / "single_target_ship_config_w_env.yaml"
-# config_path = ROOT / "ship_config" / "non_ast" / "multi_target_ship_config.yaml"
-# config_path = ROOT / "ship_config" / "non_ast" / "multi_target_ship_config_w_env.yaml"
+#  config_path = ROOT / "config" / "non_ast" / "single_ship_config.yaml"
+# config_path = ROOT / "config" / "non_ast" / "single_ship_config_w_env.yaml"
+# config_path = ROOT / "config" / "non_ast" / "single_target_ship_config.yaml"
+# config_path = ROOT / "config" / "non_ast" / "single_target_ship_config_w_env.yaml"
+# config_path = ROOT / "config" / "non_ast" / "multi_target_ship_config.yaml"
+config_path = ROOT / "config" / "non_ast" / "multi_target_ship_config_w_env.yaml"
 
-save_path = ROOT / "saved_animation" / "single_ship.mp4"
+# save_path = ROOT / "saved_animation" / "single_ship.mp4"
 # save_path = ROOT / "saved_animation" / "single_ship_w_env.mp4"
 # save_path = ROOT / "saved_animation" / "single_target_ship.mp4"
 # save_path = ROOT / "saved_animation" / "single_target_ship_w_env.mp4"
 # save_path = ROOT / "saved_animation" / "multi_target_ship.mp4"
-# save_path = ROOT / "saved_animation" / "multi_target_ship_w_env.mp4"
+save_path = ROOT / "saved_animation" / "multi_target_ship_w_env.mp4"
 
 
 with config_path.open("r", encoding="utf-8") as f:
@@ -72,7 +72,7 @@ instance.AnimateFleetTrajectory(
         plot_roa=True,
         with_labels=True,
         precompute_outlines=True,
-        save_path=save_path,
+        # save_path=save_path,
         writer_fps=60,
         show=True,
         block=True,
@@ -104,10 +104,10 @@ key_group_list = [
     ["OS0.rr_own_to_tar_1"],
     
     # For environment load-enabled simulation only
-    # ["OS0.current_speed"],
-    # ["OS0.current_direction_deg"],
-    # ["OS0.wind_speed"],
-    # ["OS0.wind_direction_deg"],
+    ["OS0.current_speed"],
+    ["OS0.current_direction_deg"],
+    ["OS0.wind_speed"],
+    ["OS0.wind_direction_deg"],
 ]
 
 # Plot Time Series
