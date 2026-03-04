@@ -1,9 +1,10 @@
 # Ship in Transit Co-simulation
-Repository for Ship in Transit simulator in Co-simulation form
+Repository for Ship in Transit simulator in Co-simulation form.
+![Animation](0_docs/ani/multi_target_ship_w_env.gif)
 
 ## Conda Environment Setup [Simulator Only]
 
-First clone the repository. Made sure conda is installed. Then, set up the conda environment by running this command in terminal:
+First clone the repository. Make sure conda is installed. Then, set up the conda environment by running this command in terminal:
 
 ```bash
 conda env create -f sit_cosim.yml
@@ -68,7 +69,9 @@ pip3 install torch torchvision --index-url https://download.pytorch.org/whl/cu12
 
 The **ship-in-transit co-simulation** is a modular Python-based co-simulation framework for modeling and running transit scenarios of a marine vessel. It includes ship dynamics, machinery system behaviors, navigation logic, and environmental effects each in a form of a Functional Mockup Unit (`FMU`).
 
-Think of `FMU` as a seperate sub-simulator describing a sub-system that can be simulated independently. Using `libcosimpy`, we can orchestrate all of these `FMUs` in harmony into a single complex system simulated as one entity.
+Think of `FMU` as a seperate sub-simulator describing a sub-system that can be simulated independently. Using `libcosimpy`, we can orchestrate all of these `FMUs` in harmony into a single complex system simulated as one entity. Below are shown how all FMUs is connected and orchestrated together:
+
+![Simulation Architecture](0_docs/img/SiT_FMUs.png)
 
 This simulator is developed based on Ship in Transit Simulator created by Børge Rokseth (**borge.rokseth@ntnu.no**). Original simulator can be found [here](https://github.com/BorgeRokseth/ship_in_transit_simulator.git).
 
