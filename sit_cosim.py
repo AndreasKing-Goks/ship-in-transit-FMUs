@@ -27,13 +27,34 @@ class ShipInTransitCoSimulation(CoSimInstance):
         especially built for running the FMU-based Ship In Transit Simulator
     '''
     def __init__(self,
-                 instanceName   : str     = "simulation",
-                 stopTime       : float   = 1.0, 
-                 stepSize       : float   = 0.01):
+                 config : dict,
+                 ROOT   : Path
+                 ):
+        # =========================
+        # Instantiate the Parent Class
+        # =========================
+        # Upack the config file
+        simu_config     = config["simulation"]
+        ship_configs    = config["ships"]
+        
+        # Name
+        instanceName    = simu_config["instanceName"]
+
+        # Time
+        stopTime        = simu_config["stopTime"] # Number of steps in seconds (int)
+        stepSize        = simu_config["stepSize"] # Number of seconds (int)
+        
+        # Initiate the parent class
         super().__init__(instanceName, stopTime, stepSize)
         
         # For colav_active printing flag
         self.print_col_msg = False
+        
+        # =========================
+        # Build the Ships
+        # =========================
+        # Set up the FMUs for all ship assets
+        self.add_ship(ship_configs=ship_configs, ROOT=ROOT)
 
 
     def ship_slave(self, prefix: str, block: str) -> str:
