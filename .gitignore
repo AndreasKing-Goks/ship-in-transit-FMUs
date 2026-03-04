@@ -27,10 +27,7 @@ share/python-wheels/
 MANIFEST
 trained_model/
 0_*/
-
-/misc/
-/sub_systems/
-/trial/
+00_*/
 
 
 # PyInstaller
