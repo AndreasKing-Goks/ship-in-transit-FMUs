@@ -210,7 +210,7 @@ class ShipInTransitCoSimulation(CoSimInstance):
         # Start timer
         start_time = time.perf_counter()
         
-        while self.time < self.stopTime: 
+        while self.time <  self.stopTime: 
             self.Step()
             
              # Integrate or stop the simulator
