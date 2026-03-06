@@ -54,16 +54,23 @@ class ShipInTransitCoSimulation(CoSimInstance):
         # Build the Ships
         # =========================
         # Set up the FMUs for all ship assets
-        self.add_ship(ship_configs=ship_configs, ROOT=ROOT)
+        self.AddAllShips(ship_configs=ship_configs, ROOT=ROOT)
 
 
+# =============================================================================================================
+# Add Ship Function
+# =============================================================================================================
     def ship_slave(self, prefix: str, block: str) -> str:
         return f"{prefix}__{block}"
     
     
-    def add_ship(self,
-                 ship_configs,
-                 ROOT: Path ):
+    def AddAllShips(self,
+                    ship_configs,
+                    ROOT: Path ):
+        '''
+            Add all configure ships and auto solve FMU connections 
+            between each ship entity for the Collision Avoidance FMU
+        '''
         
         # Store ship configs as the class attribute
         self.ship_configs = ship_configs
@@ -145,7 +152,10 @@ class ShipInTransitCoSimulation(CoSimInstance):
                     draw_attr, 
                     ShipDraw(fmu_params["SHIP_MODEL"].get("length_of_ship"), fmu_params["SHIP_MODEL"].get("width_of_ship")))
             
-        
+            
+# =============================================================================================================
+# Simulator Step Up
+# =============================================================================================================
     def PreSolverFunctionCall(self):
         """
         Function to handle:
@@ -194,7 +204,7 @@ class ShipInTransitCoSimulation(CoSimInstance):
         self.stop = all_ship_reaches_end_point or any_ship_collides
         
 
-    def Step(self):
+    def step(self):
         # Simulate
         self.CoSimManipulate()
         self.SetInputFromExternal()
@@ -211,7 +221,7 @@ class ShipInTransitCoSimulation(CoSimInstance):
         start_time = time.perf_counter()
         
         while self.time <  self.stopTime: 
-            self.Step()
+            self.step()
             
              # Integrate or stop the simulator
             if not self.stop:
@@ -333,7 +343,7 @@ class ShipInTransitCoSimulation(CoSimInstance):
                 idx = np.arange(0, n, every_n)
                 draw_attr = f"{sid}_draw"
                 draw = getattr(self, draw_attr)
-                for i in idx[::1]:  # extra subsample for speed
+                for i in idx[::2]:  # extra subsample for speed
                     x, y = draw.local_coords()
                     x_ned, y_ned = draw.rotate_coords(x, y, yaw[i])
                     x_tr,  y_tr  = draw.translate_coords(x_ned, y_ned, north[i], east[i])

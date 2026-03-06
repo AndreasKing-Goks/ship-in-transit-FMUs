@@ -18,7 +18,7 @@ from orchestrator.sit_cosim import ShipInTransitCoSimulation
 # =========================
 import yaml
 
-# Get the path
+## Get the config path
 
 # config_path = ROOT / "config" / "non_ast" / "step_size_5s" / "single_ship_config.yaml"
 # config_path = ROOT / "config" / "non_ast" / "step_size_5s" / "single_ship_config_w_env.yaml"
@@ -27,12 +27,18 @@ import yaml
 # config_path = ROOT / "config" / "non_ast" / "step_size_5s" / "multi_target_ship_config.yaml"
 config_path = ROOT / "config" / "non_ast" / "step_size_5s" / "multi_target_ship_config_w_env.yaml"
 
+# config_path = ROOT / "config" / "non_ast" / "delayed_start" / "single_ship_delayed_start_test.yaml"
+
+## Get the save path for animation
+
 # save_path = ROOT / "saved_animation" / "single_ship.mp4"
 # save_path = ROOT / "saved_animation" / "single_ship_w_env.mp4"
 # save_path = ROOT / "saved_animation" / "single_target_ship.mp4"
 # save_path = ROOT / "saved_animation" / "single_target_ship_w_env.mp4"
 # save_path = ROOT / "saved_animation" / "multi_target_ship.mp4"
 save_path = ROOT / "saved_animation" / "multi_target_ship_w_env.mp4"
+
+# save_path = ROOT / "saved_animation" / "single_ship_delayed_start_test.mp4"
 
 
 with config_path.open("r", encoding="utf-8") as f:
@@ -80,11 +86,12 @@ instance.AnimateFleetTrajectory(
         blit=True
     )
 
-# Plot Trajectory
+# # Plot Trajectory
 instance.PlotFleetTrajectory()
 
 # Plot Simulation Results
 key_group_list = [
+    ## Own Ship
     # Base results
     ["OS0.forward_speed", "OS0.next_wp_speed", "OS0.total_ship_speed"],
     ["OS0.yaw_angle_rad", "OS0.yaw_angle_ref_rad"],
@@ -93,21 +100,29 @@ key_group_list = [
     ["OS0.shaft_speed_rpm", "OS0.shaft_speed_cmd_rpm"],
     ["OS0.throttle_cmd"],
     
-    # For non-single ship simulation only
-    ["OS0.new_throttle_cmd"],
-    ["OS0.new_rudder_angle_deg"],
-    ["OS0.colav_rud_ang_increment"],
-    ["OS0.beta_own_to_tar_1"],
-    ["OS0.tcpa_own_to_tar_1"],
-    ["OS0.dcpa_own_to_tar_1"],
-    ["OS0.dist_own_to_tar_1"],
-    ["OS0.rr_own_to_tar_1"],
+    # # For non-single ship simulation only
+    # ["OS0.new_throttle_cmd"],
+    # ["OS0.new_rudder_angle_deg"],
+    # ["OS0.colav_rud_ang_increment"],
+    # ["OS0.beta_own_to_tar_1"],
+    # ["OS0.tcpa_own_to_tar_1"],
+    # ["OS0.dcpa_own_to_tar_1"],
+    # ["OS0.dist_own_to_tar_1"],
+    # ["OS0.rr_own_to_tar_1"],
     
-    # For environment load-enabled simulation only
-    ["OS0.current_speed"],
-    ["OS0.current_direction_deg"],
-    ["OS0.wind_speed"],
-    ["OS0.wind_direction_deg"],
+    # # For environment load-enabled simulation only
+    # ["OS0.current_speed"],
+    # ["OS0.current_direction_deg"],
+    # ["OS0.wind_speed"],
+    # ["OS0.wind_direction_deg"],
+    
+    ## Target Ship(s)
+    # # Base results
+    # ["TS1.forward_speed", "TS1.next_wp_speed", "TS1.total_ship_speed"],
+    # ["TS1.yaw_angle_rad", "TS1.yaw_angle_ref_rad"],
+    # ["TS1.rudder_angle_deg"],
+    # ["TS1.e_ct"],
+    # ["TS1.thrust_force"]
 ]
 
 # Plot Time Series

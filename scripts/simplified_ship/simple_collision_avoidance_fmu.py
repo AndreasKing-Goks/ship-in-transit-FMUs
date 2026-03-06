@@ -1,5 +1,5 @@
 """
-Simple Collision Avoidance Python FMU implementation.
+Simple Collision Avoidance Python FMU implementation for Simplified Ship.
 This FMU manages the simple collision avoidance algorithm.
 
 Authors : Andreas R.G. Sitorus
@@ -13,13 +13,13 @@ import traceback
 class SimpleCollisionAvoidance(Fmi2Slave):
     
     author = "Andreas R.G. Sitorus"
-    description = "Simple Collision Avoidance Algorithm Python FMU Implementation"
+    description = "Simple Collision Avoidance Algorithm Python FMU Implementation for Simplified Ship"
     
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
          
         ## Parameters
-        self.throttle_scale_factor  = 0.5
+        self.thrust_scale_factor    = 0.5
         self.rud_ang_increment_deg  = 15.0
         self.danger_zone_radius     = 926.0     # 0.5 nautical mile
         self.collision_zone_radius  = 100.0     # Ideally ship length
@@ -40,11 +40,11 @@ class SimpleCollisionAvoidance(Fmi2Slave):
             setattr(self, f"tar_{i}_yaw_angle", 0.0)
             setattr(self, f"tar_{i}_measured_speed", 0.0)
         
-        self.throttle_cmd           = 0.0
+        self.thrust_cmd             = 0.0
         self.rudder_angle_deg       = 0.0
         
         ## Output
-        self.new_throttle_cmd        = 0.0 
+        self.new_thrust_cmd          = 0.0 
         self.new_rudder_angle_deg    = 0.0
         self.colav_rud_ang_increment = 0.0 # OUTPUT
         self.colav_active            = False
@@ -65,7 +65,7 @@ class SimpleCollisionAvoidance(Fmi2Slave):
         
         ## Registration
         # Parameters
-        self.register_variable(Real("throttle_scale_factor", causality=Fmi2Causality.parameter, variability=Fmi2Variability.tunable))
+        self.register_variable(Real("thrust_scale_factor", causality=Fmi2Causality.parameter, variability=Fmi2Variability.tunable))
         self.register_variable(Real("rud_ang_increment_deg", causality=Fmi2Causality.parameter, variability=Fmi2Variability.tunable))
         self.register_variable(Real("danger_zone_radius", causality=Fmi2Causality.parameter, variability=Fmi2Variability.tunable))
         self.register_variable(Real("collision_zone_radius", causality=Fmi2Causality.parameter, variability=Fmi2Variability.tunable))
@@ -74,7 +74,7 @@ class SimpleCollisionAvoidance(Fmi2Slave):
         self.register_variable(Real("T_lookahead", causality=Fmi2Causality.parameter, variability=Fmi2Variability.tunable))
         
         # Input
-        self.register_variable(Real("throttle_cmd", causality=Fmi2Causality.input))
+        self.register_variable(Real("thrust_cmd", causality=Fmi2Causality.input))
         self.register_variable(Real("rudder_angle_deg", causality=Fmi2Causality.input))
         
         self.register_variable(Real("own_north", causality=Fmi2Causality.input))
@@ -89,7 +89,7 @@ class SimpleCollisionAvoidance(Fmi2Slave):
             self.register_variable(Real(f"tar_{i}_measured_speed", causality=Fmi2Causality.input))    
         
         # Output
-        self.register_variable(Real("new_throttle_cmd", causality=Fmi2Causality.output))
+        self.register_variable(Real("new_thrust_cmd", causality=Fmi2Causality.output))
         self.register_variable(Real("new_rudder_angle_deg", causality=Fmi2Causality.output))
         self.register_variable(Real("colav_rud_ang_increment", causality=Fmi2Causality.output))
         self.register_variable(Boolean("colav_active", causality=Fmi2Causality.output))
@@ -112,7 +112,7 @@ class SimpleCollisionAvoidance(Fmi2Slave):
             # To take into account issue with all-zero initial value, 
             # Turn off the COLAV during the very first time step
             if current_time < step_size:
-                self.new_throttle_cmd       = 0.0 
+                self.new_thrust_cmd         = 0.0 
                 self.new_rudder_angle_deg   = 0.0
                 self.colav_active           = False
                 self.ship_collision         = False
@@ -204,7 +204,7 @@ class SimpleCollisionAvoidance(Fmi2Slave):
             self.ship_collision = bool(np.any(collision_status))    # OUTPUT
             
             if self.ship_collision:
-                self.new_throttle_cmd       = float(np.clip(self.throttle_cmd, 0.0, 1.0))   # OUTPUT, clamp after scaling
+                self.new_thrust_cmd         = float(self.thrust_cmd)   # OUTPUT, clamp after scaling
                 self.new_rudder_angle_deg   = self.rudder_angle_deg         # OUTPUT
                 
                 return True
@@ -276,7 +276,7 @@ class SimpleCollisionAvoidance(Fmi2Slave):
                 self.colav_rud_ang_increment += self.colav_rudder_sign * self.rud_ang_increment_deg # OUTPUT
                 
                 # OUTPUTS
-                self.new_throttle_cmd        = float(np.clip(self.throttle_scale_factor * self.throttle_cmd, 0.0, 1.0))  # clamp after scaling
+                self.new_thrust_cmd          = float(self.thrust_scale_factor * self.thrust_cmd)  # clamp after scaling
                 self.new_rudder_angle_deg    = self.rudder_angle_deg + self.colav_rud_ang_increment
                     
                 if self.prioritize_one_target:                        
@@ -287,7 +287,7 @@ class SimpleCollisionAvoidance(Fmi2Slave):
             
             else:
                 # OUTPUTS
-                self.new_throttle_cmd        = float(np.clip(self.throttle_cmd, 0.0, 1.0))   # OUTPUT, clamp after scaling
+                self.new_thrust_cmd          = float(self.thrust_cmd)   # OUTPUT, clamp after scaling
                 self.new_rudder_angle_deg    = self.rudder_angle_deg     # OUTPUT
                 self.colav_rud_ang_increment = 0.0 # OUTPUT
             
@@ -297,7 +297,7 @@ class SimpleCollisionAvoidance(Fmi2Slave):
             print(traceback.format_exc())
             
             # Freeze dynamics (keep last state/outputs)
-            self.new_throttle_cmd        = float(np.clip(self.throttle_cmd, 0.0, 1.0))     # clamp after scaling
+            self.new_thrust_cmd          = float(self.thrust_cmd)     # clamp after scaling
             self.new_rudder_angle_deg    = self.rudder_angle_deg
             self.colav_rud_ang_increment = 0.0 # OUTPUT
             self.colav_active            = False
