@@ -13,15 +13,13 @@ ships:
       speed: [5, 5, 5, 4, 3, 2]
 
     SHIP_BLOCKS:
-      - [MISSION_MANAGER, FMUs/MissionManager.fmu]
-      - [AUTOPILOT, FMUs/Autopilot.fmu]
-      - [SHAFT_SPEED_CONTROLLER, FMUs/ShaftSpeedController.fmu]
-      - [THROTTLE_CONTROLLER, FMUs/ThrottleController.fmu]
-      - [MACHINERY_SYSTEM, FMUs/MachinerySystem.fmu]
-      - [RUDDER, FMUs/Rudder.fmu]
-      - [SHIP_MODEL, FMUs/ShipModel.fmu]
-      - [SURFACE_CURRENT, FMUs/SurfaceCurrentModel.fmu]
-      - [WIND, FMUs/WindModel.fmu]
+      - [MISSION_MANAGER, FMUs/ship/MissionManager.fmu]
+      - [AUTOPILOT, FMUs/ship/Autopilot.fmu]
+      - [SHAFT_SPEED_CONTROLLER, FMUs/ship/ShaftSpeedController.fmu]
+      - [THROTTLE_CONTROLLER, FMUs/ship/ThrottleController.fmu]
+      - [MACHINERY_SYSTEM, FMUs/ship/MachinerySystem.fmu]
+      - [RUDDER, FMUs/ship/Rudder.fmu]
+      - [SHIP_MODEL, FMUs/ship/ShipModel.fmu]
 
     SHIP_CONNECTIONS:
       # Mission manager
@@ -46,7 +44,7 @@ ships:
       - [THROTTLE_CONTROLLER, measured_shaft_speed_rpm, MACHINERY_SYSTEM,       shaft_speed_rpm]
 
       # Machinery
-      - [MACHINERY_SYSTEM, load_perc, THROTTLE_CONTROLLER, throttle_cmd]
+      - [MACHINERY_SYSTEM, load_perc, THROTTLE_CONTROLLER,  throttle_cmd]
 
       # Rudder
       - [RUDDER, rudder_angle_deg, AUTOPILOT,  rudder_angle_deg]
@@ -54,14 +52,10 @@ ships:
       - [RUDDER, forward_speed,    SHIP_MODEL, forward_speed]
 
       # Ship model
-      - [SHIP_MODEL, thrust_force,     MACHINERY_SYSTEM, thrust_force]
-      - [SHIP_MODEL, rudder_force_v,   RUDDER,           rudder_force_v]
-      - [SHIP_MODEL, rudder_force_r,   RUDDER,           rudder_force_r]
-      - [SHIP_MODEL, current_speed ,   SURFACE_CURRENT,  current_speed]
-      - [SHIP_MODEL, current_dir_rad , SURFACE_CURRENT,  current_direction_rad]
-      - [SHIP_MODEL, wind_speed,       WIND,             wind_speed]
-      - [SHIP_MODEL, wind_dir_rad ,    WIND,             wind_direction_rad]
-
+      - [SHIP_MODEL, thrust_force,   MACHINERY_SYSTEM, thrust_force]
+      - [SHIP_MODEL, rudder_force_v, RUDDER,           rudder_force_v]
+      - [SHIP_MODEL, rudder_force_r, RUDDER,           rudder_force_r]
+      
     SHIP_OBSERVERS:
       - [MISSION_MANAGER, prev_wp_north, "Waypoint [m]"]
       - [MISSION_MANAGER, prev_wp_east, "Waypoint [m]"]
@@ -114,12 +108,6 @@ ships:
       - [SHIP_MODEL, d_sideways_speed, "Acceleration [m/s2]"]
       - [SHIP_MODEL, d_yaw_rate, "Angular Acc. [rad/s2]"]
 
-      - [SURFACE_CURRENT, current_speed, "Speed [m/s]"]
-      - [SURFACE_CURRENT, current_direction_deg, "Angle [deg]"]
-
-      - [WIND, wind_speed, "Speed [m/s]"]
-      - [WIND, wind_direction_deg, "Angle [deg]"]
-      
     fmu_params:
       MISSION_MANAGER:
         ra: 300
@@ -200,34 +188,3 @@ ships:
         initial_forward_speed_m_per_s: 0.0
         initial_sideways_speed_m_per_s: 0.0
         initial_yaw_rate_rad_per_s: 0.0
-
-      SURFACE_CURRENT:
-        seed: 0
-        initial_current_speed: 0.01
-        current_speed_decay_rate: 0.5
-        current_speed_standard_deviation: 0.15
-        initial_current_direction_deg: 0.0
-        current_direction_deg_decay_rate: 0.5 
-        current_direction_deg_standard_deviation: 5.0
-        clip_speed_nonnegative: True
-        fail_outputs_zero: True
-
-      WIND:
-        seed: 0
-        initial_mean_wind_speed: 5.0
-        mean_wind_speed_decay_rate: 0.5
-        mean_wind_speed_standard_deviation: 1.5
-        initial_wind_direction_deg: 0.0
-        wind_direction_deg_decay_rate: 0.5
-        wind_direction_deg_standard_deviation: 5.0
-        minimum_mean_wind_speed: 0.0
-        maximum_mean_wind_speed: 42.0
-        minimum_wind_gust_frequency: 0.06
-        maximum_wind_gust_frequency: 0.4
-        wind_gust_frequency_discrete_unit_count: 100
-        wind_evaluation_height: 5.0
-        U10: 10.0
-        kappa_parameter: 0.0026
-        clip_speed_nonnegative: True
-        manual_mean_wind_speed: True
-        fail_outputs_zero: True

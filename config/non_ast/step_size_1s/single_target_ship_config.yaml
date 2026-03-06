@@ -13,14 +13,14 @@ ships:
       speed: [5, 5, 5, 4, 3, 2]
 
     SHIP_BLOCKS:
-      - [MISSION_MANAGER, FMUs/MissionManager.fmu]
-      - [AUTOPILOT, FMUs/Autopilot.fmu]
-      - [SHAFT_SPEED_CONTROLLER, FMUs/ShaftSpeedController.fmu]
-      - [THROTTLE_CONTROLLER, FMUs/ThrottleController.fmu]
-      - [MACHINERY_SYSTEM, FMUs/MachinerySystem.fmu]
-      - [RUDDER, FMUs/Rudder.fmu]
-      - [SHIP_MODEL, FMUs/ShipModel.fmu]
-      - [COLAV, FMUs/SimpleCollisionAvoidance.fmu]
+      - [MISSION_MANAGER, FMUs/ship/MissionManager.fmu]
+      - [AUTOPILOT, FMUs/ship/Autopilot.fmu]
+      - [SHAFT_SPEED_CONTROLLER, FMUs/ship/ShaftSpeedController.fmu]
+      - [THROTTLE_CONTROLLER, FMUs/ship/ThrottleController.fmu]
+      - [MACHINERY_SYSTEM, FMUs/ship/MachinerySystem.fmu]
+      - [RUDDER, FMUs/ship/Rudder.fmu]
+      - [SHIP_MODEL, FMUs/ship/ShipModel.fmu]
+      - [COLAV, FMUs/ship/SimpleCollisionAvoidance.fmu]
 
     SHIP_CONNECTIONS:
       # Mission manager
@@ -227,13 +227,13 @@ ships:
       speed: [5, 5, 5, 4, 3, 2]
 
     SHIP_BLOCKS:
-      - [MISSION_MANAGER, FMUs/MissionManager.fmu]
-      - [AUTOPILOT, FMUs/Autopilot.fmu]
-      - [SHAFT_SPEED_CONTROLLER, FMUs/ShaftSpeedController.fmu]
-      - [THROTTLE_CONTROLLER, FMUs/ThrottleController.fmu]
-      - [MACHINERY_SYSTEM, FMUs/MachinerySystem.fmu]
-      - [RUDDER, FMUs/Rudder.fmu]
-      - [SHIP_MODEL, FMUs/ShipModel.fmu]
+      - [MISSION_MANAGER, FMUs/ship/MissionManager.fmu]
+      - [AUTOPILOT, FMUs/ship/Autopilot.fmu]
+      - [SHAFT_SPEED_CONTROLLER, FMUs/ship/ShaftSpeedController.fmu]
+      - [THROTTLE_CONTROLLER, FMUs/ship/ThrottleController.fmu]
+      - [MACHINERY_SYSTEM, FMUs/ship/MachinerySystem.fmu]
+      - [RUDDER, FMUs/ship/Rudder.fmu]
+      - [SHIP_MODEL, FMUs/ship/ShipModel.fmu]
 
     SHIP_CONNECTIONS:
       # Mission manager
