@@ -25,9 +25,10 @@ import yaml
 # config_path = ROOT / "config" / "non_ast" / "step_size_5s" / "single_target_ship_config.yaml"
 # config_path = ROOT / "config" / "non_ast" / "step_size_5s" / "single_target_ship_config_w_env.yaml"
 # config_path = ROOT / "config" / "non_ast" / "step_size_5s" / "multi_target_ship_config.yaml"
-config_path = ROOT / "config" / "non_ast" / "step_size_5s" / "multi_target_ship_config_w_env.yaml"
+# config_path = ROOT / "config" / "non_ast" / "step_size_5s" / "multi_target_ship_config_w_env.yaml"
 
 # config_path = ROOT / "config" / "non_ast" / "delayed_start" / "single_ship_delayed_start_test.yaml"
+config_path = ROOT / "config" / "non_ast" / "delayed_start" / "single_target_ship_delayed_start_test.yaml"
 
 ## Get the save path for animation
 
@@ -36,9 +37,10 @@ config_path = ROOT / "config" / "non_ast" / "step_size_5s" / "multi_target_ship_
 # save_path = ROOT / "saved_animation" / "single_target_ship.mp4"
 # save_path = ROOT / "saved_animation" / "single_target_ship_w_env.mp4"
 # save_path = ROOT / "saved_animation" / "multi_target_ship.mp4"
-save_path = ROOT / "saved_animation" / "multi_target_ship_w_env.mp4"
+# save_path = ROOT / "saved_animation" / "multi_target_ship_w_env.mp4"
 
 # save_path = ROOT / "saved_animation" / "single_ship_delayed_start_test.mp4"
+save_path = ROOT / "saved_animation" / "single_target_ship_delayed_start_test.mp4"
 
 
 with config_path.open("r", encoding="utf-8") as f:

@@ -308,9 +308,9 @@ ships:
         max_rudder_angle_deg: 30
 
       SPEED_CONTROLLER:
-        kp: 175.0
-        ki: 2.25
-        kd: 2.25
+        kp: 150.0
+        ki: 350.0
+        kd: 200.0
 
       RUDDER:
         rudder_angle_to_sway_force_coefficient: 50000
