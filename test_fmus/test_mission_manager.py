@@ -32,7 +32,7 @@ instance    = CoSimInstance(instanceName= name, stopTime=stopTime, stepSize=step
 # Adding slaves
 # =========================
 # MissionManager.fmu
-mission_manager_fmu_path = str(ROOT / "FMUs" / "MissionManager.fmu")
+mission_manager_fmu_path = str(ROOT / "FMUs" / "ship" / "MissionManager.fmu")
 instance.AddSlave(name="MISSION_MANAGER", 
                   path=mission_manager_fmu_path)
 
@@ -89,8 +89,11 @@ east_list   = [0, 700, 1500, 2500, 3000, 3750, 3750, 6000, 7000, 8750, 8750, 900
                #              #                 #                 #                  #
 
 for step in range(len(north_list)):
-    north = north_list[step]
-    east  = east_list[step]
+    # north = north_list[step]
+    # east  = east_list[step]
+    
+    north = 0.0
+    east  = 0.0
     
     instance.SingleVariableManipulation(slaveName="MISSION_MANAGER", slaveVar="north", value=north)
     instance.SingleVariableManipulation(slaveName="MISSION_MANAGER", slaveVar="east", value=east)

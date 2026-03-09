@@ -37,7 +37,7 @@ execution.add_observer(observer=observer)
 manip = CosimManipulator.create_override()
 execution.add_manipulator(manipulator=manip)
 
-fmu_path = str(ROOT / "FMUs" / "ShipModel.fmu")
+fmu_path = str(ROOT / "FMUs" / "ship" / "ShipModel.fmu")
 slave = CosimLocalSlave(fmu_path=fmu_path, instance_name="SHIP_MODEL")
 idx = execution.add_local_slave(local_slave=slave)
 vars_ = execution.slave_variables(slave_index=idx)
@@ -69,7 +69,7 @@ ship_params = {
     "cn": 0.08,
     "initial_north_position_m": 0.0,
     "initial_east_position_m": 0.0,
-    "initial_yaw_angle_rad": float(np.deg2rad(45.0)),
+    "initial_yaw_angle_rad": float(np.deg2rad(45.0)), 
     "initial_forward_speed_m_per_s": 0.0,
     "initial_sideways_speed_m_per_s": 0.0,
     "initial_yaw_rate_rad_per_s": 0.0,
@@ -123,6 +123,13 @@ manip.slave_real_values(idx, [in_vrs["wind_speed"]],     [wind_speed(ts0)])
 manip.slave_real_values(idx, [in_vrs["wind_dir_rad"]],   [wind_dir_rad(ts0)])
 manip.slave_real_values(idx, [in_vrs["current_speed"]],  [current_speed(ts0)])
 manip.slave_real_values(idx, [in_vrs["current_dir_rad"]],[current_dir_rad(ts0)])
+# manip.slave_real_values(idx, [in_vrs["thrust_force"]],   [0.0])
+# manip.slave_real_values(idx, [in_vrs["rudder_force_v"]], [0.0])
+# manip.slave_real_values(idx, [in_vrs["rudder_force_r"]], [0.0])
+# manip.slave_real_values(idx, [in_vrs["wind_speed"]],     [0.0])
+# manip.slave_real_values(idx, [in_vrs["wind_dir_rad"]],   [0.0])
+# manip.slave_real_values(idx, [in_vrs["current_speed"]],  [0.0])
+# manip.slave_real_values(idx, [in_vrs["current_dir_rad"]],[0.0])
 
 t = 0
 while t < stopTime:
@@ -134,6 +141,13 @@ while t < stopTime:
     manip.slave_real_values(idx, [in_vrs["wind_dir_rad"]],   [wind_dir_rad(ts)])
     manip.slave_real_values(idx, [in_vrs["current_speed"]],  [current_speed(ts)])
     manip.slave_real_values(idx, [in_vrs["current_dir_rad"]],[current_dir_rad(ts)])
+    # manip.slave_real_values(idx, [in_vrs["thrust_force"]],   [0.0])
+    # manip.slave_real_values(idx, [in_vrs["rudder_force_v"]], [0.0])
+    # manip.slave_real_values(idx, [in_vrs["rudder_force_r"]], [0.0])
+    # manip.slave_real_values(idx, [in_vrs["wind_speed"]],     [0.0])
+    # manip.slave_real_values(idx, [in_vrs["wind_dir_rad"]],   [0.0])
+    # manip.slave_real_values(idx, [in_vrs["current_speed"]],  [0.0])
+    # manip.slave_real_values(idx, [in_vrs["current_dir_rad"]],[0.0])
 
     execution.step()
     t += stepSize

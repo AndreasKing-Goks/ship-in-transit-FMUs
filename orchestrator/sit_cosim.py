@@ -53,6 +53,9 @@ class ShipInTransitCoSimulation(CoSimInstance):
         # =========================
         # Build the Ships
         # =========================
+        # Active status
+        self.ship_active = {ship_config["id"]: [] for ship_config in ship_configs}
+        
         # Set up the FMUs for all ship assets
         self.AddAllShips(ship_configs=ship_configs, ROOT=ROOT)
 
@@ -64,10 +67,26 @@ class ShipInTransitCoSimulation(CoSimInstance):
         return f"{prefix}__{block}"
     
     
+    def spawn_ship(self, ship_id:str, spawn: dict, fmu_params: dict):
+        # Init the Ship Model with the spawn point
+        fmu_params["SHIP_MODEL"]["initial_north_position_m"]      = spawn["north"]
+        fmu_params["SHIP_MODEL"]["initial_east_position_m"]       = spawn["east"]
+        fmu_params["SHIP_MODEL"]["initial_yaw_angle_rad"]         = np.deg2rad(spawn.get("yaw_angle_deg", 0.0))
+        fmu_params["SHIP_MODEL"]["initial_forward_speed_m_per_s"] = spawn.get("forward_speed", 0.0)
+        
+        # Start the ship when the time is equal to the start time
+        start_time = spawn["start_time"]
+        if self.time >= start_time*1e9:
+            self.ship_active[ship_id].append(True)
+        else:
+            self.ship_active[ship_id].append(False)
+        
+        return fmu_params
+        
+        
     def AddAllShips(self,
                     ship_configs: list,
-                    ROOT: Path,
-                    spawn_with_route: bool =True):
+                    ROOT: Path,):
         '''
             Add all configure ships and auto solve FMU connections 
             between each ship entity for the Collision Avoidance FMU
@@ -77,12 +96,18 @@ class ShipInTransitCoSimulation(CoSimInstance):
         self.ship_configs = ship_configs
         
         for ship_config in ship_configs:
+            spawn_in_route      = False if "spawn" in list(ship_config.keys()) else True
             prefix              = ship_config.get("id")
             SHIP_BLOCKS         = ship_config.get("SHIP_BLOCKS")
             SHIP_CONNECTIONS    = ship_config.get("SHIP_CONNECTIONS")
             SHIP_OBSERVERS      = ship_config.get("SHIP_OBSERVERS")
-            fmu_params          = compile_ship_params(ship_config, spawn_with_route=spawn_with_route)
+            fmu_params          = compile_ship_params(ship_config, spawn_in_route=spawn_in_route)
             enable_colav        = ship_config.get("enable_colav")
+            
+            # If not spawn in route
+            if not spawn_in_route:
+                spawn           = ship_config["spawn"]
+                fmu_params = self.spawn_ship(ship_id=prefix, spawn=spawn, fmu_params=fmu_params)
             
             # Add slaves
             for block, relpath in SHIP_BLOCKS:
@@ -156,6 +181,146 @@ class ShipInTransitCoSimulation(CoSimInstance):
 # =============================================================================================================
 # Simulator Step Up
 # =============================================================================================================
+    def get_fmu_base_name(self, slave_name: str) -> str:
+        """
+        Example:
+            TS1__MISSION_MANAGER -> MISSION_MANAGER
+            OS2__SHIP_MODEL      -> SHIP_MODEL
+        """
+        if "__" in slave_name:
+            return slave_name.split("__", 1)[1]
+        return slave_name
+    
+    
+    def get_masked_input_val_for_inactive_ship(self, ship_id, in_slave, in_var):
+        """
+        Return the value to be written into an inactive ship's input port.
+        This masks the ship's incoming signals so subsystems do not evolve
+        in a meaningful way during the inactive phase.
+        """
+        # Get the base FMU name
+        in_slave_base_name = self.get_fmu_base_name(in_slave)
+        
+        ship_model_name = self.ship_slave(ship_id, "SHIP_MODEL")
+
+        # Inputs that should track the ship's own frozen state
+        passthrough_from_ship_model = {
+            ("MISSION_MANAGER", "north"): "north",
+            ("MISSION_MANAGER", "east"): "east",
+
+            ("COLAV", "north"): "north",
+            ("COLAV", "east"): "east",
+            ("COLAV", "yaw_angle"): "yaw_angle",
+        }
+
+        key = (in_slave_base_name, in_var)
+        if key in passthrough_from_ship_model:
+            return self.GetLastValue(
+                slaveName=ship_model_name,
+                slaveVar=passthrough_from_ship_model[key]
+            )
+
+        # Inputs that should simply be zeroed
+        zero_mask = {
+            ("AUTOPILOT", "north"),
+            ("AUTOPILOT", "east"),
+            ("AUTOPILOT", "yaw_angle_rad"),
+            ("AUTOPILOT", "prev_wp_north"),
+            ("AUTOPILOT", "prev_wp_east"),
+            ("AUTOPILOT", "next_wp_north"),
+            ("AUTOPILOT", "next_wp_east"),
+
+            ("SHAFT_SPEED_CONTROLLER", "desired_ship_speed"),
+            ("SHAFT_SPEED_CONTROLLER", "measured_ship_speed"),
+
+            ("THROTTLE_CONTROLLER", "desired_shaft_speed_rpm"),
+            ("THROTTLE_CONTROLLER", "measured_shaft_speed_rpm"),
+
+            ("SPEED_CONTROLLER", "desired_ship_speed"),
+            ("SPEED_CONTROLLER", "measured_ship_speed"),
+
+            ("MACHINERY_SYSTEM", "load_perc"),
+
+            ("RUDDER", "rudder_angle_deg"),
+            ("RUDDER", "yaw_angle_rad"),
+            ("RUDDER", "forward_speed"),
+            ("RUDDER", "current_speed"),
+            ("RUDDER", "current_dir_rad"),
+
+            ("SHIP_MODEL", "thrust_force"),
+            ("SHIP_MODEL", "rudder_force_v"),
+            ("SHIP_MODEL", "rudder_force_r"),
+            ("SHIP_MODEL", "wind_speed"),
+            ("SHIP_MODEL", "wind_dir_rad"),
+            ("SHIP_MODEL", "current_speed"),
+            ("SHIP_MODEL", "current_dir_rad"),
+
+            ("COLAV", "throttle_cmd"),
+            ("COLAV", "rudder_angle_deg"),
+        }
+
+        if key in zero_mask:
+            return 0.0
+
+        # Pattern-based masking for COLAV targets
+        # Set to a far away location for all target ship to prevent triggering the collision avoidance
+        if in_slave == "COLAV":
+            if in_var.startswith("tar_") and in_var.endswith("_north"):
+                return 1e9
+            if in_var.startswith("tar_") and in_var.endswith("_east"):
+                return 1e9
+            if in_var.startswith("tar_") and in_var.endswith("_yaw_angle"):
+                return 0.0
+            if in_var.startswith("tar_") and in_var.endswith("_measured_speed"):
+                return 0.0
+
+        raise KeyError(
+            f"No inactive-mask rule defined for ship_id={ship_id}, "
+            f"in_slave={in_slave}, in_var={in_var}"
+        )
+    
+    
+    def CoSimManipulate(self):
+        for i in range(len(self.slave_input_name)):
+            try:
+                in_slave = self.slave_input_name[i]
+                in_var   = self.slave_input_var[i]
+                out_slave= self.slave_output_name[i]
+                out_var  = self.slave_output_var[i]
+
+                ship_id = in_slave[:3]
+                is_active = self.ship_active.get(ship_id)[-1]
+
+                out_vr, out_type = GetVariableInfo(self.slaves_variables[out_slave], out_var)
+                in_vr,  in_type  = GetVariableInfo(self.slaves_variables[in_slave],  in_var)
+
+                if out_type != in_type:
+                    continue  # or raise
+                
+                if is_active:
+                    out_val = [self.GetLastValue(slaveName=out_slave, slaveVar=out_var)]
+                else:
+                    out_val = [self.get_masked_input_val_for_inactive_ship(ship_id=ship_id,
+                                                                          in_slave=in_slave,
+                                                                          in_var=in_var)]
+
+                if out_type == CosimVariableType.REAL:
+                    self.manipulator.slave_real_values(self.slaves_index[in_slave], [in_vr], out_val)
+                elif out_type == CosimVariableType.BOOLEAN:
+                    self.manipulator.slave_boolean_values(self.slaves_index[in_slave], [in_vr], out_val)
+                elif out_type == CosimVariableType.INTEGER:
+                    self.manipulator.slave_integer_values(self.slaves_index[in_slave], [in_vr], out_val)
+                else:
+                    self.manipulator.slave_string_values(self.slaves_index[in_slave], [in_vr], out_val)
+
+            except Exception as error:
+                print("An error occured during signal manipulation: ",
+                    self.slave_input_name[i], ".", self.slave_input_var[i], " = ",
+                    self.slave_output_name[i], ".", self.slave_output_var[i], " :",
+                    type(error).__name__, "-", error)
+                sys.exit(1)
+    
+    
     def PreSolverFunctionCall(self):
         """
         Function to handle:
@@ -163,7 +328,31 @@ class ShipInTransitCoSimulation(CoSimInstance):
         - Additional FMU manipulation using given external input
         """
         pass
+    
+    
+    def update_ship_reach_end_point_status(self, ship_id):
+        return self.GetLastValue(slaveName=self.ship_slave(ship_id, "MISSION_MANAGER"), 
+                                 slaveVar="reach_wp_end")
+    
+    
+    def update_ship_active_status(self, ship_id, spawn):
+        start_time  = spawn.get("start_time")
+        
+        if self.time >= start_time*1e9:
+            self.ship_active[ship_id].append(True)
+        else:
+            self.ship_active[ship_id].append(False)
+            
 
+    def update_colav_active_flag(self, ship_id):
+        return self.GetLastValue(slaveName=self.ship_slave(ship_id, "COLAV"), 
+                                 slaveVar="colav_active")
+        
+    
+    def update_collision_status(self, ship_id):
+        return self.GetLastValue(slaveName=self.ship_slave(ship_id, "COLAV"), 
+                                 slaveVar="ship_collision")
+        
 
     def PostSolverFunctionCall(self):
         """
@@ -176,26 +365,34 @@ class ShipInTransitCoSimulation(CoSimInstance):
         collision_flags = []
         
         for ship_config in self.ship_configs:
-            prefix = ship_config.get("id")
-            rep_flag  = self.GetLastValue(slaveName=self.ship_slave(prefix, "MISSION_MANAGER"), 
-                                         slaveVar="reach_wp_end")
+            ship_id = ship_config.get("id")
+            spawn   = ship_config["spawn"] if "spawn" in list(ship_config.keys()) else None
+            
+            # Update ship active status
+            if spawn is not None:
+                self.update_ship_active_status(ship_id, spawn)
+            
+            # Update reach end point status
+            rep_flag  = self.update_ship_reach_end_point_status(ship_id)
             rep_flags.append(rep_flag)
             
             if ship_config.get("enable_colav"):
-                colav_active = self.GetLastValue(slaveName=self.ship_slave(prefix, "COLAV"), 
-                                         slaveVar="colav_active")
-                collision_flag = self.GetLastValue(slaveName=self.ship_slave(prefix, "COLAV"), 
-                                         slaveVar="ship_collision")
+                # Update colav active flag
+                colav_active    = self.update_colav_active_flag(ship_id)
+                
+                # Update collision status
+                collision_flag  = self.update_collision_status(ship_id)
                 collision_flags.append(collision_flag)
                 
+                # Update message
                 if colav_active and (not collision_flag) and (not self.print_col_msg):
-                    print(f"{prefix}_COLAV is active!")
+                    print(f"{ship_id}_COLAV is active!")
                     self.print_col_msg = True
                 elif (not colav_active) and self.print_col_msg:
-                    print(f"{prefix}_COLAV is deactivated!")
+                    print(f"{ship_id}_COLAV is deactivated!")
                     self.print_col_msg = False
                 elif collision_flag:
-                    print(f"{prefix} collides!")
+                    print(f"{ship_id} collides!")
         
         all_ship_reaches_end_point = np.all(np.array(rep_flags))
         any_ship_collides          = np.any(np.array(collision_flags))
@@ -300,7 +497,7 @@ class ShipInTransitCoSimulation(CoSimInstance):
             _, _, yaw   = self._get_ship_timeseries(sid, "yaw_angle_rad")
             
             n = min(len(north), len(east), len(yaw))
-            north, east, yaw = north[1:n], east[1:n], yaw[1:n]
+            north, east, yaw = north[:n], east[:n], yaw[:n]
 
             all_x.append(east)
             all_y.append(north)

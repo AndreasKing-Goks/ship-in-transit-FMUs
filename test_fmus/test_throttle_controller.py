@@ -43,7 +43,7 @@ manipulator = CosimManipulator.create_override()
 execution.add_manipulator(manipulator=manipulator)
 
 # Add ThrottleController FMU
-throttle_fmu_path = str(ROOT / "FMUs" / "ThrottleController.fmu")
+throttle_fmu_path = str(ROOT / "FMUs" / "ship" / "ThrottleController.fmu")
 throttle_slave = CosimLocalSlave(fmu_path=throttle_fmu_path, instance_name="THROTTLE_CONTROLLER")
 throttle_index = execution.add_local_slave(local_slave=throttle_slave)
 throttle_vars = execution.slave_variables(slave_index=throttle_index)
@@ -115,6 +115,8 @@ while time_ns < stopTime:
 
     desired = desired_signal(t_s)
     measured = measured_signal(t_s)
+    # desired = 0.0
+    # measured = 0.0
 
     # Set inputs
     manipulator.slave_real_values(throttle_index, [desired_vr], [desired])

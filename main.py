@@ -52,6 +52,7 @@ with config_path.open("r", encoding="utf-8") as f:
 # Instantiate
 instance = ShipInTransitCoSimulation(config=config, ROOT=ROOT)
 
+
 # =========================
 # Simulate
 # =========================
@@ -88,13 +89,15 @@ instance.AnimateFleetTrajectory(
         blit=True
     )
 
-# # Plot Trajectory
+# Plot Trajectory
 instance.PlotFleetTrajectory()
 
 # Plot Simulation Results
 key_group_list = [
     ## Own Ship
     # Base results
+    ["OS0.north"],
+    ["OS0.east"],
     ["OS0.forward_speed", "OS0.next_wp_speed", "OS0.total_ship_speed"],
     ["OS0.yaw_angle_rad", "OS0.yaw_angle_ref_rad"],
     ["OS0.rudder_angle_deg"],
@@ -119,12 +122,14 @@ key_group_list = [
     # ["OS0.wind_direction_deg"],
     
     ## Target Ship(s)
-    # # Base results
-    # ["TS1.forward_speed", "TS1.next_wp_speed", "TS1.total_ship_speed"],
-    # ["TS1.yaw_angle_rad", "TS1.yaw_angle_ref_rad"],
-    # ["TS1.rudder_angle_deg"],
-    # ["TS1.e_ct"],
-    # ["TS1.thrust_force"]
+    # Base results
+    ["TS1.north"],
+    ["TS1.east"],
+    ["TS1.forward_speed", "TS1.next_wp_speed", "TS1.total_ship_speed"],
+    ["TS1.yaw_angle_rad", "TS1.yaw_angle_ref_rad"],
+    ["TS1.rudder_angle_deg"],
+    ["TS1.e_ct"],
+    ["TS1.thrust_force"]
 ]
 
 # Plot Time Series

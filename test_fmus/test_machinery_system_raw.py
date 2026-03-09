@@ -37,7 +37,7 @@ manipulator = CosimManipulator.create_override()
 execution.add_manipulator(manipulator=manipulator)
 
 # Adding slaves
-engine_fmu_path = str(ROOT / "FMUs" / "MachinerySystem.fmu")
+engine_fmu_path = str(ROOT / "FMUs" / "ship" / "MachinerySystem.fmu")
 engine_slave = CosimLocalSlave(fmu_path=engine_fmu_path, instance_name='ENGINE')
 engine_index = execution.add_local_slave(local_slave=engine_slave)
 engine_variables = execution.slave_variables(slave_index=engine_index)

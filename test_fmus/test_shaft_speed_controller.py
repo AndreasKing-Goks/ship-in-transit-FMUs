@@ -45,7 +45,7 @@ execution.add_manipulator(manipulator=manip)
 # -----------------------
 # Add FMU
 # -----------------------
-fmu_path = str(ROOT / "FMUs" / "ShaftSpeedController.fmu")
+fmu_path = str(ROOT / "FMUs" / "ship" / "ShaftSpeedController.fmu")
 slave = CosimLocalSlave(fmu_path=fmu_path, instance_name="SHAFT_SPEED_CONTROLLER")
 idx = execution.add_local_slave(local_slave=slave)
 vars_ = execution.slave_variables(slave_index=idx)
@@ -109,6 +109,8 @@ while t < stopTime:
     ts = t / 1e9
     manip.slave_real_values(idx, [des_vr], [desired_ship_speed(ts)])
     manip.slave_real_values(idx, [mea_vr], [measured_ship_speed(ts)])
+    # manip.slave_real_values(idx, [des_vr], [0.0])
+    # manip.slave_real_values(idx, [mea_vr], [0.0])
     execution.step()
     t += stepSize
 

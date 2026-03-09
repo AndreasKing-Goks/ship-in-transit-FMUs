@@ -26,7 +26,7 @@ instance    = CoSimInstance(instanceName= name, stopTime=stopTime, stepSize=step
 # Adding slaves
 # =========================
 # WindModel.fmu
-wind_model_fmu_path = str(ROOT / "FMUs" / "WindModel.fmu")
+wind_model_fmu_path = str(ROOT / "FMUs" / "env_loads" / "WindModel.fmu")
 instance.AddSlave(name="WIND", 
                   path=wind_model_fmu_path)
 

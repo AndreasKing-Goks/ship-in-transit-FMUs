@@ -8,7 +8,7 @@ import numpy as np
 # =============================================================================================================
 # Ship Parameters Compiler
 # =============================================================================================================
-def compile_ship_params(ship_cfg: dict, spawn_with_route: bool=True) -> dict:
+def compile_ship_params(ship_cfg: dict, spawn_in_route: bool=True) -> dict:
     route = ship_cfg["route"]
     north = route["north"]
     east  = route["east"]
@@ -17,7 +17,7 @@ def compile_ship_params(ship_cfg: dict, spawn_with_route: bool=True) -> dict:
     if len(north) < 2 or len(east) < 2:
         raise ValueError("Route must have at least 2 points to compute initial yaw.")
 
-    if spawn_with_route:
+    if spawn_in_route:
         # Derived / precomputed values from route
         d_north = north[1] - north[0]
         d_east  = east[1]  - east[0]
@@ -59,7 +59,7 @@ def compile_ship_params(ship_cfg: dict, spawn_with_route: bool=True) -> dict:
             mm[f"wp_{i}_speed"] = float(s_i)
     
     # Initial parameters (For the altered MISSION_MANAGER and SHIP_MODEL params)
-    if spawn_with_route:
+    if spawn_in_route:
         params = {
             "MISSION_MANAGER": mm,
             "SHIP_MODEL": sm,

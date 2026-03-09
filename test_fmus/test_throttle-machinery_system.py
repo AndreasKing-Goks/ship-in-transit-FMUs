@@ -32,12 +32,12 @@ instance    = CoSimInstance(instanceName= name, stopTime=stopTime, stepSize=step
 # Adding slaves
 # =========================
 # ThrottleController.fmu
-throttle_controller_fmu_path = str(ROOT / "FMUs" / "ThrottleController.fmu")
+throttle_controller_fmu_path = str(ROOT / "FMUs" / "ships" / "ThrottleController.fmu")
 instance.AddSlave(name="THROTTLE_CONTROLLER", 
                   path=throttle_controller_fmu_path)
 
 # MachinerySystem.fmu
-machinery_system_fmu_path = str(ROOT / "FMUs" / "MachinerySystem.fmu")
+machinery_system_fmu_path = str(ROOT / "FMUs" / "ships" / "MachinerySystem.fmu")
 instance.AddSlave(name="MACHINERY_SYSTEM", 
                   path=machinery_system_fmu_path)
 

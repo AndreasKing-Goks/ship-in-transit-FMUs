@@ -37,7 +37,7 @@ execution.add_observer(observer=observer)
 manip = CosimManipulator.create_override()
 execution.add_manipulator(manipulator=manip)
 
-fmu_path = str(ROOT / "FMUs" / "Autopilot.fmu")
+fmu_path = str(ROOT / "FMUs" / "ship" / "Autopilot.fmu")
 slave = CosimLocalSlave(fmu_path=fmu_path, instance_name="AUTOPILOT")
 idx = execution.add_local_slave(local_slave=slave)
 vars_ = execution.slave_variables(slave_index=idx)
@@ -86,6 +86,7 @@ def ship_yaw(t_s):
 # Fixed waypoints (prev->next)
 prev_wp = (0.0, 0.0)
 next_wp = (2000.0, 2000.0)
+# next_wp = (0.0, 0.0)
 
 # Init inputs
 manip.slave_real_values(idx, [pwpn_vr], [prev_wp[0]])
@@ -97,14 +98,17 @@ n0, e0 = ship_position(0.0)
 manip.slave_real_values(idx, [north_vr], [n0])
 manip.slave_real_values(idx, [east_vr], [e0])
 manip.slave_real_values(idx, [yaw_vr], [ship_yaw(0.0)])
+# manip.slave_real_values(idx, [yaw_vr], [0.0])
 
 t = 0
 while t < stopTime:
     ts = t / 1e9
     n, e = ship_position(ts)
+    n, e = 0, 0
     manip.slave_real_values(idx, [north_vr], [n])
     manip.slave_real_values(idx, [east_vr], [e])
-    manip.slave_real_values(idx, [yaw_vr], [ship_yaw(ts)])
+    # manip.slave_real_values(idx, [yaw_vr], [ship_yaw(ts)])
+    manip.slave_real_values(idx, [yaw_vr], [0.0])
     execution.step()
     t += stepSize
 

@@ -219,47 +219,47 @@ instance    = ShipInTransitCoSimulation(autopilot_params=autopilot_params,
 # Adding slaves
 # =========================
 # MissionManager.fmu
-mission_manager_fmu_path = str(ROOT / "FMUs" / "MissionManager.fmu")
+mission_manager_fmu_path = str(ROOT / "FMUs" / "ship" / "MissionManager.fmu")
 instance.AddSlave(name="MISSION_MANAGER", 
                   path=mission_manager_fmu_path)
 
 # Autopilot.fmu
-autopilot_fmu_path = str(ROOT / "FMUs" / "Autopilot.fmu")
+autopilot_fmu_path = str(ROOT / "FMUs" / "ship" / "Autopilot.fmu")
 instance.AddSlave(name="AUTOPILOT", 
                   path=autopilot_fmu_path)
 
 # ShaftSpeedController.fmu
-shaft_speed_controller_fmu_path = str(ROOT / "FMUs" / "ShaftSpeedController.fmu")
+shaft_speed_controller_fmu_path = str(ROOT / "FMUs" / "ship" / "ShaftSpeedController.fmu")
 instance.AddSlave(name="SHAFT_SPEED_CONTROLLER", 
                   path=shaft_speed_controller_fmu_path)
 
 # ThrottleController.fmu
-throttle_controller_fmu_path = str(ROOT / "FMUs" / "ThrottleController.fmu")
+throttle_controller_fmu_path = str(ROOT / "FMUs" / "ship" / "ThrottleController.fmu")
 instance.AddSlave(name="THROTTLE_CONTROLLER", 
                   path=throttle_controller_fmu_path)
 
 # MachinerySystem.fmu
-machinery_system_fmu_path = str(ROOT / "FMUs" / "MachinerySystem.fmu")
+machinery_system_fmu_path = str(ROOT / "FMUs" / "ship" / "MachinerySystem.fmu")
 instance.AddSlave(name="MACHINERY_SYSTEM", 
                   path=machinery_system_fmu_path)
 
 # Rudder.fmu
-rudder_fmu_path = str(ROOT / "FMUs" / "Rudder.fmu")
+rudder_fmu_path = str(ROOT / "FMUs" / "ship" / "Rudder.fmu")
 instance.AddSlave(name="RUDDER", 
                   path=rudder_fmu_path)
 
 # ShipModel.fmu
-ship_model_fmu_path = str(ROOT / "FMUs" / "ShipModel.fmu")
+ship_model_fmu_path = str(ROOT / "FMUs" / "ship" / "ShipModel.fmu")
 instance.AddSlave(name="SHIP_MODEL", 
                   path=ship_model_fmu_path)
 
 # # SurfaceCurrentModel.fmu
-# surface_current_model_fmu_path = str(ROOT / "FMUs" / "SurfaceCurrentModel.fmu")
+# surface_current_model_fmu_path = str(ROOT / "FMUs" / "env_loads" / "SurfaceCurrentModel.fmu")
 # instance.AddSlave(name="SURFACE_CURRENT", 
 #                   path=surface_current_model_fmu_path)
 
 # # WindModel.fmu
-# wind_model_fmu_path = str(ROOT / "FMUs" / "WindModel.fmu")
+# wind_model_fmu_path = str(ROOT / "FMUs" / "env_loads" / "WindModel.fmu")
 # instance.AddSlave(name="WIND", 
 #                   path=wind_model_fmu_path)
 

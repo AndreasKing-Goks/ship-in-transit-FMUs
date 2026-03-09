@@ -37,7 +37,7 @@ execution.add_observer(observer=observer)
 manip = CosimManipulator.create_override()
 execution.add_manipulator(manipulator=manip)
 
-fmu_path = str(ROOT / "FMUs" / "Rudder.fmu")
+fmu_path = str(ROOT / "FMUs" / "ship" / "Rudder.fmu")
 slave = CosimLocalSlave(fmu_path=fmu_path, instance_name="RUDDER")
 idx = execution.add_local_slave(local_slave=slave)
 vars_ = execution.slave_variables(slave_index=idx)
@@ -112,6 +112,11 @@ while t < stopTime:
     manip.slave_real_values(idx, [u_vr],   [forward_speed(ts)])
     manip.slave_real_values(idx, [cs_vr],  [current_speed(ts)])
     manip.slave_real_values(idx, [cd_vr],  [current_dir_rad(ts)])
+    # manip.slave_real_values(idx, [rud_vr], [0.0])
+    # manip.slave_real_values(idx, [yaw_vr], [0.0])
+    # manip.slave_real_values(idx, [u_vr],   [0.0])
+    # manip.slave_real_values(idx, [cs_vr],  [0.0])
+    # manip.slave_real_values(idx, [cd_vr],  [0.0])
     execution.step()
     t += stepSize
 

@@ -26,7 +26,7 @@ instance    = CoSimInstance(instanceName= name, stopTime=stopTime, stepSize=step
 # Adding slaves
 # =========================
 # SurfaceCurrentModel.fmu
-surface_current_model_fmu_path = str(ROOT / "FMUs" / "SurfaceCurrentModel.fmu")
+surface_current_model_fmu_path = str(ROOT / "FMUs" / "env_loads" / "SurfaceCurrentModel.fmu")
 instance.AddSlave(name="SURFACE_CURRENT", 
                   path=surface_current_model_fmu_path)
 

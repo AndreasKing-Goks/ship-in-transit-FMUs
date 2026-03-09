@@ -32,7 +32,7 @@ instance    = CoSimInstance(instanceName= name, stopTime=stopTime, stepSize=step
 # Adding slaves
 # =========================
 # MachinerySystem.fmu
-machinery_system_fmu_path = str(ROOT / "FMUs" / "MachinerySystem.fmu")
+machinery_system_fmu_path = str(ROOT / "FMUs" / "ship" / "MachinerySystem.fmu")
 instance.AddSlave(name="MACHINERY_SYSTEM", 
                   path=machinery_system_fmu_path)
 
@@ -101,6 +101,7 @@ instance.AddObserverTimeSeriesWithLabel(name="hybrid_shaft_generator_torque", sl
 # =========================
 while instance.time < instance.stopTime:
      # Get values
+    # load_perc = 0.0
     load_perc = 0.25
     
     if instance.time > instance.stopTime/4:

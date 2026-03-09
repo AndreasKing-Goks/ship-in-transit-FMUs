@@ -118,7 +118,7 @@ class CoSimInstance:
             sys.exit(1)
 
 
-    def GetObserverTimeSeries(self, name: str, from_step: int = 0):
+    def GetObserverTimeSeries(self, name: str, from_step: int = 1):
 
         try:
             sample_count = np.int64(self.stopTime / self.stepSize)
