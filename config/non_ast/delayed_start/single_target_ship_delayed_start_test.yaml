@@ -5,8 +5,6 @@ simulation:
 
 ships:
   - id: OS0
-    role: own
-    start_time: 
 
     route:
       north: [0, 2500, 2500, 7500, 7500, 10000]
@@ -220,7 +218,6 @@ ships:
   ##########################################################
 
   - id: TS1
-    role: target_1
 
     route:
       north: [10000, 7500, 7500, 2500, 2500, 0]

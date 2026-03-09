@@ -78,7 +78,6 @@ class ShipInTransitCoSimulation(CoSimInstance):
         
         for ship_config in ship_configs:
             prefix              = ship_config.get("id")
-            role                = ship_config.get("role")
             SHIP_BLOCKS         = ship_config.get("SHIP_BLOCKS")
             SHIP_CONNECTIONS    = ship_config.get("SHIP_CONNECTIONS")
             SHIP_OBSERVERS      = ship_config.get("SHIP_OBSERVERS")
