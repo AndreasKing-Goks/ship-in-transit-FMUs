@@ -65,8 +65,9 @@ class ShipInTransitCoSimulation(CoSimInstance):
     
     
     def AddAllShips(self,
-                    ship_configs,
-                    ROOT: Path ):
+                    ship_configs: list,
+                    ROOT: Path,
+                    spawn_with_route: bool =True):
         '''
             Add all configure ships and auto solve FMU connections 
             between each ship entity for the Collision Avoidance FMU
@@ -81,7 +82,7 @@ class ShipInTransitCoSimulation(CoSimInstance):
             SHIP_BLOCKS         = ship_config.get("SHIP_BLOCKS")
             SHIP_CONNECTIONS    = ship_config.get("SHIP_CONNECTIONS")
             SHIP_OBSERVERS      = ship_config.get("SHIP_OBSERVERS")
-            fmu_params          = compile_ship_params(ship_config)
+            fmu_params          = compile_ship_params(ship_config, spawn_with_route=spawn_with_route)
             enable_colav        = ship_config.get("enable_colav")
             
             # Add slaves

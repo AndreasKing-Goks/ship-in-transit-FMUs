@@ -8,7 +8,7 @@ import numpy as np
 # =============================================================================================================
 # Ship Parameters Compiler
 # =============================================================================================================
-def compile_ship_params(ship_cfg: dict) -> dict:
+def compile_ship_params(ship_cfg: dict, spawn_with_route: bool=True) -> dict:
     route = ship_cfg["route"]
     north = route["north"]
     east  = route["east"]
@@ -17,15 +17,22 @@ def compile_ship_params(ship_cfg: dict) -> dict:
     if len(north) < 2 or len(east) < 2:
         raise ValueError("Route must have at least 2 points to compute initial yaw.")
 
-    # ---- Derived / precomputed values from route ----
-    d_north = north[1] - north[0]
-    d_east  = east[1]  - east[0]
-    initial_yaw = float(np.atan2(d_east, d_north))
+    if spawn_with_route:
+        # Derived / precomputed values from route
+        d_north = north[1] - north[0]
+        d_east  = east[1]  - east[0]
+        initial_yaw = float(np.atan2(d_east, d_north))
 
-    initial_north = float(north[0])
-    initial_east  = float(east[0])
+        initial_north = float(north[0])
+        initial_east  = float(east[0])
+        
+        # Ship Model params (base + derived)
+        sm = dict(ship_cfg["fmu_params"]["SHIP_MODEL"])
+        sm["initial_north_position_m"] = initial_north
+        sm["initial_east_position_m"]  = initial_east
+        sm["initial_yaw_angle_rad"]    = initial_yaw
 
-    # ---- Mission Manager params ----
+    # Mission Manager params
     mm = dict(ship_cfg["fmu_params"].get("MISSION_MANAGER", {}))  # ra, max_inter_wp, etc.
     mm["wp_start_north"] = float(north[0])
     mm["wp_start_east"]  = float(east[0])
@@ -50,22 +57,21 @@ def compile_ship_params(ship_cfg: dict) -> dict:
             mm[f"wp_{i}_north"] = float(n_i)
             mm[f"wp_{i}_east"]  = float(e_i)
             mm[f"wp_{i}_speed"] = float(s_i)
-
-    # ---- Ship Model params (base + derived) ----
-    sm = dict(ship_cfg["fmu_params"]["SHIP_MODEL"])
-    sm["initial_north_position_m"] = initial_north
-    sm["initial_east_position_m"]  = initial_east
-    sm["initial_yaw_angle_rad"]    = initial_yaw
     
     # Initial parameters (For the altered MISSION_MANAGER and SHIP_MODEL params)
-    params = {
-        "MISSION_MANAGER": mm,
-        "SHIP_MODEL": sm,
-    }
+    if spawn_with_route:
+        params = {
+            "MISSION_MANAGER": mm,
+            "SHIP_MODEL": sm,
+        }
+    else:
+        params = {
+            "MISSION_MANAGER": mm
+        }
     
     # Repopulate the unaltered parameters into params_dict
     params_name_list = list(ship_cfg["fmu_params"].keys())
-    altered_params_name_list = ["MISSION_MANAGER", "SHIP_MODEL"]
+    altered_params_name_list = list(params.keys())
     unaltered_params_name_list = [p for p in params_name_list if (p not in altered_params_name_list)]
         
     for param_name in unaltered_params_name_list:
@@ -77,7 +83,7 @@ def compile_ship_params(ship_cfg: dict) -> dict:
     else:
         ship_cfg["enable_colav"] = False
     
-    # ---- Pass-through params for other FMUs ----
+    # Pass-through params for other FMUs
     return params
 
 
