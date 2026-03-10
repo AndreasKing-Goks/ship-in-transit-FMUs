@@ -53,8 +53,8 @@ class ShipInTransitCoSimulation(CoSimInstance):
         # =========================
         # Build the Ships
         # =========================
-        # Active status
-        self.ship_active = {ship_config["id"]: [] for ship_config in ship_configs}
+        # Delayed status
+        self.ship_delayed = {ship_config["id"]: [] for ship_config in ship_configs}
         
         # Set up the FMUs for all ship assets
         self.AddAllShips(ship_configs=ship_configs, ROOT=ROOT)
@@ -74,12 +74,12 @@ class ShipInTransitCoSimulation(CoSimInstance):
         fmu_params["SHIP_MODEL"]["initial_yaw_angle_rad"]         = np.deg2rad(spawn.get("yaw_angle_deg", 0.0))
         fmu_params["SHIP_MODEL"]["initial_forward_speed_m_per_s"] = spawn.get("forward_speed", 0.0)
         
-        # Start the ship when the time is equal to the start time
+        # Start the ship when the time is equal to the start time, else ship is delayed
         start_time = spawn["start_time"]
-        if self.time >= start_time*1e9:
-            self.ship_active[ship_id].append(True)
+        if self.time < start_time*1e9:
+            self.ship_delayed[ship_id].append(True)
         else:
-            self.ship_active[ship_id].append(False)
+            self.ship_delayed[ship_id].append(False)
         
         return fmu_params
         
@@ -192,11 +192,11 @@ class ShipInTransitCoSimulation(CoSimInstance):
         return slave_name
     
     
-    def get_masked_input_val_for_inactive_ship(self, ship_id, in_slave, in_var):
+    def get_masked_input_val_for_delayed_ship(self, ship_id, in_slave, in_var):
         """
-        Return the value to be written into an inactive ship's input port.
+        Return the value to be written into an delayed ship's input port.
         This masks the ship's incoming signals so subsystems do not evolve
-        in a meaningful way during the inactive phase.
+        in a meaningful way during the delayed phase.
         """
         # Get the base FMU name
         in_slave_base_name = self.get_fmu_base_name(in_slave)
@@ -208,9 +208,10 @@ class ShipInTransitCoSimulation(CoSimInstance):
             ("MISSION_MANAGER", "north"): "north",
             ("MISSION_MANAGER", "east"): "east",
 
-            ("COLAV", "north"): "north",
-            ("COLAV", "east"): "east",
-            ("COLAV", "yaw_angle"): "yaw_angle",
+            ("COLAV", "own_north"): "north",
+            ("COLAV", "own_east"): "east",
+            ("COLAV", "own_yaw_angle"): "yaw_angle_rad",
+            ("COLAV", "own_measured_speed"): "total_ship_speed",
         }
 
         key = (in_slave_base_name, in_var)
@@ -289,7 +290,7 @@ class ShipInTransitCoSimulation(CoSimInstance):
                 out_var  = self.slave_output_var[i]
 
                 ship_id = in_slave[:3]
-                is_active = self.ship_active.get(ship_id)[-1]
+                is_not_delayed = not self.ship_delayed.get(ship_id)[-1]
 
                 out_vr, out_type = GetVariableInfo(self.slaves_variables[out_slave], out_var)
                 in_vr,  in_type  = GetVariableInfo(self.slaves_variables[in_slave],  in_var)
@@ -297,10 +298,10 @@ class ShipInTransitCoSimulation(CoSimInstance):
                 if out_type != in_type:
                     continue  # or raise
                 
-                if is_active:
+                if is_not_delayed:
                     out_val = [self.GetLastValue(slaveName=out_slave, slaveVar=out_var)]
                 else:
-                    out_val = [self.get_masked_input_val_for_inactive_ship(ship_id=ship_id,
+                    out_val = [self.get_masked_input_val_for_delayed_ship(ship_id=ship_id,
                                                                           in_slave=in_slave,
                                                                           in_var=in_var)]
 
@@ -331,17 +332,24 @@ class ShipInTransitCoSimulation(CoSimInstance):
     
     
     def update_ship_reach_end_point_status(self, ship_id):
-        return self.GetLastValue(slaveName=self.ship_slave(ship_id, "MISSION_MANAGER"), 
-                                 slaveVar="reach_wp_end")
+        # Get the reach end waypoint flag
+        rep_flag = self.GetLastValue(slaveName=self.ship_slave(ship_id, "MISSION_MANAGER"), 
+                                     slaveVar="reach_wp_end")
+        
+        # Set the active flag to False if the ship has reach the end waypoint
+        # if rep_flag:
+        #     self.ship_delayed[ship_id].append(False)
+        
+        return rep_flag
     
     
-    def update_ship_active_status(self, ship_id, spawn):
+    def update_ship_delayed_status(self, ship_id, spawn):
         start_time  = spawn.get("start_time")
         
-        if self.time >= start_time*1e9:
-            self.ship_active[ship_id].append(True)
+        if self.time < start_time*1e9:
+            self.ship_delayed[ship_id].append(True)
         else:
-            self.ship_active[ship_id].append(False)
+            self.ship_delayed[ship_id].append(False)
             
 
     def update_colav_active_flag(self, ship_id):
@@ -370,7 +378,7 @@ class ShipInTransitCoSimulation(CoSimInstance):
             
             # Update ship active status
             if spawn is not None:
-                self.update_ship_active_status(ship_id, spawn)
+                self.update_ship_delayed_status(ship_id, spawn)
             
             # Update reach end point status
             rep_flag  = self.update_ship_reach_end_point_status(ship_id)
