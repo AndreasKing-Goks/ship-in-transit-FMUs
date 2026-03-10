@@ -54,7 +54,13 @@ class ShipInTransitCoSimulation(CoSimInstance):
         # Build the Ships
         # =========================
         # Delayed status
-        self.ship_delayed = {ship_config["id"]: [] for ship_config in ship_configs}
+        self.ship_delayed               = {ship_config["id"]: [] for ship_config in ship_configs}
+        
+        # Reach end waypoint status
+        self.ship_reach_end_waypoint    = {ship_config["id"]: [] for ship_config in ship_configs}
+        
+        # # Colav active flag
+        # self.ship_colav_active          = {ship_config["id"]: [] for ship_config in ship_configs}
         
         # Set up the FMUs for all ship assets
         self.AddAllShips(ship_configs=ship_configs, ROOT=ROOT)
@@ -73,6 +79,9 @@ class ShipInTransitCoSimulation(CoSimInstance):
         fmu_params["SHIP_MODEL"]["initial_east_position_m"]       = spawn["east"]
         fmu_params["SHIP_MODEL"]["initial_yaw_angle_rad"]         = np.deg2rad(spawn.get("yaw_angle_deg", 0.0))
         fmu_params["SHIP_MODEL"]["initial_forward_speed_m_per_s"] = spawn.get("forward_speed", 0.0)
+        
+        # Set the ship reach end waypoint status at False first
+        self.ship_reach_end_waypoint[ship_id].append(False)
         
         # Start the ship when the time is equal to the start time, else ship is delayed
         start_time = spawn["start_time"]
@@ -333,14 +342,14 @@ class ShipInTransitCoSimulation(CoSimInstance):
     
     def update_ship_reach_end_point_status(self, ship_id):
         # Get the reach end waypoint flag
-        rep_flag = self.GetLastValue(slaveName=self.ship_slave(ship_id, "MISSION_MANAGER"), 
+        rew_flag = self.GetLastValue(slaveName=self.ship_slave(ship_id, "MISSION_MANAGER"), 
                                      slaveVar="reach_wp_end")
         
-        # Set the active flag to False if the ship has reach the end waypoint
-        # if rep_flag:
-        #     self.ship_delayed[ship_id].append(False)
+        # If reach end waypoint, set the flag as True
+        if rew_flag:
+            self.ship_reach_end_waypoint[ship_id].append(True)
         
-        return rep_flag
+        return rew_flag
     
     
     def update_ship_delayed_status(self, ship_id, spawn):
@@ -369,8 +378,8 @@ class ShipInTransitCoSimulation(CoSimInstance):
         - Reward Function for reward signal (RL only)
         """
         # Get the reach end point and collision flag for all assets
-        rep_flags       = []
-        collision_flags = []
+        rew_flags       = {ship_config["id"]: False for ship_config in self.ship_configs}
+        collision_flags = {ship_config["id"]: False for ship_config in self.ship_configs}
         
         for ship_config in self.ship_configs:
             ship_id = ship_config.get("id")
@@ -381,8 +390,8 @@ class ShipInTransitCoSimulation(CoSimInstance):
                 self.update_ship_delayed_status(ship_id, spawn)
             
             # Update reach end point status
-            rep_flag  = self.update_ship_reach_end_point_status(ship_id)
-            rep_flags.append(rep_flag)
+            rew_flag  = self.update_ship_reach_end_point_status(ship_id)
+            rew_flags[ship_id] = rew_flag
             
             if ship_config.get("enable_colav"):
                 # Update colav active flag
@@ -390,7 +399,7 @@ class ShipInTransitCoSimulation(CoSimInstance):
                 
                 # Update collision status
                 collision_flag  = self.update_collision_status(ship_id)
-                collision_flags.append(collision_flag)
+                collision_flags[ship_id] = collision_flag
                 
                 # Update message
                 if colav_active and (not collision_flag) and (not self.print_col_msg):
@@ -402,8 +411,8 @@ class ShipInTransitCoSimulation(CoSimInstance):
                 elif collision_flag:
                     print(f"{ship_id} collides!")
         
-        all_ship_reaches_end_point = np.all(np.array(rep_flags))
-        any_ship_collides          = np.any(np.array(collision_flags))
+        all_ship_reaches_end_point = np.all([rew_flags[ship_id] for ship_id in list(rew_flags.keys())])
+        any_ship_collides          = np.any([collision_flags[ship_id] for ship_id in list(collision_flags.keys())])
         
         # Conclude the stop flag
         self.stop = all_ship_reaches_end_point or any_ship_collides
