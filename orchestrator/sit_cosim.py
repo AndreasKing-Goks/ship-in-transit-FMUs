@@ -411,11 +411,12 @@ class ShipInTransitCoSimulation(CoSimInstance):
                 elif collision_flag:
                     print(f"{ship_id} collides!")
         
-        all_ship_reaches_end_point = np.all([rew_flags[ship_id] for ship_id in list(rew_flags.keys())])
-        any_ship_collides          = np.any([collision_flags[ship_id] for ship_id in list(collision_flags.keys())])
+        own_ship_reaches_end_waypoint   = rew_flags["OS0"]
+        all_ship_reaches_end_waypoint   = np.all([rew_flags[ship_id] for ship_id in list(rew_flags.keys())])
+        any_ship_collides               = np.any([collision_flags[ship_id] for ship_id in list(collision_flags.keys())])
         
         # Conclude the stop flag
-        self.stop = all_ship_reaches_end_point or any_ship_collides
+        self.stop = own_ship_reaches_end_waypoint or (all_ship_reaches_end_waypoint or any_ship_collides)
         
 
     def step(self):
@@ -557,7 +558,7 @@ class ShipInTransitCoSimulation(CoSimInstance):
                 idx = np.arange(0, n, every_n)
                 draw_attr = f"{sid}_draw"
                 draw = getattr(self, draw_attr)
-                for i in idx[::2]:  # extra subsample for speed
+                for i in idx[::1]:  # extra subsample for speed
                     x, y = draw.local_coords()
                     x_ned, y_ned = draw.rotate_coords(x, y, yaw[i])
                     x_tr,  y_tr  = draw.translate_coords(x_ned, y_ned, north[i], east[i])
