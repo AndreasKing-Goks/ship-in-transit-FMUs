@@ -110,7 +110,7 @@ class ShipInTransitCoSimulation(CoSimInstance):
             SHIP_BLOCKS         = ship_config.get("SHIP_BLOCKS")
             SHIP_CONNECTIONS    = ship_config.get("SHIP_CONNECTIONS")
             SHIP_OBSERVERS      = ship_config.get("SHIP_OBSERVERS")
-            fmu_params          = compile_ship_params(ship_config, spawn_in_route=spawn_in_route)
+            fmu_params          = compile_ship_params(ship_config)
             enable_colav        = ship_config.get("enable_colav")
             
             # If not spawn in route
@@ -411,7 +411,7 @@ class ShipInTransitCoSimulation(CoSimInstance):
                 elif collision_flag:
                     print(f"{ship_id} collides!")
         
-        own_ship_reaches_end_waypoint   = rew_flags["OS0"]
+        own_ship_reaches_end_waypoint   = rew_flags[self.ship_configs[0]["id"]]
         all_ship_reaches_end_waypoint   = np.all([rew_flags[ship_id] for ship_id in list(rew_flags.keys())])
         any_ship_collides               = np.any([collision_flags[ship_id] for ship_id in list(collision_flags.keys())])
         

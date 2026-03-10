@@ -4,7 +4,14 @@ simulation:
   stepSize: 5.0
 
 ships:
-  - id: TS1
+  - id: OS0
+
+    spawn:
+      start_time: 0.0
+      north: 10000.0
+      east: 0
+      yaw_angle_deg: 135
+      forward_speed: 0
 
     route:
       north: [10000, 7500, 7500, 2500, 2500, 0]

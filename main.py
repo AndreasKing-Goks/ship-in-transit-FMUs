@@ -20,16 +20,12 @@ import yaml
 
 ## Get the config path
 
-# config_path = ROOT / "config" / "non_ast" / "step_size_5s" / "single_ship_config.yaml"
-# config_path = ROOT / "config" / "non_ast" / "step_size_5s" / "single_ship_config_w_env.yaml"
-# config_path = ROOT / "config" / "non_ast" / "step_size_5s" / "single_target_ship_config.yaml"
-# config_path = ROOT / "config" / "non_ast" / "step_size_5s" / "single_target_ship_config_w_env.yaml"
-config_path = ROOT / "config" / "non_ast" / "step_size_5s" / "multi_target_ship_config.yaml"
-# config_path = ROOT / "config" / "non_ast" / "step_size_5s" / "multi_target_ship_config_w_env.yaml"
-
-# config_path = ROOT / "config" / "non_ast" / "delayed_start" / "single_ship_delayed_start_test.yaml"
-# config_path = ROOT / "config" / "non_ast" / "delayed_start" / "single_target_ship_delayed_start_test.yaml"
-# config_path = ROOT / "config" / "non_ast" / "delayed_start" / "multi_target_ship_delayed_start_test.yaml"
+# config_path = ROOT / "config" / "non_ast" / "single_ship_config.yaml"
+# config_path = ROOT / "config" / "non_ast" / "single_ship_config_w_env.yaml"
+# config_path = ROOT / "config" / "non_ast" / "single_target_ship_config.yaml"
+# config_path = ROOT / "config" / "non_ast" / "single_target_ship_config_w_env.yaml"
+# config_path = ROOT / "config" / "non_ast" / "multi_target_ship_config.yaml"
+config_path = ROOT / "config" / "non_ast" / "multi_target_ship_config_w_env.yaml"
 
 ## Get the save path for animation
 
@@ -135,4 +131,4 @@ key_group_list = [
 ]
 
 # Plot Time Series
-instance.JoinPlotTimeSeries(list(reversed(key_group_list)),  create_title= False, legend= True, show_instance_name=False, show=True)
+# instance.JoinPlotTimeSeries(list(reversed(key_group_list)),  create_title= False, legend= True, show_instance_name=False, show=True)
