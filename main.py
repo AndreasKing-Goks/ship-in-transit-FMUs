@@ -20,8 +20,8 @@ import yaml
 
 ## Get the config path
 
-# config_path = ROOT / "config" / "non_ast" / "single_ship_config.yaml"
-# config_path = ROOT / "config" / "non_ast" / "single_ship_config_w_env.yaml"
+# config_path = ROOT / "config" / "non_ast" / "test_simplified_ship_config.yaml"
+# config_path = ROOT / "config" / "non_ast" / "test_ship_config_w_env.yaml"
 # config_path = ROOT / "config" / "non_ast" / "single_target_ship_config.yaml"
 # config_path = ROOT / "config" / "non_ast" / "single_target_ship_config_w_env.yaml"
 # config_path = ROOT / "config" / "non_ast" / "multi_target_ship_config.yaml"
@@ -29,8 +29,8 @@ config_path = ROOT / "config" / "non_ast" / "multi_target_ship_config_w_env.yaml
 
 ## Get the save path for animation
 
-# save_path = ROOT / "saved_animation" / "single_ship.mp4"
-# save_path = ROOT / "saved_animation" / "single_ship_w_env.mp4"
+# save_path = ROOT / "saved_animation" / "test_simplified_ship.mp4"
+# save_path = ROOT / "saved_animation" / "test_ship_w_env.mp4"
 # save_path = ROOT / "saved_animation" / "single_target_ship.mp4"
 # save_path = ROOT / "saved_animation" / "single_target_ship_w_env.mp4"
 # save_path = ROOT / "saved_animation" / "multi_target_ship.mp4"

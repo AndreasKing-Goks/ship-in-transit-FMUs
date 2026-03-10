@@ -259,7 +259,7 @@ ships:
       - [AUTOPILOT, next_wp_north, MISSION_MANAGER, next_wp_north]
       - [AUTOPILOT, next_wp_east,  MISSION_MANAGER, next_wp_east]
 
-      # Shaft speed controller
+      # Speed controller
       - [SPEED_CONTROLLER, desired_ship_speed,  MISSION_MANAGER,  next_wp_speed]
       - [SPEED_CONTROLLER, measured_ship_speed, SHIP_MODEL,       forward_speed]
 
