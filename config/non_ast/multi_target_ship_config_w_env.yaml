@@ -203,7 +203,7 @@ ships:
         rud_ang_increment_deg: 0.2
         danger_zone_radius: 926.0
         collision_zone_radius: 100.0
-        max_target_ship_count: 1
+        max_target_ship_count: 2
         hold_time: 450.0
         T_lookahead: 900.0
 

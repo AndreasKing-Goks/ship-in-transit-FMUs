@@ -34,11 +34,7 @@ config_path = ROOT / "config" / "non_ast" / "multi_target_ship_config_w_env.yaml
 # save_path = ROOT / "saved_animation" / "single_target_ship.mp4"
 # save_path = ROOT / "saved_animation" / "single_target_ship_w_env.mp4"
 # save_path = ROOT / "saved_animation" / "multi_target_ship.mp4"
-# save_path = ROOT / "saved_animation" / "multi_target_ship_w_env.mp4"
-
-# save_path = ROOT / "saved_animation" / "single_ship_delayed_start_test.mp4"
-# save_path = ROOT / "saved_animation" / "single_target_ship_delayed_start_test.mp4"
-save_path = ROOT / "saved_animation" / "multi_target_ship_delayed_start_test.mp4"
+save_path = ROOT / "saved_animation" / "multi_target_ship_w_env.mp4"
 
 
 with config_path.open("r", encoding="utf-8") as f:
@@ -131,4 +127,4 @@ key_group_list = [
 ]
 
 # Plot Time Series
-# instance.JoinPlotTimeSeries(list(reversed(key_group_list)),  create_title= False, legend= True, show_instance_name=False, show=True)
+instance.JoinPlotTimeSeries(list(reversed(key_group_list)),  create_title= False, legend= True, show_instance_name=False, show=True)

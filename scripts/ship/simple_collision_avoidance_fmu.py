@@ -266,7 +266,7 @@ class SimpleCollisionAvoidance(Fmi2Slave):
                     self.timer = 0.0
                     
                     # Also held the colav rudder sign
-                    beta = beta_list[use_idx]
+                    beta = beta_list[self.held_target_idx]
                     self.colav_rudder_sign      = float(-np.sign(beta)) if abs(beta) > 1e-6 else -1.0
                 
                 # If prioritize one target use held_target_idx, else use idx
