@@ -16,7 +16,7 @@ ships:
     route:
       north: [0, 8000 , 10000 ]
       east:  [0, 8000 , 10000 ]
-      speed: [5, 5    , 3.5   ]
+      speed: [5, 3.5   ]          # Upon reaching the next waypoint
 
     SHIP_BLOCKS:
       - [MISSION_MANAGER, FMUs/ship/MissionManager.fmu]
@@ -279,7 +279,7 @@ ships:
     route:
       north: [10000 , 2000, 0     ]
       east:  [0     , 8000, 10000 ]
-      speed: [5     , 5   , 3.5   ]
+      speed: [5     , 3.5   ]          # Upon reaching the next waypoint
 
     SHIP_BLOCKS:
       - [MISSION_MANAGER, FMUs/simplified_ship/MissionManager.fmu]
@@ -456,7 +456,7 @@ ships:
     route:
       north: [10000 , 2000 , 0    ]
       east:  [5000  , 5000 , 5000 ]
-      speed: [4     , 4    , 2    ]
+      speed: [4     , 2    ]          # Upon reaching the next waypoint
 
     SHIP_BLOCKS:
       - [MISSION_MANAGER, FMUs/simplified_ship/MissionManager.fmu]
@@ -633,7 +633,7 @@ ships:
     route:
       north: [5000  , 5000 , 5000 ]
       east:  [10000 , 2000 , 0    ]
-      speed: [4.5   , 4.5  , 2    ]
+      speed: [4.5   , 2    ]          # Upon reaching the next waypoint
 
     SHIP_BLOCKS:
       - [MISSION_MANAGER, FMUs/simplified_ship/MissionManager.fmu]

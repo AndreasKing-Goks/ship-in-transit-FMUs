@@ -61,30 +61,30 @@ instance.Simulate()
 # - .avi
 # - .mov
 
-# Animate Simulation
-instance.AnimateFleetTrajectory(
-        ship_ids=None,
-        fig_width=10.0,
-        margin_frac=0.08,
-        equal_aspect=True,
-        interval_ms=60,
-        frame_step=2,
-        trail_len=50,
-        plot_routes=True,
-        plot_waypoints=True,
-        plot_roa=True,
-        with_labels=True,
-        precompute_outlines=True,
-        # save_path=save_path,
-        writer_fps=60,
-        show=True,
-        block=True,
-        palette=None,
-        blit=True
-    )
+# # Animate Simulation
+# instance.AnimateFleetTrajectory(
+#         ship_ids=None,
+#         fig_width=10.0,
+#         margin_frac=0.08,
+#         equal_aspect=True,
+#         interval_ms=60,
+#         frame_step=2,
+#         trail_len=50,
+#         plot_routes=True,
+#         plot_waypoints=True,
+#         plot_roa=True,
+#         with_labels=True,
+#         precompute_outlines=True,
+#         # save_path=save_path,
+#         writer_fps=60,
+#         show=True,
+#         block=True,
+#         palette=None,
+#         blit=True
+#     )
 
-# Plot Trajectory
-instance.PlotFleetTrajectory()
+# # Plot Trajectory
+# instance.PlotFleetTrajectory()
 
 # Plot Simulation Results
 key_group_list = [

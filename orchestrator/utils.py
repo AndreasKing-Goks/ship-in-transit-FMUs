@@ -21,7 +21,6 @@ def compile_ship_params(ship_cfg: dict) -> dict:
     mm = dict(ship_cfg["fmu_params"].get("MISSION_MANAGER", {}))  # ra, max_inter_wp, etc.
     mm["wp_start_north"] = float(north[0])
     mm["wp_start_east"]  = float(east[0])
-    mm["wp_start_speed"] = float(speed[0])
     mm["wp_end_north"]   = float(north[-1])
     mm["wp_end_east"]    = float(east[-1])
     mm["wp_end_speed"]   = float(speed[-1])
@@ -29,12 +28,12 @@ def compile_ship_params(ship_cfg: dict) -> dict:
     # Intermediate waypoints: points 1..-2
     iw_north = north[1:-1]
     iw_east  = east[1:-1]
-    iw_speed = speed[1:-1]
+    iw_speed = speed[0:-1]
 
     # If you want to enforce max_inter_wp:
     max_inter_wp = int(len(iw_north))
-    if len(iw_north) != len(iw_east) or len(iw_north) != len(iw_speed):
-        raise ValueError("Route north/east/speed lengths mismatch.")
+    if len(iw_north) != len(iw_east):
+        raise ValueError("Route north/east lengths mismatch.")
     mm["max_inter_wp"] = max_inter_wp
 
     if max_inter_wp > 0:
