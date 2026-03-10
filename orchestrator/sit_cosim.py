@@ -688,14 +688,14 @@ class ShipInTransitCoSimulation(CoSimInstance):
             
             # Align data lengths
             n = min(len(north), len(east), len(yaw))
-            north, east, yaw = north[1:n], east[1:n], yaw[1:n]
+            north, east, yaw = north[:n], east[:n], yaw[:n]
             
             # Prepare per ship datum
             datum = {
                 "north" : north, 
                 "east"  : east, 
                 "yaw"   : yaw, 
-                "N"     : n-1
+                "N"     : n
                 }
             
             # Add datum to data container
@@ -853,15 +853,16 @@ class ShipInTransitCoSimulation(CoSimInstance):
         # status message (customize later)
         artists["status_text"].set_text(f"time={i*self.stepSize/1e9} s | frame={i}")
 
-        for sid in ship_ids:
+        for sid in ship_ids:            
+            # Draw animation frame
             east  = data[sid]["east"]
             north = data[sid]["north"]
 
-            # trail segment
+            # Trail segment
             j0 = 0 if trail_len is None else max(0, i - int(trail_len))
             artists["trail"][sid].set_data(east[j0:i+1], north[j0:i+1])
 
-            # outline: precomputed
+            # Outline: precomputed
             if precomputed_outlines is not None:
                 artists["outline"][sid].set_xy(precomputed_outlines[sid][i])
             else:
@@ -874,7 +875,7 @@ class ShipInTransitCoSimulation(CoSimInstance):
                 xy = np.column_stack([y_tr, x_tr])
                 artists["outline"][sid].set_xy(xy)
 
-            # label
+            # Label
             if sid in artists["label"]:
                 artists["label"][sid].set_position((east[i], north[i]))
 

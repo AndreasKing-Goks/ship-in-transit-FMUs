@@ -6,6 +6,13 @@ simulation:
 ships:
   - id: OS0
 
+    spawn:
+      start_time: 0.0
+      north: 0.0
+      east: 0.0
+      yaw_angle_deg: 45.0
+      forward_speed: 0.0
+
     route:
       north: [0, 8000 , 10000 ]
       east:  [0, 8000 , 10000 ]
@@ -181,11 +188,11 @@ ships:
 
       COLAV:
         throttle_scale_factor: 0.5
-        rud_ang_increment_deg: 0.2
+        rud_ang_increment_deg: 5
         danger_zone_radius: 926.0
         collision_zone_radius: 100.0
-        max_target_ship_count: 2
-        hold_time: 450.0
+        max_target_ship_count: 1
+        hold_time: 900.0
         T_lookahead: 900.0
 
       SHIP_MODEL:
@@ -218,6 +225,13 @@ ships:
   ##########################################################
 
   - id: TS1
+
+    spawn:
+      start_time: 250.0
+      north: 10000.0
+      east: 0.0
+      yaw_angle_deg: 135.0
+      forward_speed: 0.0
 
     route:
       north: [10000 , 2000, 0     ]
@@ -405,10 +419,17 @@ ships:
 
   - id: TS2
 
+    spawn:
+      start_time: 250.0
+      north: 10000.0
+      east: 5000.0
+      yaw_angle_deg: 180.0
+      forward_speed: 0
+
     route:
       north: [10000 , 2000 , 0    ]
       east:  [5000  , 5000 , 5000 ]
-      speed: [4     , 4    , 2    ]
+      speed: [6     , 6    , 2    ]
 
     SHIP_BLOCKS:
       - [MISSION_MANAGER, FMUs/ship/MissionManager.fmu]
@@ -591,10 +612,17 @@ ships:
 
   - id: TS3
 
+    spawn:
+      start_time: 770.0
+      north: 5000.0
+      east: 10000.0
+      yaw_angle_deg: -90.0
+      forward_speed: 0
+
     route:
       north: [5000  , 5000 , 5000 ]
       east:  [10000 , 2000 , 0    ]
-      speed: [4.5   , 4.5  , 2    ]
+      speed: [8   , 8  , 2    ]
 
     SHIP_BLOCKS:
       - [MISSION_MANAGER, FMUs/ship/MissionManager.fmu]
