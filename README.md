@@ -2,27 +2,40 @@
 Repository for Ship in Transit simulator in Co-simulation form.
 ![Animation](0_docs/ani/multi_target_ship_w_env.gif)
 
-## Conda Environment Setup [Simulator Only]
+## `Conda` Environment Setup [Simulator Only]
 
-First clone the repository. Make sure conda is installed. Then, set up the conda environment by running this command in terminal:
+First clone the repository. Make sure `Conda` is installed. Then, set up the `Conda` environment by running this command in terminal:
 
 ```bash
-conda env create -f sit_cosim.yml
+conda env create -f environment.yml
 ```
 
-### Libcosimpy
-When using co-simulation as a simulator base, we require the use of `libcosimpy` in order to orchestrate the FMUs when doing simulation. Install the Python library by running:
+The created `Conda` environment already includes the `libcosimpy` package, which is used to orchestrate and manage the execution of the `FMUs` within the co-simulation framework.
+
+This setup is sufficient to run the simulator immediately. No additional installation steps are required if you intend to run the simulator without animation support.
+
+### Enabling animation visualization
+This simulator also supports animation visualization. However it requires `FFmpeg` module to **save** the animation as a file with video extension. Specifically on Windows, please refer to this [WikiHow](https://www.wikihow.com/Install-FFmpeg-on-Windows) page for the `FFmpeg` installation guide.
+
+### Enabling OpenStreetMap (OSM) support
+This simulator support real-map support, using [OpenStreetMap (OSM)](https://www.openstreetmap.org/) API.This feature allows the simulator to:
+* Plot real geographic regions anywhere on the globe
+* Access and interact with the underlying topological map data
+* Incorporate realistic environmental constraints into the simulation. 
+
+The implementation relies on several geospatial Python libraries, including:
+* `osmnx`
+* `geopandas`
+* `shapely`
+* `pyproj`
+
+Additionally `matplotlib` and `pandas` are required for visualization and data handling (these are already included in the `environment.yaml`).
+
+Install the required geospatial dependencies with:
+
 ```bash
-pip install libcosimpy
+pip install osmnx geopandas shapely pyproj
 ```
-
-### FFmpeg
-This simulator supports animation visualization. However it requires `FFmpeg` module to **save** the animation as a file with video extension.
-Install `FFmpeg` in conda:
-```bash
-conda install conda-forge::ffmpeg
-```
-
 
 ## Dependencies for Adaptive Stress Testing (Optional)
 
