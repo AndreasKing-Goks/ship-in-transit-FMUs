@@ -99,15 +99,15 @@ key_group_list = [
     ["OS0.shaft_speed_rpm", "OS0.shaft_speed_cmd_rpm"],
     ["OS0.throttle_cmd"],
     
-    # For non-single ship simulation only
-    ["OS0.new_throttle_cmd"],
-    ["OS0.new_rudder_angle_deg"],
-    ["OS0.colav_rud_ang_increment"],
-    ["OS0.beta_own_to_tar_1"],
-    ["OS0.tcpa_own_to_tar_1"],
-    ["OS0.dcpa_own_to_tar_1"],
-    ["OS0.dist_own_to_tar_1"],
-    ["OS0.rr_own_to_tar_1"],
+    # # For non-single ship simulation only
+    # ["OS0.new_throttle_cmd"],
+    # ["OS0.new_rudder_angle_deg"],
+    # ["OS0.colav_rud_ang_increment"],
+    # ["OS0.beta_own_to_tar_1"],
+    # ["OS0.tcpa_own_to_tar_1"],
+    # ["OS0.dcpa_own_to_tar_1"],
+    # ["OS0.dist_own_to_tar_1"],
+    # ["OS0.rr_own_to_tar_1"],
     
     # # For environment load-enabled simulation only
     # ["OS0.current_speed"],

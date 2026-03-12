@@ -6,6 +6,16 @@ __pycache__/
 # C extensions
 *.so
 
+# OSM extensions
+*.osm.pbf
+*.osm
+*.pbf
+*.cpg
+*.dbf
+*.prj
+*.shp
+*.shx
+
 # Distribution / packaging
 .Python
 build/

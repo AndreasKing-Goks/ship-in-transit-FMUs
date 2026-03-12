@@ -12,18 +12,13 @@ conda env create -f environment.yml
 
 The created `Conda` environment already includes the `libcosimpy` package, which is used to orchestrate and manage the execution of the `FMUs` within the co-simulation framework.
 
-This setup is sufficient to run the simulator immediately. No additional installation steps are required if you intend to run the simulator without animation support.
-
-### Enabling animation visualization
-This simulator also supports animation visualization. However it requires `FFmpeg` module to **save** the animation as a file with video extension. Specifically on Windows, please refer to this [WikiHow](https://www.wikihow.com/Install-FFmpeg-on-Windows) page for the `FFmpeg` installation guide.
-
-### Enabling OpenStreetMap (OSM) support
-This simulator support real-map support, using [OpenStreetMap (OSM)](https://www.openstreetmap.org/) API.This feature allows the simulator to:
+This simulator includes real-map support, using [OpenStreetMap (OSM)](https://www.openstreetmap.org/) API.This feature allows the simulator to:
 * Plot real geographic regions anywhere on the globe
 * Access and interact with the underlying topological map data
 * Incorporate realistic environmental constraints into the simulation. 
 
 The implementation relies on several geospatial Python libraries, including:
+* `osmium`
 * `osmnx`
 * `geopandas`
 * `shapely`
@@ -31,11 +26,10 @@ The implementation relies on several geospatial Python libraries, including:
 
 Additionally `matplotlib` and `pandas` are required for visualization and data handling (these are already included in the `environment.yaml`).
 
-Install the required geospatial dependencies with:
+This setup is sufficient to run the simulator immediately. No additional installation steps are required if you intend to run the simulator without animation support.
 
-```bash
-pip install osmnx geopandas shapely pyproj
-```
+### Enabling animation visualization
+This simulator also supports animation visualization. However it requires `FFmpeg` module to **save** the animation as a file with video extension. Specifically on Windows, please refer to this [WikiHow](https://www.wikihow.com/Install-FFmpeg-on-Windows) page for the `FFmpeg` installation guide.
 
 ## Dependencies for Adaptive Stress Testing (Optional)
 
@@ -198,7 +192,7 @@ Using this, users can:
 2. **Load Map in the Simulator**
    - Use helper functions from `utils.prepare_map` such as:
      ```python
-     from utils.prepare_map import get_gdf_from_gpkg
+     from map_route_plotter.prepare_map import get_gdf_from_gpkg
      frame_gdf, ocean_gdf, land_gdf, coast_gdf, water_gdf = get_gdf_from_gpkg(GPKG_PATH, FRAME_LAYER, OCEAN_LAYER, LAND_LAYER, COAST_LAYER, WATER_LAYER)
      ```
    - The map geometry is read using `geopandas` and can be directly visualized or used in the environment setup.
@@ -207,9 +201,9 @@ Using this, users can:
    - Route files (typically in `.txt`) define the waypoints of the ship’s mission.  
    - These can be plotted together with the map using:
      ```python
-     from utils.get_path import get_map_path, get_ship_route_path
+     from orchestrator.utils import get_map_path, get_ship_route_path
      ```
-   - Visualization scripts are provided in `test_beds/map_and_route_plotter/plot_realmap_route.py`.
+   - Visualization scripts are provided in `TBA`.
 
 4. **Typical Use Case**
    - Extract the harbor region from OSM.  
