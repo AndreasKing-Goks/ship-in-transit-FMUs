@@ -225,7 +225,7 @@ Run the script:
 
 An interactive map window will appear.
 
-![route_planner](0_docs/img/route_planner.png)
+![route_planner](0_docs/ani/route_planner.gif)
 
 ------------------------------------------------------------------------
 
