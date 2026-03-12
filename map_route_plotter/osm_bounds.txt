@@ -1,0 +1,5 @@
+# Singapore Strait
+MANUAL_BOUNDS   = (103.60, 0.95, 104.30, 1.50)  # (minx, miny, maxx, maxy)
+
+# Oslo
+MANUAL_BOUNDS   = (10.56, 59.82, 10.76, 59.92)  # (minx, miny, maxx, maxy)
