@@ -12,7 +12,9 @@ from matplotlib.animation import FuncAnimation, FFMpegWriter
 import numpy as np
 
 from orchestrator.cosim_instance import *
-from orchestrator.utils import ShipDraw, compile_ship_params
+from orchestrator.utils import ShipDraw, compile_ship_params, get_ship_route_path_from_group, get_map_path
+from map_route_plotter.prepare_map_route import load_waypoints
+
 import time
 
 # =============================================================================================================
@@ -27,8 +29,9 @@ class ShipInTransitCoSimulation(CoSimInstance):
         especially built for running the FMU-based Ship In Transit Simulator
     '''
     def __init__(self,
-                 config : dict,
-                 ROOT   : Path
+                 config         : dict,
+                 ROOT           : Path,
+                 spawn_requests : dict=None,
                  ):
         # =========================
         # Instantiate the Parent Class
@@ -62,6 +65,13 @@ class ShipInTransitCoSimulation(CoSimInstance):
         # # Colav active flag
         # self.ship_colav_active          = {ship_config["id"]: [] for ship_config in ship_configs}
         
+        # If we have a custom spawn_request, alter the ship_configs
+        if spawn_requests is not None:
+            ship_configs = self.AddShipSpawn(spawn_requests=spawn_requests,
+                                             ROOT=ROOT,
+                                             simu_config=simu_config,
+                                             ship_configs=ship_configs)
+        
         # Set up the FMUs for all ship assets
         self.AddAllShips(ship_configs=ship_configs, ROOT=ROOT)
 
@@ -91,7 +101,103 @@ class ShipInTransitCoSimulation(CoSimInstance):
             self.ship_delayed[ship_id].append(False)
         
         return fmu_params
+    
+    
+    def AddShipSpawn(self, ROOT, spawn_requests, simu_config, ship_configs):
+        """
+            Iteratively add spawn request to each ship configurations
+        """
+        for i, ship_config in enumerate(ship_configs):
+            # Get the ship id
+            ship_id         = ship_config["id"]
+            
+            # Break down the spawn request
+            spawn_request   = spawn_requests[ship_id]
+            start_time      = spawn_request.get("start_time", 0.0)
+            north           = spawn_request.get("north", None)
+            east            = spawn_request.get("east", None)
+            yaw_angle_deg   = spawn_request.get("yaw_angle_deg", None)
+            speed_setpoints = spawn_request.get("speed_setpoints", 5.0)
+            
+            # Get the ship's unprocessed route
+            ship_route_path = get_ship_route_path_from_group(root=ROOT, 
+                                                             group=simu_config["instanceName"],
+                                                             route_filename=ship_config["route_filename"])
+            raw_route = load_waypoints(ship_route_path)
+            
+            # Prepare the route and spawn request
+            route, spawn = self.GetShipSpawn(raw_route=raw_route,
+                                             start_time=start_time,
+                                             north=north,
+                                             east=east,
+                                             yaw_angle_deg=yaw_angle_deg,
+                                             speed_setpoints=speed_setpoints)
+            
+            # Assign the prepared route and spawn requests to the ship configs
+            ship_configs[i]["spawn"] = spawn
+            ship_configs[i]["route"] = route
         
+        return ship_configs
+    
+    
+    def GetShipSpawn(self,
+                     raw_route: tuple,
+                     start_time: float= 0.0,
+                     north: float= None,
+                     east: float= None,
+                     yaw_angle_deg: float= None,
+                     speed_setpoints: float|list=5.0):
+        """
+            Convert the ship spawn request to be compliant with the class Simulate() method
+        """
+        ## Compile route
+        north_list   = raw_route[0]
+        east_list    = raw_route[1]
+        print(type(speed_setpoints))
+        print(isinstance (speed_setpoints, list))
+        if isinstance (speed_setpoints, list):
+            if len(speed_setpoints) == len(north_list):
+                speed_list  = speed_setpoints
+            else:
+                raise Exception("Speed set point length has to match with the route length!")
+        else:
+            speed_list      = [speed_setpoints] * len(north_list)
+            speed_list[0]   = 0 # Setting initial speed as 0 when speed_setpoint is not specified
+            
+        route = {
+            "north": north_list,
+            "east": east_list,
+            "speed": speed_list[1:] # First entry is the inital forward speed
+        }
+        
+        ## Compile spawn
+        if north is None:
+            north_spawn = north_list[0]
+        else:
+            north_spawn = north
+            
+        if east is None:
+            east_spawn  = east_list[0]
+        else:
+            east_spawn  = east
+            
+        if yaw_angle_deg is None:
+            d_north             = north_list[1] - north_list[0]
+            d_east              = east_list[1] - east_list[0]
+            yaw_angle_rad       = np.atan2(d_north, d_east)
+            yaw_angle_deg_spawn = np.rad2deg(yaw_angle_rad)
+        else:
+            yaw_angle_deg_spawn = yaw_angle_deg
+        
+        spawn = {
+            "start_time": start_time,
+            "north": north_spawn,
+            "east": east_spawn,
+            "yaw_angle_deg": yaw_angle_deg_spawn,
+            "forward_speed": speed_list[0]
+        }
+            
+        return route, spawn
         
     def AddAllShips(self,
                     ship_configs: list,
@@ -105,7 +211,6 @@ class ShipInTransitCoSimulation(CoSimInstance):
         self.ship_configs = ship_configs
         
         for ship_config in ship_configs:
-            spawn_in_route      = False if "spawn" in list(ship_config.keys()) else True
             prefix              = ship_config.get("id")
             SHIP_BLOCKS         = ship_config.get("SHIP_BLOCKS")
             SHIP_CONNECTIONS    = ship_config.get("SHIP_CONNECTIONS")
@@ -113,10 +218,9 @@ class ShipInTransitCoSimulation(CoSimInstance):
             fmu_params          = compile_ship_params(ship_config)
             enable_colav        = ship_config.get("enable_colav")
             
-            # If not spawn in route
-            if not spawn_in_route:
-                spawn           = ship_config["spawn"]
-                fmu_params = self.spawn_ship(ship_id=prefix, spawn=spawn, fmu_params=fmu_params)
+            # Spawn the ships
+            spawn               = ship_config["spawn"]
+            fmu_params          = self.spawn_ship(ship_id=prefix, spawn=spawn, fmu_params=fmu_params)
             
             # Add slaves
             for block, relpath in SHIP_BLOCKS:

@@ -280,11 +280,11 @@ def plot_route_map(
 def main():
     map = 1
     if map == 1:
-        group           = "singapore-strait"
+        group           = "singapore_strait"
         map_filename    = "singapore_strait.gpkg"
         title           = "Singapore Strait Fleet Route Map"
     elif map == 2:
-        group           = "oslo-fjord"
+        group           = "oslo_fjord"
         map_filename    = "oslo_fjord.gpkg"
         title           = "Oslo Fjord Fleet Route Map"
     
