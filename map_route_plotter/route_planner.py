@@ -75,7 +75,7 @@ class RoutePicker:
             "Left-click: add waypoint    |    Undo    Clear    Finish & Save    Cancel\n"
             "Tip: Use mouse scroll/drag to navigate.",
             xy=(0.01, 0.01), xycoords="axes fraction", va="bottom", ha="left",
-            bbox=dict(boxstyle="round,pad=0.25", fc="white", alpha=0.9), fontsize=9
+            bbox=dict(boxstyle="round,pad=0.25", fc="white", alpha=0.9), fontsize=LABEL_FONTSIZE/2
         )
 
         self.start_anno = None
@@ -93,6 +93,11 @@ class RoutePicker:
         self.b_clear  = Button(self.b_clear_ax,  "Clear")
         self.b_finish = Button(self.b_finish_ax, "Finish & Save")
         self.b_cancel = Button(self.b_cancel_ax, "Cancel")
+        
+        self.b_undo.label.set_fontsize(LABEL_FONTSIZE)
+        self.b_clear.label.set_fontsize(LABEL_FONTSIZE)
+        self.b_finish.label.set_fontsize(LABEL_FONTSIZE)
+        self.b_cancel.label.set_fontsize(LABEL_FONTSIZE)
 
         self.b_undo.on_clicked(self._on_undo)
         self.b_clear.on_clicked(self._on_clear)
@@ -246,7 +251,7 @@ def main():
     map_h = maxy - miny
     aspect = map_w / map_h
 
-    fig_width = 12
+    fig_width = 5.5
     fig_height = fig_width / aspect
     fig, ax = plt.subplots(figsize=(fig_width, fig_height), dpi=180)
 
@@ -287,13 +292,14 @@ def main():
     ax.set_ylim(miny, maxy)
     ax.set_aspect("equal")
 
-    ax.set_xlabel("East [m]")
-    ax.set_ylabel("North [m]")
+    ax.set_xlabel("East [m]").set_fontsize(LABEL_FONTSIZE)
+    ax.set_ylabel("North [m]").set_fontsize(LABEL_FONTSIZE)
 
     ax.ticklabel_format(axis="y", style="sci", scilimits=(0, 0))
-    ax.yaxis.get_offset_text().set_fontsize(10)
+    ax.yaxis.get_offset_text().set_fontsize(LABEL_FONTSIZE)
     ax.ticklabel_format(axis="x", style="sci", scilimits=(0, 0))
-    ax.xaxis.get_offset_text().set_fontsize(10)
+    ax.xaxis.get_offset_text().set_fontsize(LABEL_FONTSIZE)
+    ax.tick_params(axis="both", labelsize=LABEL_FONTSIZE)
 
     ax.grid(True, color="0.82", linestyle="--", linewidth=0.5, zorder=100)
 
@@ -301,7 +307,7 @@ def main():
         spine.set_linewidth(0.8)
         spine.set_color("0.35")
 
-    ax.set_title("Route Planner • Click to add waypoints • Buttons below to Finish/Undo/Clear/Cancel")
+    ax.set_title("Route Planner • Click to add waypoints • Buttons below to Finish/Undo/Clear/Cancel", fontsize=LABEL_FONTSIZE)
 
     save_path = Path(get_ship_route_path(ROOT, ROUTE_FILENAME))
     RoutePicker(ax, save_path=save_path)

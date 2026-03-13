@@ -16,6 +16,7 @@ mpl.rcParams["font.family"] = "Arial"
 from orchestrator.utils import get_ship_route_path_from_group, get_map_path
 from map_route_plotter.prepare_map_route import get_gdf_from_gpkg, load_waypoints
 
+LABEL_FONTSIZE = 7.5
 
 def add_scalebar(ax, length_m=None, location=(0.08, 0.06), linewidth=3, text_offset=0.015):
     """
@@ -45,7 +46,7 @@ def add_scalebar(ax, length_m=None, location=(0.08, 0.06), linewidth=3, text_off
         label,
         ha="center",
         va="bottom",
-        fontsize=10,
+        fontsize=LABEL_FONTSIZE,
         bbox=dict(facecolor="white", edgecolor="none", alpha=0.8, pad=1.5),
         zorder=21,
     )
@@ -218,8 +219,8 @@ def plot_route_map(
         )
 
         if (len(east) > 0) and (i==0):
-            ax.text(east[0], north[0]+500, " START", fontsize=8, weight="bold", va="bottom", ha="center", zorder=12)
-            ax.text(east[-1], north[-1]+500, " GOAL", fontsize=8, weight="bold", va="bottom", ha="center", zorder=12)
+            ax.text(east[0], north[0]+500, " START", fontsize=LABEL_FONTSIZE, weight="bold", va="bottom", ha="center", zorder=12)
+            ax.text(east[-1], north[-1]+500, " GOAL", fontsize=LABEL_FONTSIZE, weight="bold", va="bottom", ha="center", zorder=12)
 
         route_handles.append(Line2D([0], [0], color=palette[i], lw=1.0, ls="--", label=f"Route {i+1}"))
 
@@ -230,13 +231,14 @@ def plot_route_map(
     ax.set_ylim(miny, maxy)
     ax.set_aspect("equal")
 
-    ax.set_xlabel("East [m]")
-    ax.set_ylabel("North [m]")
+    ax.set_xlabel("East [m]").set_fontsize(LABEL_FONTSIZE)
+    ax.set_ylabel("North [m]").set_fontsize(LABEL_FONTSIZE)
 
     ax.ticklabel_format(axis="y", style="sci", scilimits=(0, 0))
-    ax.yaxis.get_offset_text().set_fontsize(10)
+    ax.yaxis.get_offset_text().set_fontsize(LABEL_FONTSIZE)
     ax.ticklabel_format(axis="x", style="sci", scilimits=(0, 0))
-    ax.xaxis.get_offset_text().set_fontsize(10)
+    ax.xaxis.get_offset_text().set_fontsize(LABEL_FONTSIZE)
+    ax.tick_params(axis="both", labelsize=LABEL_FONTSIZE)
 
     ax.grid(True, color="0.82", linestyle="--", linewidth=0.5, zorder=100)
 
@@ -259,12 +261,13 @@ def plot_route_map(
             frameon=True,
             facecolor="white",
             edgecolor="0.7",
+            prop={'size':LABEL_FONTSIZE}
         )
 
     # -----------------------
     # Title and spacing
     # -----------------------
-    ax.set_title(title, fontsize=10, pad=10)
+    ax.set_title(title, fontsize=LABEL_FONTSIZE, pad=10)
 
     plt.subplots_adjust(left=0.08, right=0.99, bottom=0.08, top=0.93)
 
@@ -292,7 +295,7 @@ def main():
         group=group,
         map_filename=map_filename,
         title=title,
-        fig_width=12.0,
+        fig_width=7.0,
         dpi=180,
         show_coast=False,
         show_water=False,
