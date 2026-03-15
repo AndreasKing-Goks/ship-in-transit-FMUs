@@ -84,7 +84,8 @@ class ShipInTransitCoSimulation(CoSimInstance):
         
         # Add the Map
         if self.is_map_exists:
-            self.AddMap(ROOT=ROOT, map_filename=self.map.get("name"))
+            self.map_name = self.map.get("name")
+            self.AddMap(ROOT=ROOT, map_filename=self.map.get("filename"))
 
 
 # =============================================================================================================
@@ -138,17 +139,17 @@ class ShipInTransitCoSimulation(CoSimInstance):
         self.land_poly = get_polygon_from_gdf(self.land_gdf)
     
     
-    def set_map_static_aspect(self, aspect: float=None):
+    def set_map_static_aspect(self, frame_gdf, aspect: float=None):
         """
             Returns the static map plot aspect based on the frame_gdf.
-            Else returns pre determined aspect.
+            Also returns the map boundary. Else returns pre determined aspect.
         """
         if aspect is None:
-            minx, miny, maxx, maxy = self.frame_gdf.total_bounds
+            minx, miny, maxx, maxy = frame_gdf.total_bounds
             map_w = maxx - minx
             map_h = maxy - miny
             aspect = map_w / map_h
-        return aspect
+        return aspect, minx, miny, maxx, maxy
         
     
     def set_map_static_artist(self, ax):
@@ -166,49 +167,64 @@ class ShipInTransitCoSimulation(CoSimInstance):
         show_tss            = self.map.get("show_tss")
         show_docks          = self.map.get("show_docks")
         
+        # Reuse the gdf for different plotting use
+        frame_gdf           = self.frame_gdf
+        ocean_gdf           = self.ocean_gdf
+        land_gdf            = self.land_gdf 
+        coast_gdf           = self.coast_gdf
+        water_gdf           = self.water_gdf
+        waterways_gdf       = self.waterways_gdf
+        ferry_routes_gdf    = self.ferry_routes_gdf
+        harbours_gdf        = self.harbours_gdf
+        bridges_gdf         = self.bridges_gdf
+        tss_gdf             = self.tss_gdf
+        docks_gdf           = self.docks_gdf
+        
         ## Base layers
         # Ocean background
         if not self.ocean_gdf.empty:
-            self.ocean_gdf.plot(ax=ax, facecolor="#cfe8f7", edgecolor="none", zorder=0)
+            ocean_gdf.plot(ax=ax, facecolor="#cfe8f7", edgecolor="none", zorder=0)
 
         # Land polygons
         if not self.land_gdf.empty:
-            self.land_gdf.plot(ax=ax, facecolor="#dfe6d5", edgecolor="#7a8a6a", linewidth=0.30, zorder=1)
+            land_gdf.plot(ax=ax, facecolor="#dfe6d5", edgecolor="#7a8a6a", linewidth=0.30, zorder=1)
 
         # Optional water bodies
         if show_water and not self.water_gdf.empty:
-            self.water_gdf.plot(ax=ax, facecolor="#b7dcef", edgecolor="none", zorder=2)
+            water_gdf.plot(ax=ax, facecolor="#b7dcef", edgecolor="none", zorder=2)
 
         # Coastline outline
         if show_coast and not self.coast_gdf.empty:
-            self.coast_gdf.plot(ax=ax, color="#4f6650", linewidth=0.45, zorder=3)
+            coast_gdf.plot(ax=ax, color="#4f6650", linewidth=0.45, zorder=3)
 
         ## Optional overlays
         # Navigable waterways (rivers / channels)
         if show_waterways and not self.waterways_gdf.empty:
-            self.waterways_gdf.plot(ax=ax, color="#7fb6d6", linewidth=0.6, alpha=0.9, zorder=4)
+            waterways_gdf.plot(ax=ax, color="#7fb6d6", linewidth=0.6, alpha=0.9, zorder=4)
 
         # Ferry routes
         if show_ferry_routes and not self.ferry_routes_gdf.empty:
-            self.ferry_routes_gdf.plot(ax=ax, color="#5d6fd3", linewidth=0.25, linestyle="--", alpha=0.5, zorder=5)
+            ferry_routes_gdf.plot(ax=ax, color="#5d6fd3", linewidth=0.25, linestyle="--", alpha=0.5, zorder=5)
 
         # Traffic Separation Scheme
         if show_tss and not self.tss_gdf.empty:
-            self.tss_gdf.plot(ax=ax, color="#9c6ade", linewidth=1.0, linestyle=":", alpha=0.9, zorder=5)
+            tss_gdf.plot(ax=ax, color="#9c6ade", linewidth=1.0, linestyle=":", alpha=0.9, zorder=5)
 
         # Bridges
         if show_bridges and not self.bridges_gdf.empty:
-            self.bridges_gdf.plot(ax=ax, color="#6b4f3a", linewidth=1.2, alpha=0.9, zorder=6)
+            bridges_gdf.plot(ax=ax, color="#6b4f3a", linewidth=1.2, alpha=0.9, zorder=6)
 
         # Dock areas
         if show_docks and not self.docks_gdf.empty:
-            self.docks_gdf.plot(ax=ax, facecolor="#d9c27a", edgecolor="#8d7b45", linewidth=0.4, alpha=0.9, zorder=6)
+            docks_gdf.plot(ax=ax, facecolor="#d9c27a", edgecolor="#8d7b45", linewidth=0.4, alpha=0.9, zorder=6)
 
         # Harbour markers
         if show_harbours and not self.harbours_gdf.empty:
-            self.harbours_gdf.plot(ax=ax, color="#c85a5a", markersize=14, alpha=0.85, zorder=7)
+            harbours_gdf.plot(ax=ax, color="#c85a5a", markersize=14, alpha=0.85, zorder=7)
 
-        return
+        return (frame_gdf, ocean_gdf, land_gdf, coast_gdf,
+                water_gdf, waterways_gdf, ferry_routes_gdf,
+                harbours_gdf, bridges_gdf, tss_gdf, docks_gdf)
 
 
 # =============================================================================================================
@@ -256,7 +272,7 @@ class ShipInTransitCoSimulation(CoSimInstance):
             
             # Get the ship's unprocessed route
             # If route is not belong to any group, access it from data/route/ directly
-            group = simu_config["map"].get("name", None)
+            group = simu_config["map"].get("group", None)
             ship_route_path = get_ship_route_path_from_group(ROOT=ROOT, 
                                                              group=group,
                                                              route_filename=ship_config["route_filename"])
@@ -321,7 +337,7 @@ class ShipInTransitCoSimulation(CoSimInstance):
         if yaw_angle_deg is None:
             d_north             = north_list[1] - north_list[0]
             d_east              = east_list[1] - east_list[0]
-            yaw_angle_rad       = np.atan2(d_north, d_east)
+            yaw_angle_rad       = np.atan2(d_east, d_north)
             yaw_angle_deg_spawn = np.rad2deg(yaw_angle_rad)
         else:
             yaw_angle_deg_spawn = yaw_angle_deg
@@ -701,6 +717,40 @@ class ShipInTransitCoSimulation(CoSimInstance):
         key = f"{ship_id}.{var}"
         t, step, samples = self.GetObserverTimeSeries(key)
         return np.asarray(t), np.asarray(step), np.asarray(samples)
+    
+    
+    def add_scalebar(self, ax, length_m=None, location=(0.08, 0.06), linewidth=3, text_offset=0.015, label_fs=11):
+        """
+        Add a simple metric scale bar to an axes already in projected meters.
+        """
+        x0, x1 = ax.get_xlim()
+        y0, y1 = ax.get_ylim()
+        width = x1 - x0
+        height = y1 - y0
+
+        if length_m is None:
+            target = width * 0.15
+            nice_lengths = np.array([500, 1000, 2000, 5000, 10000, 20000, 50000, 100000])
+            length_m = nice_lengths[np.argmin(np.abs(nice_lengths - target))]
+
+        sx = x0 + location[0] * width
+        sy = y0 + location[1] * height
+
+        ax.plot([sx, sx + length_m], [sy, sy], color="black", lw=linewidth, solid_capstyle="butt", zorder=20)
+        ax.plot([sx, sx], [sy - 0.003 * height, sy + 0.003 * height], color="black", lw=linewidth, zorder=20)
+        ax.plot([sx + length_m, sx + length_m], [sy - 0.003 * height, sy + 0.003 * height], color="black", lw=linewidth, zorder=20)
+
+        label = f"{int(length_m/1000)} km" if length_m >= 1000 else f"{int(length_m)} m"
+        ax.text(
+            sx + length_m / 2,
+            sy + text_offset * height,
+            label,
+            ha="center",
+            va="bottom",
+            fontsize=label_fs,
+            bbox=dict(facecolor="white", edgecolor="none", alpha=0.8, pad=1.5),
+            zorder=21,
+        )
 
     
     def PlotFleetTrajectory(
@@ -727,11 +777,11 @@ class ShipInTransitCoSimulation(CoSimInstance):
         if mode == "paper":
             own_lw, route_lw, ship_lw = 2.4, 1.8, 2.0
             title_fs, label_fs, tick_fs, legend_fs = 12, 11, 10, 9
-            grid_alpha, roa_alpha, dpi = 0.4, 0.25, 500
+            grid_alpha, roa_alpha, dpi = 1.0, 0.25, 500
         elif mode == "quick":
             own_lw, route_lw, ship_lw = 1.2, 1.0, 1.6
             title_fs, label_fs, tick_fs, legend_fs = 9, 8, 7, 7
-            grid_alpha, roa_alpha, dpi = 0.2, 0.15, 110
+            grid_alpha, roa_alpha, dpi = 0.8, 0.15, 110
         else:
             raise ValueError("mode must be 'quick' or 'paper'")
 
@@ -740,14 +790,21 @@ class ShipInTransitCoSimulation(CoSimInstance):
         ## Figure
         fig, ax = plt.subplots(figsize=(fig_width, fig_width), dpi=dpi)
         
-        # ## Plot map if exists
-        # if self.is_map_exists:
-        #     # Set the map static artists
-        #     self.set_map_static_artist(ax=ax)
+        ## Plot map if exists
+        if self.is_map_exists:
+            # Set the map static artists
+            (frame_gdf, ocean_gdf, land_gdf, coast_gdf,
+            water_gdf, waterways_gdf, ferry_routes_gdf,
+            harbours_gdf, bridges_gdf, tss_gdf, docks_gdf) = self.set_map_static_artist(ax=ax)
             
-        #     # Get the aspect
-        #     aspect = self.set_map_static_aspect()
+            # Get the aspect
+            aspect, minx, miny, maxx, maxy = self.set_map_static_aspect(frame_gdf)
             
+            # Set the fig height based on the aspect
+            fig_height = fig_width / aspect
+        
+            # Resize the figure
+            fig.set_size_inches(fig_width, fig_height)
 
         # simple palette (you can replace with your own, incl. colorblind-safe)
         palette = ["#0c3c78", "#d90808", "#2a9d8f", "#f4a261", "#6a4c93", "#264653"]
@@ -775,7 +832,6 @@ class ShipInTransitCoSimulation(CoSimInstance):
 
             # --- route per ship (from config) ---
             if plot_routes:
-                print("Drawing routes ...")
                 cfg = next((sc for sc in self.ship_configs if sc.get("id") == sid), None)
                 if cfg and "route" in cfg:
                     rN = cfg["route"].get("north", [])
@@ -785,13 +841,15 @@ class ShipInTransitCoSimulation(CoSimInstance):
                                 label=f"{sid} route")
                         if plot_waypoints:
                             ax.scatter(rE, rN,
-                                    s=18 if mode == "quick" else 30,
-                                    marker="x", color=color)
+                                    s=20 if mode == "quick" else 30,
+                                    edgecolors="white", color=color)
+                            
+                            ax.text(rE[0], rN[0]+500, " START", fontsize=label_fs, weight="bold", va="bottom", ha="center", zorder=12)
+                            ax.text(rE[-1], rN[-1]+500, " GOAL", fontsize=label_fs, weight="bold", va="bottom", ha="center", zorder=12)
 
                             # RoA circles
                             ra = cfg["fmu_params"].get("MISSION_MANAGER", {}).get("ra", None)
                             if ra is not None:
-                                print("Drawing RoA ...")
                                 for n_wp, e_wp in zip(rN[1:], rE[1:]):
                                     circ = patches.Circle(
                                         (e_wp, n_wp),
@@ -815,33 +873,46 @@ class ShipInTransitCoSimulation(CoSimInstance):
                     ax.plot(y_tr, x_tr, lw=ship_lw, color=color, alpha=0.6)
 
         # Zoom (global)
-        X = np.concatenate(all_x) if len(all_x) else np.array([0.0, 1.0])
-        Y = np.concatenate(all_y) if len(all_y) else np.array([0.0, 1.0])
+        if self.is_map_exists:
+            # Set figure boundaries
+            ax.set_xlim(minx, maxx)
+            ax.set_ylim(miny, maxy)
+            
+            # Add scalebar
+            self.add_scalebar(ax=ax, length_m=None)
+        else:
+            X = np.concatenate(all_x) if len(all_x) else np.array([0.0, 1.0])
+            Y = np.concatenate(all_y) if len(all_y) else np.array([0.0, 1.0])
 
-        x_min, x_max = float(np.min(X)), float(np.max(X))
-        y_min, y_max = float(np.min(Y)), float(np.max(Y))
+            x_min, x_max = float(np.min(X)), float(np.max(X))
+            y_min, y_max = float(np.min(Y)), float(np.max(Y))
 
-        dx = max(1e-9, x_max - x_min)
-        dy = max(1e-9, y_max - y_min)
-
-        ax.set_xlim(x_min - margin_frac * dx, x_max + margin_frac * dx)
-        ax.set_ylim(y_min - margin_frac * dy, y_max + margin_frac * dy)
+            dx = max(1e-9, x_max - x_min)
+            dy = max(1e-9, y_max - y_min)
+            
+            ax.set_xlim(x_min - margin_frac * dx, x_max + margin_frac * dx)
+            ax.set_ylim(y_min - margin_frac * dy, y_max + margin_frac * dy)
 
         # Styling
-        ax.set_title("Fleet trajectories", fontsize=title_fs, pad=4)
+        title = f"Fleet trajectories on {self.map_name}" if self.is_map_exists else "Fleet trajectories"
+        ax.set_title(title, fontsize=title_fs, pad=4)
         ax.set_xlabel("East position (m)", fontsize=label_fs)
         ax.set_ylabel("North position (m)", fontsize=label_fs)
 
         ax.tick_params(axis="both", which="major", labelsize=tick_fs, length=3)
-        ax.grid(True, which="major", linewidth=0.6, alpha=grid_alpha)
+        ax.grid(True, color="0.82", linestyle="--", linewidth=0.5, alpha=grid_alpha)
 
         leg = ax.legend(fontsize=legend_fs, frameon=True, framealpha=0.75,
-                        borderpad=0.4, handlelength=2.2, loc="lower center")
+                        borderpad=0.4, handlelength=2.2, loc="upper left")
         leg.get_frame().set_linewidth(0.6)
 
         ax.ticklabel_format(style='sci', axis='both', scilimits=(0,0))
         ax.xaxis.get_offset_text().set_fontsize(tick_fs-1)
         ax.yaxis.get_offset_text().set_fontsize(tick_fs-1)
+        
+        for spine in ax.spines.values():
+            spine.set_linewidth(0.8)
+            spine.set_color("0.35")
 
         if equal_aspect:
             ax.set_aspect("equal", adjustable="box")
