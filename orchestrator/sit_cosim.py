@@ -713,7 +713,7 @@ class ShipInTransitCoSimulation(CoSimInstance):
 # =============================================================================================================
 # Static Plot
 # =============================================================================================================
-    def _get_ship_timeseries(self, ship_id: str, var: str):
+    def get_ship_timeseries(self, ship_id: str, var: str):
         key = f"{ship_id}.{var}"
         t, step, samples = self.GetObserverTimeSeries(key)
         return np.asarray(t), np.asarray(step), np.asarray(samples)
@@ -793,9 +793,7 @@ class ShipInTransitCoSimulation(CoSimInstance):
         ## Plot map if exists
         if self.is_map_exists:
             # Set the map static artists
-            (frame_gdf, ocean_gdf, land_gdf, coast_gdf,
-            water_gdf, waterways_gdf, ferry_routes_gdf,
-            harbours_gdf, bridges_gdf, tss_gdf, docks_gdf) = self.set_map_static_artist(ax=ax)
+            (frame_gdf, _, _, _, _, _, _, _, _, _, _) = self.set_map_static_artist(ax=ax)
             
             # Get the aspect
             aspect, minx, miny, maxx, maxy = self.set_map_static_aspect(frame_gdf)
@@ -806,7 +804,7 @@ class ShipInTransitCoSimulation(CoSimInstance):
             # Resize the figure
             fig.set_size_inches(fig_width, fig_height)
 
-        # simple palette (you can replace with your own, incl. colorblind-safe)
+        # simple palette
         palette = ["#0c3c78", "#d90808", "#2a9d8f", "#f4a261", "#6a4c93", "#264653"]
 
         # track global extents (route or traj)
@@ -816,10 +814,10 @@ class ShipInTransitCoSimulation(CoSimInstance):
         for k, sid in enumerate(ship_ids):
             color = palette[k % len(palette)]
 
-            # --- time series ---
-            _, _, north = self._get_ship_timeseries(sid, "north")
-            _, _, east  = self._get_ship_timeseries(sid, "east")
-            _, _, yaw   = self._get_ship_timeseries(sid, "yaw_angle_rad")
+            # time series 
+            _, _, north = self.get_ship_timeseries(sid, "north")
+            _, _, east  = self.get_ship_timeseries(sid, "east")
+            _, _, yaw   = self.get_ship_timeseries(sid, "yaw_angle_rad")
             
             n = min(len(north), len(east), len(yaw))
             north, east, yaw = north[:n], east[:n], yaw[:n]
@@ -827,10 +825,10 @@ class ShipInTransitCoSimulation(CoSimInstance):
             all_x.append(east)
             all_y.append(north)
             
-            # --- trajectory ---
+            # trajectory
             ax.plot(east, north, lw=own_lw, color=color, label=f"{sid} trajectory")
 
-            # --- route per ship (from config) ---
+            # route per ship (from config) 
             if plot_routes:
                 cfg = next((sc for sc in self.ship_configs if sc.get("id") == sid), None)
                 if cfg and "route" in cfg:
@@ -860,7 +858,7 @@ class ShipInTransitCoSimulation(CoSimInstance):
                                     )
                                     ax.add_patch(circ)
 
-            # --- ship outlines ---
+            # ship outlines 
             if plot_outlines:
                 print("Drawing ship outlines ...")
                 idx = np.arange(0, n, every_n)
@@ -933,7 +931,7 @@ class ShipInTransitCoSimulation(CoSimInstance):
 # =============================================================================================================
 # Animation
 # =============================================================================================================
-    def _resolve_ship_ids(self, ship_ids):
+    def resolve_ship_ids(self, ship_ids):
         if ship_ids is None:
             ship_ids = [sc.get("id") for sc in self.ship_configs]
         # filter None + keep order + remove duplicates
@@ -949,7 +947,7 @@ class ShipInTransitCoSimulation(CoSimInstance):
         return out
     
     
-    def _compute_bounds_from_playback_data(self, data, ship_ids):
+    def compute_bounds_from_playback_data(self, data, ship_ids):
         all_e = []
         all_n = []
         for sid in ship_ids:
@@ -964,7 +962,7 @@ class ShipInTransitCoSimulation(CoSimInstance):
         return (x_min, x_max, y_min, y_max)
     
     
-    def _precompute_outlines(self, data, ship_ids, n_frames):
+    def precompute_outlines(self, data, ship_ids, n_frames):
         """
         Returns:
             outlines[sid] = list of xy arrays, length n_frames
@@ -998,14 +996,14 @@ class ShipInTransitCoSimulation(CoSimInstance):
         return outlines
     
     
-    def _prepare_playback_data(self, ship_ids):
+    def prepare_playback_data(self, ship_ids):
         data = {}
         
         for sid in ship_ids:
             # Unload data
-            _, _, north   = self._get_ship_timeseries(sid, "north")
-            _, _, east    = self._get_ship_timeseries(sid, "east")
-            _, _, yaw     = self._get_ship_timeseries(sid, "yaw_angle_rad")
+            _, _, north   = self.get_ship_timeseries(sid, "north")
+            _, _, east    = self.get_ship_timeseries(sid, "east")
+            _, _, yaw     = self.get_ship_timeseries(sid, "yaw_angle_rad")
             
             # Align data lengths
             n = min(len(north), len(east), len(yaw))
@@ -1028,7 +1026,7 @@ class ShipInTransitCoSimulation(CoSimInstance):
         return data, n_frames
     
 
-    def _init_anim_figures(self, fig_width, equal_aspect, margin_frac, bounds=None):
+    def init_anim_figures(self, fig_width, equal_aspect, margin_frac, bounds=None):
         # Prepare gid an axes
         fig     = plt.figure(figsize=(fig_width, 0.9 * fig_width), constrained_layout=True)
         gs      = fig.add_gridspec(nrows=2, ncols=1, height_ratios=[1.0, 0.12], hspace=0.0)
@@ -1069,7 +1067,7 @@ class ShipInTransitCoSimulation(CoSimInstance):
         return fig, ax_map, ax_status
     
 
-    def _draw_static(self, ax_map, ship_ids, plot_routes, plot_waypoints, plot_roa, palette=None):
+    def draw_static(self, ax_map, ship_ids, plot_routes, plot_waypoints, plot_roa, palette=None):
         if (not plot_routes) and (not plot_waypoints) and (not plot_roa):
             return []
 
@@ -1120,7 +1118,7 @@ class ShipInTransitCoSimulation(CoSimInstance):
         return static_artists
 
     
-    def _init_dynamic_artists(self, ax_map, ax_status, ship_ids, palette=None, with_labels=True):
+    def init_dynamic_artists(self, ax_map, ax_status, ship_ids, palette=None, with_labels=True):
         # palette is optional; just keep consistent colors per ship
         if palette is None:
             palette = ["#0c3c78", "#d90808", "#2a9d8f", "#f4a261", "#6a4c93", "#264653"]
@@ -1170,7 +1168,7 @@ class ShipInTransitCoSimulation(CoSimInstance):
         return artists
     
     
-    def _update_dynamic(self, i, ship_ids, artists, data, precomputed_outlines=None, trail_len=None):
+    def update_dynamic(self, i, ship_ids, artists, data, precomputed_outlines=None, trail_len=None):
         # status message (customize later)
         artists["status_text"].set_text(f"time={i*self.stepSize/1e9} s | frame={i}")
 
@@ -1224,21 +1222,21 @@ class ShipInTransitCoSimulation(CoSimInstance):
         palette=None,
         blit=False
     ):
-        ship_ids = self._resolve_ship_ids(ship_ids)
+        ship_ids = self.resolve_ship_ids(ship_ids)
         if len(ship_ids) == 0:
             raise ValueError("No valid ship ids to animate.")
 
-        data, n_frames = self._prepare_playback_data(ship_ids)
-        bounds = self._compute_bounds_from_playback_data(data, ship_ids)
+        data, n_frames = self.prepare_playback_data(ship_ids)
+        bounds = self.compute_bounds_from_playback_data(data, ship_ids)
 
-        fig, ax_map, ax_status = self._init_anim_figures(
+        fig, ax_map, ax_status = self.init_anim_figures(
             fig_width=fig_width,
             equal_aspect=equal_aspect,
             margin_frac=margin_frac,
             bounds=bounds
         )
 
-        static_artists = self._draw_static(
+        static_artists = self.draw_static(
             ax_map=ax_map,
             ship_ids=ship_ids,
             plot_routes=plot_routes,
@@ -1250,7 +1248,7 @@ class ShipInTransitCoSimulation(CoSimInstance):
         if plot_routes:
             ax_map.legend(loc="upper right")
 
-        artists = self._init_dynamic_artists(
+        artists = self.init_dynamic_artists(
             ax_map=ax_map,
             ax_status=ax_status,
             ship_ids=ship_ids,
@@ -1260,7 +1258,7 @@ class ShipInTransitCoSimulation(CoSimInstance):
 
         outlines = None
         if precompute_outlines:
-            outlines = self._precompute_outlines(data, ship_ids, n_frames)
+            outlines = self.precompute_outlines(data, ship_ids, n_frames)
 
         # Frame skipping
         frame_step = max(1, int(frame_step))
@@ -1270,7 +1268,7 @@ class ShipInTransitCoSimulation(CoSimInstance):
         interval_ms = interval_ms
 
         def update(i):
-            return self._update_dynamic(
+            return self.update_dynamic(
                 i=i,
                 ship_ids=ship_ids,
                 artists=artists,
