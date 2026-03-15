@@ -53,7 +53,7 @@ def add_scalebar(ax, length_m=None, location=(0.08, 0.06), linewidth=3, text_off
 
 
 def plot_route_map(
-    root: Path,
+    ROOT: Path,
     route_filename: str,
     group: str=None,
     pattern: str= "*.txt",
@@ -76,7 +76,7 @@ def plot_route_map(
 
     Parameters
     ----------
-    root : Path
+    ROOT : Path
         Project root path.
     route_filename : str
         Route file stored under the route folder. If set to '*', means all route files
@@ -108,16 +108,16 @@ def plot_route_map(
     # Load route
     # -----------------------
     if route_filename == "*":
-        route_files = get_ship_route_path_from_group(root=root, group=group, route_filename=route_filename, pattern=pattern)
+        route_files = get_ship_route_path_from_group(ROOT=ROOT, group=group, route_filename=route_filename, pattern=pattern)
         routes = [load_waypoints(file) for file in route_files]
     else:
-        route_file = get_ship_route_path_from_group(root=root, group=group, route_filename=route_filename)
+        route_file = get_ship_route_path_from_group(ROOT=ROOT, group=group, route_filename=route_filename)
         routes = [load_waypoints(route_file)]
 
     # -----------------------
     # Load map layers
     # -----------------------
-    gpkg_path = get_map_path(root, map_filename)
+    gpkg_path = get_map_path(ROOT, map_filename)
 
     frame_layer = "frame_3857"
     ocean_layer = "ocean_3857"
@@ -267,7 +267,7 @@ def plot_route_map(
     # -----------------------
     # Title and spacing
     # -----------------------
-    ax.set_title(title, fontsize=LABEL_FONTSIZE, pad=10)
+    ax.set_title(title, fontsize=LABEL_FONTSIZE*1.5, pad=10)
 
     plt.subplots_adjust(left=0.08, right=0.99, bottom=0.08, top=0.93)
 
@@ -289,7 +289,7 @@ def main():
         title           = "Oslo Fjord Fleet Route Map"
     
     plot_route_map(
-        root=ROOT,
+        ROOT=ROOT,
         # route_filename="route.txt",
         route_filename="*",
         group=group,

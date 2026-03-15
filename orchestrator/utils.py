@@ -124,19 +124,19 @@ class ShipDraw:
 # =============================================================================================================
 # Get Path
 # =============================================================================================================
-def get_ship_route_path(root, route_filename):
-    return str(root / "data" / "route" / route_filename)
+def get_ship_route_path(ROOT, route_filename):
+    return str(ROOT / "data" / "route" / route_filename)
 
-def get_ship_route_path_from_group(root, group=None, route_filename=None, pattern="*.txt"):
+def get_ship_route_path_from_group(ROOT, group=None, route_filename=None, pattern="*.txt"):
     """
     If route_filename is None -> return the folder Path.
     If route_filename is "*"... use pattern to list files.
     Otherwise return the full path to a single file.
     """
     if group is None:
-        base = Path(root) / "data" / "route" 
+        base = Path(ROOT) / "data" / "route" 
     else:
-        base = Path(root) / "data" / "route" / group
+        base = Path(ROOT) / "data" / "route" / group
         
     if route_filename is None:
         return base
@@ -149,33 +149,33 @@ def get_ship_route_path_from_group(root, group=None, route_filename=None, patter
         return sorted(files, key=nkey)
     return base / route_filename
 
-def get_map_path(root, map_filename):
-    return str(root / "data" / "map" / map_filename)
+def get_map_path(ROOT, map_filename):
+    return str(ROOT / "data" / "map" / map_filename)
 
-def get_saved_model_path(root, saved_model_filename):
-    return str(root / "saved_model" / saved_model_filename)
+def get_saved_model_path(ROOT, saved_model_filename):
+    return str(ROOT / "saved_model" / saved_model_filename)
 
-def get_trained_model_path(root, 
+def get_trained_model_path(ROOT, 
                            model_name :str):
-    model_path = str(root / "trained_model" / model_name / "model")
-    log_path   = str(root / "trained_model" / model_name / "log")
+    model_path = str(ROOT / "trained_model" / model_name / "model")
+    log_path   = str(ROOT / "trained_model" / model_name / "log")
     
     return model_path, log_path
 
-def get_saved_anim_path(root, 
+def get_saved_anim_path(ROOT, 
                         model_name :str):
-    save_path = str(root / "trained_model" / model_name / "saved_anim")
+    save_path = str(ROOT / "trained_model" / model_name / "saved_anim")
     
     return save_path
 
-def get_rl_csv_path(root,
+def get_rl_csv_path(ROOT,
                     model_name:str,
                     csv_name:str):
-    save_path = str(root / "trained_model" / model_name / "rl_csv" / csv_name)
+    save_path = str(ROOT / "trained_model" / model_name / "rl_csv" / csv_name)
     
     return save_path
 
-def get_trained_model_and_log_path(root: Path, model_name: str, unique: bool = True):
+def get_trained_model_and_log_path(ROOT: Path, model_name: str, unique: bool = True):
     """
     Generate model and log paths with unique timestamp (and short UUID) suffix.
     
@@ -188,7 +188,7 @@ def get_trained_model_and_log_path(root: Path, model_name: str, unique: bool = T
         # tb_path   = ".../trained_model/AST-train_2025-11-09_18-25-03_ab12/tb"
     """
     # Base directory
-    base_dir = Path(root) / "trained_model"
+    base_dir = Path(ROOT) / "trained_model"
 
     # Create unique suffix (timestamp + short UUID)
     if unique:

@@ -2,6 +2,16 @@ simulation:
   instanceName: singapore_strait
   stopTime: 10000
   stepSize: 5.0
+  map:
+    name: singapore_strait 
+    show_coast: False
+    show_water: False
+    show_waterways: False
+    show_ferry_routes: True
+    show_harbours: False
+    show_bridges: False
+    show_tss: False
+    show_docks: False  
 
 ships:
   - id: OS0

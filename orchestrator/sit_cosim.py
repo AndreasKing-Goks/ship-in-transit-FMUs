@@ -13,7 +13,7 @@ import numpy as np
 
 from orchestrator.cosim_instance import *
 from orchestrator.utils import ShipDraw, compile_ship_params, get_ship_route_path_from_group, get_map_path
-from map_route_plotter.prepare_map_route import load_waypoints
+from map_route_plotter.prepare_map_route import get_gdf_from_gpkg, get_polygon_from_gdf, load_waypoints
 
 import time
 
@@ -74,6 +74,141 @@ class ShipInTransitCoSimulation(CoSimInstance):
         
         # Set up the FMUs for all ship assets
         self.AddAllShips(ship_configs=ship_configs, ROOT=ROOT)
+        
+        # =========================
+        # Set the Map (if given)
+        # =========================
+        # Get the map filename if exists, else None
+        self.map            = simu_config.get("map", None)
+        self.is_map_exists  = True if self.map is not None else False
+        
+        # Add the Map
+        if self.is_map_exists:
+            self.AddMap(ROOT=ROOT, map_filename=self.map.get("name"))
+
+
+# =============================================================================================================
+# Prepare Map
+# =============================================================================================================
+    def AddMap(self, ROOT, map_filename):
+        """
+            Load map layers from a GeoPackage and store them as GeoDataFrames.
+            Also converts the land layer into a Shapely polygon for later 
+            geometric operations (e.g., grounding checks).
+        """
+
+        # Get full path to the GeoPackage file
+        gpkg_path = get_map_path(ROOT, map_filename)
+
+        # Layer names inside the GeoPackage (all projected in EPSG:3857)
+        frame_layer = "frame_3857"
+        ocean_layer = "ocean_3857"
+        land_layer = "land_3857"
+        coast_layer = "coast_3857"
+        water_layer = "water_3857"
+        waterways_layer = "waterways_3857"
+        ferry_routes_layer = "ferry_routes_3857"
+        harbours_layer = "harbours_3857"
+        bridges_layer = "bridges_3857"
+        tss_layer = "tss_3857"
+        docks_layer = "docks_3857"
+
+        # Load layers from the GeoPackage into GeoDataFrames
+        (
+            self.frame_gdf, self.ocean_gdf, self.land_gdf, self.coast_gdf,
+            self.water_gdf, self.waterways_gdf, self.ferry_routes_gdf,
+            self.harbours_gdf, self.bridges_gdf, self.tss_gdf, self.docks_gdf
+        ) = get_gdf_from_gpkg(
+            gpkg_path,
+            frame_layer=frame_layer,
+            ocean_layer=ocean_layer,
+            land_layer=land_layer,
+            coast_layer=coast_layer,
+            water_layer=water_layer,
+            waterways_layer=waterways_layer,
+            ferry_routes_layer=ferry_routes_layer,
+            harbours_layer=harbours_layer,
+            bridges_layer=bridges_layer,
+            tss_layer=tss_layer,
+            docks_layer=docks_layer,
+        )
+            
+        # Merge land geometries into a single Shapely polygon
+        # (useful for spatial checks such as grounding detection)
+        self.land_poly = get_polygon_from_gdf(self.land_gdf)
+    
+    
+    def set_map_static_aspect(self, aspect: float=None):
+        """
+            Returns the static map plot aspect based on the frame_gdf.
+            Else returns pre determined aspect.
+        """
+        if aspect is None:
+            minx, miny, maxx, maxy = self.frame_gdf.total_bounds
+            map_w = maxx - minx
+            map_h = maxy - miny
+            aspect = map_w / map_h
+        return aspect
+        
+    
+    def set_map_static_artist(self, ax):
+        """
+        Plot selected map layers on the provided Matplotlib axis.
+        Visibility of each layer is controlled by the boolean flags.
+        """
+        ## Get the map details
+        show_coast          = self.map.get("show_coast")
+        show_water          = self.map.get("show_water")
+        show_waterways      = self.map.get("show_waterways")
+        show_ferry_routes   = self.map.get("show_ferry_routes")
+        show_harbours       = self.map.get("show_harbours")
+        show_bridges        = self.map.get("show_bridges")
+        show_tss            = self.map.get("show_tss")
+        show_docks          = self.map.get("show_docks")
+        
+        ## Base layers
+        # Ocean background
+        if not self.ocean_gdf.empty:
+            self.ocean_gdf.plot(ax=ax, facecolor="#cfe8f7", edgecolor="none", zorder=0)
+
+        # Land polygons
+        if not self.land_gdf.empty:
+            self.land_gdf.plot(ax=ax, facecolor="#dfe6d5", edgecolor="#7a8a6a", linewidth=0.30, zorder=1)
+
+        # Optional water bodies
+        if show_water and not self.water_gdf.empty:
+            self.water_gdf.plot(ax=ax, facecolor="#b7dcef", edgecolor="none", zorder=2)
+
+        # Coastline outline
+        if show_coast and not self.coast_gdf.empty:
+            self.coast_gdf.plot(ax=ax, color="#4f6650", linewidth=0.45, zorder=3)
+
+        ## Optional overlays
+        # Navigable waterways (rivers / channels)
+        if show_waterways and not self.waterways_gdf.empty:
+            self.waterways_gdf.plot(ax=ax, color="#7fb6d6", linewidth=0.6, alpha=0.9, zorder=4)
+
+        # Ferry routes
+        if show_ferry_routes and not self.ferry_routes_gdf.empty:
+            self.ferry_routes_gdf.plot(ax=ax, color="#5d6fd3", linewidth=0.25, linestyle="--", alpha=0.5, zorder=5)
+
+        # Traffic Separation Scheme
+        if show_tss and not self.tss_gdf.empty:
+            self.tss_gdf.plot(ax=ax, color="#9c6ade", linewidth=1.0, linestyle=":", alpha=0.9, zorder=5)
+
+        # Bridges
+        if show_bridges and not self.bridges_gdf.empty:
+            self.bridges_gdf.plot(ax=ax, color="#6b4f3a", linewidth=1.2, alpha=0.9, zorder=6)
+
+        # Dock areas
+        if show_docks and not self.docks_gdf.empty:
+            self.docks_gdf.plot(ax=ax, facecolor="#d9c27a", edgecolor="#8d7b45", linewidth=0.4, alpha=0.9, zorder=6)
+
+        # Harbour markers
+        if show_harbours and not self.harbours_gdf.empty:
+            self.harbours_gdf.plot(ax=ax, color="#c85a5a", markersize=14, alpha=0.85, zorder=7)
+
+        return
 
 
 # =============================================================================================================
@@ -120,8 +255,10 @@ class ShipInTransitCoSimulation(CoSimInstance):
             speed_setpoints = spawn_request.get("speed_setpoints", 5.0)
             
             # Get the ship's unprocessed route
-            ship_route_path = get_ship_route_path_from_group(root=ROOT, 
-                                                             group=simu_config["instanceName"],
+            # If route is not belong to any group, access it from data/route/ directly
+            group = simu_config["map"].get("name", None)
+            ship_route_path = get_ship_route_path_from_group(ROOT=ROOT, 
+                                                             group=group,
                                                              route_filename=ship_config["route_filename"])
             raw_route = load_waypoints(ship_route_path)
             
@@ -600,8 +737,17 @@ class ShipInTransitCoSimulation(CoSimInstance):
 
         every_n = max(1, int(every_n))
 
-        # Figure
+        ## Figure
         fig, ax = plt.subplots(figsize=(fig_width, fig_width), dpi=dpi)
+        
+        # ## Plot map if exists
+        # if self.is_map_exists:
+        #     # Set the map static artists
+        #     self.set_map_static_artist(ax=ax)
+            
+        #     # Get the aspect
+        #     aspect = self.set_map_static_aspect()
+            
 
         # simple palette (you can replace with your own, incl. colorblind-safe)
         palette = ["#0c3c78", "#d90808", "#2a9d8f", "#f4a261", "#6a4c93", "#264653"]
