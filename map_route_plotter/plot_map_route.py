@@ -220,7 +220,7 @@ def plot_route_map(
 
         if (len(east) > 0) and (i==0):
             ax.text(east[0], north[0]+500, " START", fontsize=LABEL_FONTSIZE, weight="bold", va="bottom", ha="center", zorder=12)
-            ax.text(east[-1], north[-1]+500, " GOAL", fontsize=LABEL_FONTSIZE, weight="bold", va="bottom", ha="center", zorder=12)
+            ax.text(east[-1], north[-1]+500, " END", fontsize=LABEL_FONTSIZE, weight="bold", va="bottom", ha="center", zorder=12)
 
         route_handles.append(Line2D([0], [0], color=palette[i], lw=1.0, ls="--", label=f"Route {i+1}"))
 
@@ -278,7 +278,7 @@ def plot_route_map(
 
 
 def main():
-    map = 1
+    map = 2
     if map == 1:
         group           = "singapore_strait"
         map_filename    = "singapore_strait.gpkg"

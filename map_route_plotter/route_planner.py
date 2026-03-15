@@ -221,7 +221,7 @@ class RoutePicker:
 
             nL, eL = self.points[-1]
             self.goal_anno = self.ax.annotate(
-                "GOAL", (eL, nL), xytext=(5, -9), textcoords="offset points",
+                "END", (eL, nL), xytext=(5, -9), textcoords="offset points",
                 fontsize=LABEL_FONTSIZE, bbox=dict(boxstyle="round,pad=0.2", fc="w", alpha=0.8),
                 zorder=23,
             )
