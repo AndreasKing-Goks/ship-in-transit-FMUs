@@ -3,11 +3,13 @@ simulation:
   stopTime: 10000
   stepSize: 5.0
   map:
-    name: singapore_strait 
+    name: Singapore Strait
+    group: singapore_strait
+    filename: singapore_strait.gpkg
     show_coast: False
     show_water: False
     show_waterways: False
-    show_ferry_routes: True
+    show_ferry_routes: False
     show_harbours: False
     show_bridges: False
     show_tss: False
