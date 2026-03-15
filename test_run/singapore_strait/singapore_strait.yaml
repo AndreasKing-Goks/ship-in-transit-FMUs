@@ -1,6 +1,6 @@
 simulation:
   instanceName: singapore_strait
-  stopTime: 10000
+  stopTime: 100000
   stepSize: 5.0
   map:
     name: Singapore Strait

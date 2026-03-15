@@ -28,22 +28,22 @@ save_path = ROOT / "saved_animation" / "singapore_strait.mp4"
 with config_path.open("r", encoding="utf-8") as f:
     config = yaml.safe_load(f)
 
-# Spawn requests
+# Spawn requests (Singapore Strait)
 own_ship = {
     "start_time"        : 0.0,
-    "speed_setpoints"   : [0, 4, 5, 5, 4, 3, 3, 2]
+    "speed_setpoints"   : [0, 6, 9, 9, 8, 8, 7, 7]
 }
 target_ship_1 = {
-    "start_time"        : 0.0,
-    "speed_setpoints"   : [0, 2, 2, 5, 4, 0]    
+    "start_time"        : 250.0, # 0.0: Collides
+    "speed_setpoints"   : [0, 5, 5, 6, 9, 9, 4, 2]    
 }
 target_ship_2 = {
-    "start_time"        : 0.0,
-    "speed_setpoints"   : [0, 2, 3, 2, 0]    
+    "start_time"        : 2500.0,
+    "speed_setpoints"   : [0, 2, 5, 5, 8, 5, 1]    
 }
 target_ship_3 = {
-    "start_time"        : 0.0,
-    "speed_setpoints"   : [0, 2, 3, 4, 4, 0]    
+    "start_time"        : 3000.0,
+    "speed_setpoints"   : [0, 2, 5, 7, 9, 9, 5, 2]    
 }
 spawn_requests = {
     "OS0": own_ship,
@@ -73,27 +73,29 @@ instance.Simulate()
 # - .avi
 # - .mov
 
-# # Animate Simulation
-# instance.AnimateFleetTrajectory(
-#         ship_ids=None,
-#         fig_width=10.0,
-#         margin_frac=0.08,
-#         equal_aspect=True,
-#         interval_ms=60,
-#         frame_step=2,
-#         trail_len=50,
-#         plot_routes=True,
-#         plot_waypoints=True,
-#         plot_roa=True,
-#         with_labels=True,
-#         precompute_outlines=True,
-#         # save_path=save_path,
-#         writer_fps=60,
-#         show=True,
-#         block=True,
-#         palette=None,
-#         blit=True
-#     )
+# Animate Simulation
+instance.AnimateFleetTrajectory(
+        ship_ids=None,
+        show=True,
+        block=True,
+        mode="quick",
+        fig_width=10.0,
+        margin_frac=0.08,
+        equal_aspect=True,
+        interval_ms=20,
+        frame_step=5,
+        trail_len=300,
+        plot_routes=True,
+        plot_waypoints=True,
+        plot_roa=True,
+        plot_start_end=True,
+        with_labels=True,
+        precompute_ship_outlines=True,
+        # save_path=save_path,
+        writer_fps=20,
+        palette=None,
+        blit=True
+    )
 
 # Plot Trajectory
 instance.PlotFleetTrajectory()
