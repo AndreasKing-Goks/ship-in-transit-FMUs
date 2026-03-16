@@ -224,7 +224,7 @@ Using this, users can:
      ```python
      from orchestrator.utils import get_map_path, get_ship_route_path_from_group, get_map_path
      ```
-   - Visualization scripts are provided in `TBA`.
+   - Visualization scripts are provided in `map_plot_route/plot_map_route.py` [script](map_plot_route/plot_map_route.py).
 
 #### Typical Use Case
    - Extract the simulation region of interest from OSM.  

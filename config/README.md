@@ -9,13 +9,34 @@ An example structure is shown below:
     config.yaml
     ├── simulation {dict}
     │   ├── instanceName: str
+    │   │
     │   ├── stopTime: float
-    │   └── stepSize: float
+    │   │
+    │   ├── stepSize: float
+    │   │
+    │   └── map {dict}
+    │       ├── name: str
+    │       ├── group: str
+    │       ├── filename: str
+    │       ├── show_coast: bool
+    │       ├── show_water: bool
+    │       ├── show_waterways: bool
+    │       ├── show_ferry_routes: bool
+    │       ├── show_harbour: bool
+    │       ├── show_bridges: bool
+    │       ├── show_tss: bool
+    │       └──  show_docks: bool
     │
     └── ships {list}
         ├── ship_1 {dict}
         │   ├── id: str
-        │   ├── role: str
+        │   │
+        │   ├── spawn {dict}
+        │   │   ├── start_time: float
+        │   │   ├── north: float
+        │   │   ├── east: float
+        │   │   ├── yaw_angle_deg: float
+        │   │   └── forward_speed: float
         │   │
         │   ├── route {dict}
         │   │   ├── north: list
@@ -52,6 +73,7 @@ Additional ships can be included by **adding new entries under the
 
 Each ship must define its own:
 
+-   spawn\
 -   route\
 -   FMU blocks\
 -   block connections\
