@@ -231,7 +231,7 @@ The **map import system** is designed to integrate OSM-based geographic data wit
      ```python
      from orchestrator.utils import get_map_path, get_ship_route_path_from_group, get_map_path
      ```
-   - Visualization scripts are provided in `map_plot_route/plot_map_route.py` [script](map_plot_route/plot_map_route.py).
+   - Visualization scripts are provided in `map_plot_route/plot_map_route.py` [script](map_route_plotter/plot_map_route.py).
 
 #### Typical Use Case
    - Extract the simulation region of interest from OSM.  
