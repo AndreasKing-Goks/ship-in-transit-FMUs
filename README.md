@@ -93,6 +93,7 @@ This simulator is developed based on Ship in Transit Simulator created by **Bør
 The simulator is executed through `main.py`. Two entry points exist:
 -   a **general example `main.py`** located at the project root
 -   a **simulation run with map included** located in `test_run/`
+
 In general, running the Ship-in-Transit simulator follows the workflow below.
 
 ### 1. Prepare Configuration Files
@@ -100,22 +101,19 @@ Create the required `.yaml` configuration files that define:
 -   simulation parameters
 -   ship configurations
 -   routes and mission setup
+
 Refer to this configuration [guide](config/README.md) for details. These configuration files describe how the simulator and individual ships are constructed.
 
 ### 2. Load the Configuration
-Load the configuration file and parse it into a Python dictionary.
-
-Typical workflow:
+Load the configuration file and parse it into a Python dictionary. Typical workflow:
 1.  Specify the path to the `.yaml` configuration file
 2.  Open the file
 3.  Parse the YAML contents into a Python dictionary
 
-This dictionary will then be used to construct the co-simulation
-environment.
+This dictionary will then be used to construct the co-simulation environment.
 
 ### 3. (Optional) Define Spawn Requests
-Ships can be initialized directly through the YAML configuration using predefined routes and spawn locations.
-However, the simulator also supports **spawn requests**, which allow modification of:
+Ships can be initialized directly through the YAML configuration using predefined routes and spawn locations. However, the simulator also supports **spawn requests**, which allow modification of:
 -   initial position
 -   start time
 -   speed setpoints
@@ -130,8 +128,7 @@ where the initial conditions must vary between simulation runs.
 
 
 ## 4. Instantiate the Co-Simulation Orchestrator
-Create the main simulator instance using `ShipInTransitCosimulation`. Direct link is [here](orchestrator/sit_cosim.py).
-This class acts as the **central orchestrator** responsible for:
+Create the main simulator instance using `ShipInTransitCosimulation`. Direct link is [here](orchestrator/sit_cosim.py). This class acts as the **central orchestrator** responsible for:
 -   initializing ship subsystems
 -   coordinating FMU components
 -   managing simulation time progression
@@ -193,8 +190,7 @@ The repository provides utilities for importing and visualizing **real-world map
 
 ### Overview
 
-The **map import system** is designed to integrate OSM-based geographic data with the ship simulator.  
-Using this, users can:
+The **map import system** is designed to integrate OSM-based geographic data with the ship simulator.   Using this, users can:
 - Load real coastal or harbor maps as simulation backdrops.  
 - Define navigable areas and obstacles based on OSM geometry.  
 - Combine OSM-derived maps with manually added obstacles for detailed scenario definition.
@@ -343,3 +339,6 @@ This function determines the appropriate masked input values that should be appl
 
 Once the simulation time exceeds the delayed start threshold, the masking is removed and the FMUs begin receiving their normal inputs,
 allowing the ship to evolve dynamically within the simulation. 
+
+## 3. FMU Reset
+TBD
