@@ -261,7 +261,9 @@ class ShipInTransitCoSimulation(CoSimInstance):
                      yaw_angle_deg: float= None,
                      speed_setpoints: float|list=5.0):
         """
-            Convert the ship spawn request to be compliant with the class Simulate() method
+            Converts ship spawn requests into the dictionary 
+            for the ship configuration dictionary compliant 
+            with `AddAllShips()` method.
         """
         ## Compile route
         north_list   = raw_route[0]
@@ -315,7 +317,8 @@ class ShipInTransitCoSimulation(CoSimInstance):
 
     def AddShipSpawn(self, ROOT, spawn_requests, simu_config, ship_configs):
         """
-            Iteratively add spawn request to each ship configurations
+            Adds converted spawn requests to each ship configuration dictionary. 
+            This allows ships to be dynamically inserted into the simulation.
         """
         for i, ship_config in enumerate(ship_configs):
             # Get the ship id
@@ -356,8 +359,14 @@ class ShipInTransitCoSimulation(CoSimInstance):
                     ship_configs: list,
                     ROOT: Path,):
         '''
-            Add all configure ships and auto solve FMU connections 
-            between each ship entity for the Collision Avoidance FMU
+            Add all ships based on its configuration and auto solve FMU
+            connections between each ship entity. Also help adjusts for 
+            the Collision Avoidance FMU connection with the other relevant
+            FMUs.
+
+            This includes connections required for:
+            -   **Collision Avoidance FMUs**
+            -   inter-ship communication
         '''
         
         # Store ship configs as the class attribute

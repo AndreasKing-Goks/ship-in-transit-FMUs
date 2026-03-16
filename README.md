@@ -85,7 +85,7 @@ This simulator includes several FMU groups, which are:
 * **[Simplified Ship](FMUs/simplified_ship/)** (*without Machinery System*)
 * **[Environmental Loads](FMUs/env_Loads)** (*Wind and Current*)
 
-This simulator is developed based on Ship in Transit Simulator created by Børge Rokseth (**borge.rokseth@ntnu.no**). Original simulator can be found [here](https://github.com/BorgeRokseth/ship_in_transit_simulator.git).
+This simulator is developed based on Ship in Transit Simulator created by **Børge Rokseth** (**borge.rokseth@ntnu.no**). Original simulator can be found [here](https://github.com/BorgeRokseth/ship_in_transit_simulator.git).
 
 ---
 
@@ -299,13 +299,13 @@ Each FMU name begins with a **ship identifier prefix** followed by
     TS1__[FMU_NAME]  -> Target Ship 1
     TS2__[FMU_NAME]  -> Target Ship 2
     TS3__[FMU_NAME]  -> Target Ship 3
+    ... and so on ...
+This prefix allows the orchestrator to group FMUs that belong to the same ship.
 
-This prefix allows the orchestrator to group FMUs that belong to the
-same ship.
+Ideally, the simulation contains <u>one</u> **own ship** that represents the *ship of interest* (or the *system under stress* in stress-testing scenarios). Consequently, all other ships are treated as **target ships**. This convention should be consistently maintained when working with the simulator.
 
 ### How Delayed Start Works
-When a target ship has a delayed start time `t_start`, its FMUs are **still stepped by the co-simulation engine** during the early
-simulation phase. However, their inputs are **masked** so that the FMUs do not evolve in a meaningful way.
+When a target ship has a delayed start time `t_start`, its FMUs are **still stepped by the co-simulation engine** during the early simulation phase. However, their inputs are **masked** so that the FMUs do not evolve in a meaningful way.
 
 The purpose of this masking is to ensure that the ship:
 -   remains stationary

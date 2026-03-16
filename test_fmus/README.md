@@ -1,44 +1,36 @@
 # Script for Individual FMU test
-TBA
+The `test_fmus` directory contains **standalone testing scripts for individual FMUs or partially connected FMU subsystems**.
 
-<!-- In `test_beds`, we provide several example scripts to better understand how the simulator and environment work:
+These scripts are intended for:
+-   **Unit testing** individual FMUs
+-   **Subsystem testing** where several FMUs are connected together
+-   **Debugging FMU behavior** without running the full Ship-in-Transit
+    simulator
+-   **Understanding the functionality and interfaces of each FMU**
 
-### `ast_test`
-Scripts for testing the AST training scripts.
+Instead of running the full co-simulation framework, these scripts allow developers to **isolate specific FMUs and validate their behavior in a controlled environment**. This makes it easier to:
+-   verify input/output variables
+-   debug integration issues
+-   understand how each subsystem works internally
 
-| Script | Description |
-|--------|-------------|
-| `run_ast_env.py` | Run the stress-testing simulation environment with the AST action sampling process.  |
-| `run_non_ast_env.py` | Run the stress-testing simulation environment without the AST action sampling process.  |
-| `setup.py` | A script for setting the configuration of `ship_model` and the environment wrapper class. |
-| `test_ast.py` | Main script for running the AST training process. |
+It is **strongly recommended to review these scripts** when trying tounderstand how each FMU operates.
 
-### `env_load_model`
-Scripts for testing environmental models.  
-See [here](https://github.com/AndreasKing-Goks/MAR-AST/tree/main/test_beds/env_load_model).
+------------------------------------------------------------------------
 
-| Script | Description |
-|--------|-------------|
-| `current_model_test.py` | Test the current model using `current_model.py` subsystem  |
-| `wave_model_test.py` | Test the wave model using `wave_model.py` subsystem |
-| `wind_model_test.py` | Test the wind model using `wind_model.py` subsystem |
+## Available Test Scripts
 
-### `map_and_route_plotter`
-Scripts for placing maps and ship routes for visualization — useful for arranging route waypoints before simulation.  
-See [here](https://github.com/AndreasKing-Goks/MAR-AST/tree/main/test_beds/map_and_route_plotter).
-
-| Script | Description |
-|--------|-------------|
-| `plot_map_route.py` | Plot routes stored in `test_beds/map_route_plotter/data` with maps manually designed using `PolygonObstacle()` class. |
-| `plot_realmap_route.py` | Plot routes stored in `data/route` with real-world maps retrieved from [Open Street Map (OSM)](https://www.openstreetmap.org/). |
-
-### `ship_simu_test`
-Scripts for using the environment classes from `env_wrappers`.  
-See [here](https://github.com/AndreasKing-Goks/MAR-AST/tree/main/test_beds).
-
-| Script | Description |
-|--------|-------------|
-| `test_ship_env_load.py` | Run `MultiShipEnv()` class for single-ship cases without running machinery system to test environment load effects on the ship. |
-| `test_single_ship_map.py` | Run `MultiShipEnv()` class on a real-world map while simulating single ship asset. |
-| `test_double_ship_map.py` | Run `MultiShipEnv()` class on a real-world map while simulating two ship asset. Used to check the COLAV system. |
-| `test_multi_ship_map.py` | Run `MultiShipEnv()` class on a real-world map with multiple ship asset simulated together. | -->
+| Script Name                                  | Description                                                                                              |
+|----------------------------------------------|----------------------------------------------------------------------------------------------------------|
+| `test_autopilot.py`                          | Tests the autopilot FMU responsible for heading control and navigation commands.                         |
+| `test_machinery_system.py`                   | Tests the machinery system by altering the throttle and the operating mode.                              |
+| `test_machinery_system_raw.py`               | Test of the machinery system FMU with raw interfacing of `libcosimpy`. `CosimInstance` is not used here. |
+| `test_mission_manager.py`                    | Tests the mission manager FMU responsible for high-level navigation logic and mission execution.         |
+| `test_rudder.py`                             | Tests the rudder FMU responsible for steering dynamics and rudder actuation.                             |
+| `test_shaft_speed_controller.py`             | Tests the shaft speed controller FMU that regulates propulsion shaft speed.                              |
+| `test_ship-throttle-machinery_system-ship.py`| Integration test connecting ship dynamics, throttle control, and machinery system FMUs.                  |
+| `test_ship_model.py`                         | Tests the ship dynamics FMU that simulates vessel motion.                                                |
+| `test_ship_path_following.py`                | Tests the path-following ship tracking given waypoints.                                                  |
+| `test_surface_current_model.py`              | Tests the environmental model that generates surface current disturbances.                               |
+| `test_throttle_controller.py`                | Tests the throttle controller FMU responsible for propulsion command generation.                         |
+| `test_throttle-machinery_system.py`          | Integration test connecting throttle control and machinery system FMUs.                                  |
+| `test_wind_model.py`                         | Tests the wind disturbance model used in the environmental simulation.                                   |
