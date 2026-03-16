@@ -140,21 +140,34 @@ This class acts as the **central orchestrator** responsible for:
 
 
 ## 5. Run the Simulation
-To execute a single simulation run `instance.Simulate()`. The detailed behavior of the simulation loop is documented in [here](orchestrator/README.md). The simulation runs until the configured stop condition is reached.
+To execute a single simulation run
+
+    instance.Simulate() 
+    
+The detailed behavior of the simulation loop is documented in [here](orchestrator/README.md). The simulation runs until the configured stop condition is reached.
 
 
 ## 6. Visualize the Results
 After the simulation completes, several visualization tools areavailable.
 
 ### Fleet Animation
-To generate an animated playback of ship motion, run `instance.AnimateFleetTrajectory()` This produces a dynamic animation of ship trajectories during the simulation.
+To generate an animated playback of ship motion run 
+
+    instance.AnimateFleetTrajectory() 
+This produces a dynamic animation of ship trajectories during the simulation.
 
 
 ### Static Trajectory Plot
-To visualize ship routes on a static map, run `instance.PlotFleetTrajectory()`. This displays the full trajectory of each vessel until the simulation stops.
+To visualize ship routes on a static map run 
+
+    instance.PlotFleetTrajectory()
+This displays the full trajectory of each vessel until the simulation stops.
 
 ### Time-Series Plots
-To visualize simulation outputs over time, run `instance.JoinPlotTimeSeries(key_group_list)`. `key_group_list` allows grouping multiple signals into the same plot. This is particularly useful when signals share the same unit (e.g., speed, heading, forces).
+To visualize simulation outputs over time run
+
+    instance.JoinPlotTimeSeries(key_group_list) 
+`key_group_list` allows grouping multiple signals into the same plot. This is particularly useful when signals share the same unit (e.g., speed, heading, forces).
 
 Time-series can be plotted:
 -   individually
@@ -235,17 +248,17 @@ Using this, users can:
    ```
    data/
    ├── map/
-   │   └── oslo_fjord.gpkg
-   │   └── sinagpore_strait.gpkg
+   │   ├── oslo_fjord.gpkg
+   │   ├── sinagpore_strait.gpkg
    │   └── ...
    └── route/
        ├── oslo_fjord/
-       │   └── of_route_0.txt
-       │   └── of_route_1.txt
+       │   ├── of_route_0.txt
+       │   ├── of_route_1.txt
        │   └── ...
        ├── singapore_strait/
-       │   └── ss_route_0.txt
-       │   └── ss_route_1.txt
+       │   ├── ss_route_0.txt
+       │   ├── ss_route_1.txt
        │   └── ...
        └── ...
    ```
@@ -262,3 +275,71 @@ Using this, users can:
    - **Bridges**: Line showing bridges
    - **Docks**: Show dock
    - **Harbour**: Show harbour
+
+## 2. Delayed Start
+The **Delayed Start** mechanism allows a target ship to begin its simulation **at a time later than `t = 0`**. This is useful when modeling scenarios where vessels **enter the simulation domain after the simulation has already started**, such as:
+-   ships entering a traffic lane later
+-   encounter scenarios generated during optimization
+-   reinforcement learning environments where ships spawn dynamically
+
+### Why a Delayed Start Protocol is Needed
+In the co-simulation architecture, the orchestrator interacts only with **FMUs (Functional Mock-up Units)**. The orchestrator itself does not contain semantic information about which FMUs belong to a particular ship. Instead, it only sees a **flat collection of FMUs** participating in the co-simulation.
+
+Because of this, we need an additional protocol that allows the orchestrator to determine:
+-   which FMUs belong to which ship
+-   when a ship should begin participating in the simulation
+
+### Ship FMU Naming Convention
+Each ship consists of multiple FMUs representing subsystems (e.g., navigation, propulsion, control). To associate FMUs with their corresponding ship, a **naming convention** is used.
+
+Each FMU name begins with a **ship identifier prefix** followed by
+`"__"`. Examples:
+
+    OS0__[FMU_NAME]  -> Own Ship
+    TS1__[FMU_NAME]  -> Target Ship 1
+    TS2__[FMU_NAME]  -> Target Ship 2
+    TS3__[FMU_NAME]  -> Target Ship 3
+
+This prefix allows the orchestrator to group FMUs that belong to the
+same ship.
+
+### How Delayed Start Works
+When a target ship has a delayed start time `t_start`, its FMUs are **still stepped by the co-simulation engine** during the early
+simulation phase. However, their inputs are **masked** so that the FMUs do not evolve in a meaningful way.
+
+The purpose of this masking is to ensure that the ship:
+-   remains stationary
+-   does not produce unintended dynamics
+-   does not interfere with the simulation before its start time
+
+In practice, this means that **all inputs to the FMUs belonging to that ship are overridden with safe placeholder values** until the simulation time reaches the delayed start marker.
+
+Conceptually:
+
+    if simulation_time < ship_start_time:
+        apply masked inputs to ship FMUs
+    else:
+        apply real inputs to ship FMUs
+
+| No Delayed Start                                       | Delayed Start                                  |
+|--------------------------------------------------------|------------------------------------------------|
+| ![non_delayed_start](0_docs/ani/non_delayed_start.gif) | ![delayed_start](0_docs/ani/delayed_start.gif) |
+
+### Masking Behavior
+The masking typically enforces conditions such as:
+-   zero propulsion commands
+-   neutral rudder angle
+-   zero control signals
+-   frozen navigation commands
+
+As a result, even though the FMUs are stepped, the ship **remains effectively inactive** until the delayed start time is reached.
+
+### Implementation
+The masking protocol is implemented through the helper function:
+
+    get_masked_input_val_for_delayed_ship()
+
+This function determines the appropriate masked input values that should be applied to each FMU input variable when the ship is still in its delayed start phase.
+
+Once the simulation time exceeds the delayed start threshold, the masking is removed and the FMUs begin receiving their normal inputs,
+allowing the ship to evolve dynamically within the simulation. 

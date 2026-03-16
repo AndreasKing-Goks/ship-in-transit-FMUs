@@ -192,7 +192,7 @@ ships:
         danger_zone_radius: 926.0
         collision_zone_radius: 100.0
         max_target_ship_count: 3
-        hold_time: 450.0
+        hold_time: 900.0
         T_lookahead: 900.0
 
       SHIP_MODEL:

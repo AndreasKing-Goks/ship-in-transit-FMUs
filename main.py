@@ -34,7 +34,7 @@ config_path = ROOT / "config" / "non_ast" / "multi_target_ship_config_w_env.yaml
 # save_path = ROOT / "saved_animation" / "single_target_ship.mp4"
 # save_path = ROOT / "saved_animation" / "single_target_ship_w_env.mp4"
 # save_path = ROOT / "saved_animation" / "multi_target_ship.mp4"
-save_path = ROOT / "saved_animation" / "multi_target_ship_w_env.mp4"
+save_path = ROOT / "saved_animation" / "multi_target_ship_w_env1.gif"
 
 
 with config_path.open("r", encoding="utf-8") as f:
@@ -72,14 +72,14 @@ instance.AnimateFleetTrajectory(
         equal_aspect=True,
         interval_ms=20,
         frame_step=2,
-        trail_len=300,
+        trail_len=50,
         plot_routes=True,
         plot_waypoints=True,
         plot_roa=True,
         plot_start_end=True,
         with_labels=True,
         precompute_ship_outlines=True,
-        # save_path=save_path,
+        save_path=save_path,
         writer_fps=20,
         palette=None,
         blit=True,
