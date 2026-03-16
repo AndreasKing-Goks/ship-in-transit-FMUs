@@ -1,6 +1,6 @@
-# Ship in Transit Co-simulation
+# Co-simulation Based Ship in Transit Simulator
 Repository for Ship in Transit simulator in Co-simulation form.
-![Animation](0_docs/ani/multi_target_ship_w_env.gif)
+![Animation](0_docs/ani/singapore_strait.gif)
 
 ## `Conda` Environment Setup [Simulator Only]
 
@@ -10,7 +10,7 @@ First clone the repository. Make sure `Conda` is installed. Then, set up the `Co
 conda env create -f environment.yml
 ```
 
-The created `Conda` environment already includes the `libcosimpy` package, which is used to orchestrate and manage the execution of the `FMUs` within the co-simulation framework.
+The created `Conda` environment already includes the `libcosimpy` package, which is used to orchestrate and manage the execution of the `FMUs` within the co-simulation framework. It also includes `pythonfmu` library to enable users to create and package their own FMUs.
 
 This simulator includes real-map support, using [OpenStreetMap (OSM)](https://www.openstreetmap.org/) API.This feature allows the simulator to:
 * Plot real geographic regions anywhere on the globe
@@ -76,102 +76,105 @@ pip3 install torch torchvision --index-url https://download.pytorch.org/whl/cu12
 
 The **ship-in-transit co-simulation** is a modular Python-based co-simulation framework for modeling and running transit scenarios of a marine vessel. It includes ship dynamics, machinery system behaviors, navigation logic, and environmental effects each in a form of a Functional Mockup Unit (`FMU`).
 
-Think of `FMU` as a seperate sub-simulator describing a sub-system that can be simulated independently. Using `libcosimpy`, we can orchestrate all of these `FMUs` in harmony into a single complex system simulated as one entity. Below are shown how all FMUs is connected and orchestrated together:
+Think of `FMU` as a seperate sub-simulator describing a sub-system that can be simulated independently. Using `libcosimpy`, we can orchestrate all of these `FMUs` in harmony into a single complex system simulated as one entity. Below are shown an example of how all FMUs is connected and orchestrated together as a single ship:
 
 ![Simulation Architecture](0_docs/img/SiT_FMUs.png)
 
+This simulator includes several FMU groups, which are:
+* **[Ship](FMUs/ship/)** (*with Machinery System*)
+* **[Simplified Ship](FMUs/simplified_ship/)** (*without Machinery System*)
+* **[Environmental Loads](FMUs/env_Loads)** (*Wind and Current*)
+
 This simulator is developed based on Ship in Transit Simulator created by Børge Rokseth (**borge.rokseth@ntnu.no**). Original simulator can be found [here](https://github.com/BorgeRokseth/ship_in_transit_simulator.git).
-
-
-### Ship Dynamics
-
-The ship model simulates motion in **three degrees of freedom**:
-
-- **Surge**
-- **Sway**
-- **Yaw**
-
-#### State Variables
-
-The full system state includes:
-
-- `x_N`: North position [m]
-- `y_E`: East position [m]
-- `ψ`: Yaw angle [rad]
-- `u`: Surge velocity [m/s]
-- `v`: Sway velocity [m/s]
-- `r`: Yaw rate (turn rate) [rad/s]
-
-> ⚠️ **ANGLE IN NED FRAME**
->
-> When we first initiate the ship heading, `0°` starts from `NORTH (y+)` direction. **Positive heading** is clockwise in direction.
-
-
-**Additional states** (depending on machinery system model):
-
-- `ω_prop`: Propeller shaft angular velocity [rad/s] — for detailed machinery system
-- `T`: Thrust force [N] — for simplified model
-
-#### Forces Modeled
-
-- Inertial forces  
-- Added mass effects  
-- Coriolis forces  
-- Linear and nonlinear damping  
-- Environmental forces (wind and current)  
-- Control forces (propeller & rudder)
-
-### Machinery System
-
-The ship includes:
-- **1 propeller shaft**
-- **1 rudder**
-- Powered by either a **main diesel engine** or a **hybrid shaft generator**.
-
-#### Energy Sources
-
-- **Main Engine (ME)**: Primary mechanical power source  
-- **Hybrid Shaft Generator (HSG)**: Can operate as motor/generator  
-- **Electrical Distribution**: Powered by diesel generators
-
-#### Machinery Modes
-
-| Mode   | Propulsion Power       | Hotel Load Power        |
-|--------|------------------------|-------------------------|
-| PTO    | Main Engine            | Hybrid SG (generator)   |
-| MEC    | Main Engine            | Electrical Distribution |
-| PTI    | Hybrid SG (motor)      | Electrical Distribution |
-
-#### Available Machinery Models
-
-1. **Detailed Model** — includes propeller shaft dynamics  
-2. **Simplified Model** — thrust modeled as a 2nd order transfer function  
-
-### Navigation System
-
-Two navigation modes:
-
-- **Heading-by-Reference**: Maintains a specified heading.  
-- **Waypoint Controller**: Follows a sequence of waypoints using Line of Sight (LOS) guidance.
-
-### Environmental Forces
-
-- **Wind** : Gust component based from NORSOK Spectrum. Stochasticity is drawn from Ornstein-Uhlenbeck process.  
-- **Current** : Stochasticity is drawn from Ornstein-Uhlenbeck process.  
-
-### Speed Control Options
-
-1. **Throttle Input**: A direct command representing propulsion load percentage  
-2. **Shaft Speed Controller**: Regulates propeller shaft speed to maintain desired vessel speed  
-
-###  Example Scenarios
-
-- Single-engine configuration using only the Main Engine in PTO mode  
-- Complex hybrid-electric propulsion control  
 
 ---
 
-## Importing Route and Map from Open Street Map
+# Setting Up the Ship-in-Transit Co-Simulation
+The simulator is executed through `main.py`. Two entry points exist:
+-   a **general example `main.py`** located at the project root
+-   a **simulation run with map included** located in `test_run/`
+In general, running the Ship-in-Transit simulator follows the workflow below.
+
+### 1. Prepare Configuration Files
+Create the required `.yaml` configuration files that define:
+-   simulation parameters
+-   ship configurations
+-   routes and mission setup
+Refer to this configuration [guide](config/README.md) for details. These configuration files describe how the simulator and individual ships are constructed.
+
+### 2. Load the Configuration
+Load the configuration file and parse it into a Python dictionary.
+
+Typical workflow:
+1.  Specify the path to the `.yaml` configuration file
+2.  Open the file
+3.  Parse the YAML contents into a Python dictionary
+
+This dictionary will then be used to construct the co-simulation
+environment.
+
+### 3. (Optional) Define Spawn Requests
+Ships can be initialized directly through the YAML configuration using predefined routes and spawn locations.
+However, the simulator also supports **spawn requests**, which allow modification of:
+-   initial position
+-   start time
+-   speed setpoints
+
+after the configuration has been loaded.
+
+This is particularly useful when running:
+-   optimization algorithms
+-   reinforcement learning
+-   scenario generation
+where the initial conditions must vary between simulation runs.
+
+
+## 4. Instantiate the Co-Simulation Orchestrator
+Create the main simulator instance using `ShipInTransitCosimulation`. Direct link is [here](orchestrator/sit_cosim.py).
+This class acts as the **central orchestrator** responsible for:
+-   initializing ship subsystems
+-   coordinating FMU components
+-   managing simulation time progression
+-   handling inter-component communication
+-   plot and animation
+
+
+## 5. Run the Simulation
+To execute a single simulation run `instance.Simulate()`. The detailed behavior of the simulation loop is documented in [here](orchestrator/README.md). The simulation runs until the configured stop condition is reached.
+
+
+## 6. Visualize the Results
+After the simulation completes, several visualization tools areavailable.
+
+### Fleet Animation
+To generate an animated playback of ship motion, run `instance.AnimateFleetTrajectory()` This produces a dynamic animation of ship trajectories during the simulation.
+
+
+### Static Trajectory Plot
+To visualize ship routes on a static map, run `instance.PlotFleetTrajectory()`. This displays the full trajectory of each vessel until the simulation stops.
+
+### Time-Series Plots
+To visualize simulation outputs over time, run `instance.JoinPlotTimeSeries(key_group_list)`. `key_group_list` allows grouping multiple signals into the same plot. This is particularly useful when signals share the same unit (e.g., speed, heading, forces).
+
+Time-series can be plotted:
+-   individually
+-   combined within the same figure
+depending on the selected options.
+
+
+## Typical Workflow Summary
+The typical process for running the simulator:
+1.  Prepare YAML configuration
+2.  Load configuration
+3.  (Optional) apply spawn requests
+4.  Instantiate `ShipInTransitCosimulation`
+5.  Run `instance.Simulate()`
+6.  Visualize results (animation, trajectory plots, time-series)
+
+---
+
+# Ship in Transit Co-simulation Features
+## 1. Importing Route and Map from Open Street Map
 
 The repository provides utilities for importing and visualizing **real-world maps** from [OpenStreetMap (OSM)](https://www.openstreetmap.org/). These are primarily used to define simulation areas and plan ship routes within realistic maritime environments.
 
@@ -185,77 +188,77 @@ Using this, users can:
 
 ### Workflow
 
-1. **Prepare the Map File**
+#### 1. Prepare the Map File
    - The repository provides tools to extract OSM data and save it as a `.gpkg` (GeoPackage) file.  
-   - Each layer in the `.gpkg` file (e.g., “frame”, “obstacles”, “routes”) corresponds to different spatial elements used by the simulator.
+   - Each layer in the `.gpkg` file (e.g., “frame”, “coast”, “waterways”) corresponds to different spatial elements used by the simulator.
+   - Consult to `map_route_plotter` guide [here](map_route_plotter/README.md) for generating your own `.gkpg` file.
 
-2. **Load Map in the Simulator**
+#### Load Map in the Simulator
    - Use helper functions from `utils.prepare_map` such as:
      ```python
-     from map_route_plotter.prepare_map import get_gdf_from_gpkg
-     frame_gdf, ocean_gdf, land_gdf, coast_gdf, water_gdf = get_gdf_from_gpkg(GPKG_PATH, FRAME_LAYER, OCEAN_LAYER, LAND_LAYER, COAST_LAYER, WATER_LAYER)
+     from map_route_plotter.prepare_map_route import get_gdf_from_gpkg
+     (
+            self.frame_gdf, self.ocean_gdf, self.land_gdf, self.coast_gdf,
+            self.water_gdf, self.waterways_gdf, self.ferry_routes_gdf,
+            self.harbours_gdf, self.bridges_gdf, self.tss_gdf, self.docks_gdf
+        ) = get_gdf_from_gpkg(
+            gpkg_path,
+            frame_layer,
+            ocean_layer,
+            land_layer,
+            coast_layer,
+            water_layer,
+            waterways_layer,
+            ferry_routes_layer,
+            harbours_layer,
+            bridges_layer,
+            tss_layer,
+            docks_layer,
+        )
      ```
    - The map geometry is read using `geopandas` and can be directly visualized or used in the environment setup.
 
-3. **Define and Visualize Routes**
+#### Define and Visualize Routes
    - Route files (typically in `.txt`) define the waypoints of the ship’s mission.  
    - These can be plotted together with the map using:
      ```python
-     from orchestrator.utils import get_map_path, get_ship_route_path
+     from orchestrator.utils import get_map_path, get_ship_route_path_from_group, get_map_path
      ```
    - Visualization scripts are provided in `TBA`.
 
-4. **Typical Use Case**
-   - Extract the harbor region from OSM.  
+#### Typical Use Case
+   - Extract the simulation region of interest from OSM.  
    - Generate a `.gpkg` file containing relevant boundaries and water areas.  
    - Load the map into the simulator and overlay route waypoints to verify the navigation corridor.
 
-5. **File Structure Example**
+#### File Structure Example
    ```
    data/
    ├── map/
-   │   └── basemap.gpkg
+   │   └── oslo_fjord.gpkg
+   │   └── sinagpore_strait.gpkg
    │   └── ...
    └── route/
-       └── own_ship_route.txt
+       ├── oslo_fjord/
+       │   └── of_route_0.txt
+       │   └── of_route_1.txt
+       │   └── ...
+       ├── singapore_strait/
+       │   └── ss_route_0.txt
+       │   └── ss_route_1.txt
+       │   └── ...
        └── ...
    ```
 
-6. **Supported Layers**
+#### Supported Layers
    The imported `.gpkg` may include:
    - **Frame**: Simulation area boundary  
-   - **Water**: Navigable regions  
-   - **Obstacle**: Islands, piers, or restricted areas  
-   - **Route**: Reference paths for the ship
-
-<!-- ### Example Script
-
-To visualize both the map and the route:
-```bash
-python test_beds/map_and_route_plotter/plot_realmap_route.py
-```
-
-This script loads the `.gpkg` map and overlays all route files found in `data/route`.  
-The result is a clear view of how your simulation environment aligns with real-world geography. -->
-
----
-
-## Setting up the Ship in Transit Co-Simulation
-TBA
-<!-- For usage and integration examples, refer to the provided scripts in `test_beds`.
-
-Generally, building this simulator is done by doing these steps:
-1. Prepare configuration objects to build one ship asset:
-   - Ship configurations built from `ShipConfiguration()`
-   - Machinery configurations (including machinery modes) built from `MachinerySystemConfiguration()`
-   - Simulator configuration built from `SimulationConfiguration()`
-2. Using these configuration objects, build the ship using `ShipModel()`.
-3. The ship model needs throttle and heading controllers to carry out an autonomous mission.  
-   - A simple engine throttle controller with fixed desired speed can be set up using `EngineThrottleFromSpeedSetPoint()`.  
-   - A heading controller using LOS Guidance can be set up using `HeadingByRouteController()`. For this, mission waypoints should be provided in a file named `_ship_route.txt`.
-4. To allow a ship to “choose” new intermediate waypoints during simulation, use `HeadingBySampledRouteController()`.  
-   This builds on the LOS controller but only requires two initial waypoints (start and end) in `_ship_route.txt`.
-5. Multiple ship models can run simultaneously. For this, use `ShipAssets()` — a collection of `ShipModel()` objects and associated parameters. Typically:
-   - The **first** ship asset represents the **own** ship (under test)
-   - The **remaining** ships act as **target** or **obstacle** ships
-6. These assets are passed to the RL environment for adaptive stress testing. -->
+   - **Ocean**: Ocean backgrounds
+   - **Land**: Islands, piers, or restricted areas  
+   - **Coast**: Coastline
+   - **Waterways**: Navigable waterways (rivers/channels)
+   - **Ferry Routes**: Trajecory line for ferry routes
+   - **TSS**: Traffic Seperation Scheme
+   - **Bridges**: Line showing bridges
+   - **Docks**: Show dock
+   - **Harbour**: Show harbour

@@ -21,13 +21,13 @@ import yaml
 ## Get the config path
 config_path = ROOT / "test_run" / "singapore_strait" / "singapore_strait.yaml"
 
-## Get the save path for animation
-save_path = ROOT / "saved_animation" / "singapore_strait.mp4"
-
 # Get the configs
 with config_path.open("r", encoding="utf-8") as f:
     config = yaml.safe_load(f)
 
+# =========================
+# Spawn Requests
+# =========================
 # Spawn requests (Singapore Strait)
 own_ship = {
     "start_time"        : 0.0,
@@ -73,6 +73,9 @@ instance.Simulate()
 # - .avi
 # - .mov
 
+## Get the save path for animation
+save_path = ROOT / "saved_animation" / "singapore_strait.gif"
+
 # Animate Simulation
 instance.AnimateFleetTrajectory(
         ship_ids=None,
@@ -91,14 +94,15 @@ instance.AnimateFleetTrajectory(
         plot_start_end=True,
         with_labels=True,
         precompute_ship_outlines=True,
-        # save_path=save_path,
+        save_path=save_path,
         writer_fps=20,
         palette=None,
-        blit=True
+        blit=True,
+        ship_scale=1.0
     )
 
 # Plot Trajectory
-instance.PlotFleetTrajectory()
+instance.PlotFleetTrajectory(mode="quick", ship_scale=1.0)
 
 # Plot Simulation Results
 key_group_list = [
@@ -141,4 +145,10 @@ key_group_list = [
 ]
 
 # Plot Time Series
-instance.JoinPlotTimeSeries(list(reversed(key_group_list)),  create_title= False, legend= True, show_instance_name=False, show=True)
+instance.JoinPlotTimeSeries(list(reversed(key_group_list)),  
+                            create_title= False, 
+                            legend= True, 
+                            show_instance_name=False,
+                            show_separately=False,
+                            show=True,
+                            mode="quick")

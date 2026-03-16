@@ -779,6 +779,113 @@ class ShipInTransitCoSimulation(CoSimInstance):
 
 
 # =============================================================================================================
+# Simulation Result Plot
+# =============================================================================================================
+    def JoinPlotTimeSeries(
+            self,
+            key_group_list,
+            create_title: bool = False,
+            legend: bool = True,
+            show_instance_name: bool = False,
+            show_separately: bool = False,
+            show: bool = True,
+            mode: str = "quick"
+        ):
+        """
+        Plot multiple observer time series. Also allows joint plot for multiple
+        timeseries. Ideally, the joined timeseries variables required to have the 
+        same unit.
+
+        Parameters
+        ----------
+        key_group_list : list[list[str]]
+            List of key groups. Each group is plotted in one figure.
+        create_title : bool
+            If True, include the instance name in the figure title.
+        legend : bool
+            Show legend for each plotted signal.
+        show_instance_name : bool
+            Prefix labels with simulation instance name.
+        show_separately : bool
+            If True, each group is shown immediately.
+        show : bool
+            If False, plots are created but not displayed.
+        mode : {"quick", "paper"}
+            Plot styling mode.
+            - quick: lightweight plotting for debugging
+            - paper: high-quality publication style
+        """
+
+        # Plot style
+        style = self.get_plot_style(mode)
+
+        fig_w = 9
+        fig_h = 7
+
+        for key_group in key_group_list:
+
+            struct_time_points = []
+            struct_step_number = []
+            struct_samples     = []
+            struct_labels      = []
+
+            # Gather data
+            for key in key_group:
+
+                time_points, step_number, samples = self.GetObserverTimeSeries(key)
+
+                struct_time_points.append(time_points)
+                struct_step_number.append(step_number)
+                struct_samples.append(samples)
+
+                label = str(key)
+                if show_instance_name:
+                    label = f"{self.instanceName}: {key}"
+
+                struct_labels.append(label)
+
+            # Create figure
+            plt.figure(figsize=(fig_w, fig_h), dpi=style["dpi"])
+
+            for i in range(len(key_group)):
+                plt.plot(
+                    struct_time_points[i],
+                    struct_samples[i],
+                    linewidth=style["own_lw"],
+                    label=struct_labels[i]
+                )
+
+            # Axes formatting
+            plt.grid(alpha=style["grid_alpha"])
+
+            plt.xticks(fontsize=style["tick_fs"])
+            plt.yticks(fontsize=style["tick_fs"])
+
+            plt.xlabel("Time [s]", fontsize=style["label_fs"])
+            plt.ylabel(self.observer_time_series_label[key_group[0]], fontsize=style["label_fs"])
+
+            # Legend
+            if legend:
+                plt.legend(fontsize=style["legend_fs"])
+
+            # Title
+            if create_title:
+                plt.title(
+                    f"Time series from co-simulation instance \"{self.instanceName}\"",
+                    fontsize=style["title_fs"]
+                )
+
+            plt.tight_layout()
+
+            # Show control
+            if show_separately and show:
+                plt.show()
+
+        if not show_separately and show:
+            plt.show()
+
+
+# =============================================================================================================
 # Static Plot
 # =============================================================================================================
     def get_ship_timeseries(self, ship_id: str, var: str):
@@ -836,6 +943,7 @@ class ShipInTransitCoSimulation(CoSimInstance):
         plot_waypoints=True,
         plot_outlines=True,
         palette=None,
+        ship_scale=1.0,
     ):
         """
             Plot the fleet trajectories for one or more ships, with optional support
@@ -997,7 +1105,7 @@ class ShipInTransitCoSimulation(CoSimInstance):
                 draw_attr = f"{sid}_draw"
                 draw = getattr(self, draw_attr)
                 for i in idx[::1]:  # extra subsample for speed
-                    x, y = draw.local_coords()
+                    x, y = draw.local_coords(scale=ship_scale)
                     x_ned, y_ned = draw.rotate_coords(x, y, yaw[i])
                     x_tr,  y_tr  = draw.translate_coords(x_ned, y_ned, north[i], east[i])
                     ax.plot(y_tr, x_tr, lw=ship_lw, color=color, alpha=0.6)
@@ -1118,7 +1226,7 @@ class ShipInTransitCoSimulation(CoSimInstance):
         return x_min, x_max, y_min, y_max
 
 
-    def precompute_outlines(self, data, ship_ids, n_frames):
+    def precompute_outlines(self, data, ship_ids, n_frames, ship_scale=1.0):
         """
         Returns:
             outlines[sid] = list of xy arrays, length n_frames
@@ -1132,7 +1240,7 @@ class ShipInTransitCoSimulation(CoSimInstance):
             north = np.asarray(data[sid]["north"])
             yaw   = np.asarray(data[sid]["yaw"])
 
-            x_local, y_local = draw.local_coords()
+            x_local, y_local = draw.local_coords(scale=ship_scale)
 
             xy_frames = []
             for i in range(n_frames):
@@ -1431,7 +1539,7 @@ class ShipInTransitCoSimulation(CoSimInstance):
         return artists
 
 
-    def update_dynamic(self, i, ship_ids, artists, data, precomputed_outlines=None, trail_len=None):
+    def update_dynamic(self, i, ship_ids, artists, data, precomputed_outlines=None, trail_len=None, ship_scale=1.0):
         artists["status_text"].set_text(f"time = {i * self.stepSize / 1e9:.2f} s   |   frame = {i}")
 
         for sid in ship_ids:
@@ -1448,7 +1556,7 @@ class ShipInTransitCoSimulation(CoSimInstance):
             else:
                 yaw = data[sid]["yaw"]
                 draw = getattr(self, f"{sid}_draw")
-                x_local, y_local = draw.local_coords()
+                x_local, y_local = draw.local_coords(scale=ship_scale)
                 x_rot, y_rot = draw.rotate_coords(x_local, y_local, yaw[i])
                 x_tr, y_tr = draw.translate_coords(x_rot, y_rot, north[i], east[i])
                 xy = np.column_stack([y_tr, x_tr])
@@ -1482,7 +1590,8 @@ class ShipInTransitCoSimulation(CoSimInstance):
         save_path=None,
         writer_fps=20,
         palette=None,
-        blit=True
+        blit=True,
+        ship_scale=1.0
     ):
         """
             Animate the fleet trajectories for one or more ships, with optional support
@@ -1634,7 +1743,7 @@ class ShipInTransitCoSimulation(CoSimInstance):
 
         outlines = None
         if precompute_ship_outlines:
-            outlines = self.precompute_outlines(data, ship_ids, n_frames)
+            outlines = self.precompute_outlines(data, ship_ids, n_frames, ship_scale)
 
         frame_step = max(1, int(frame_step))
         frames = range(0, n_frames, frame_step)
@@ -1646,7 +1755,8 @@ class ShipInTransitCoSimulation(CoSimInstance):
                 artists=artists,
                 data=data,
                 precomputed_outlines=outlines,
-                trail_len=trail_len
+                trail_len=trail_len,
+                ship_scale=ship_scale
             )
 
         self.ani = FuncAnimation(

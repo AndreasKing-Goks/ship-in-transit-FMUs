@@ -82,11 +82,12 @@ instance.AnimateFleetTrajectory(
         # save_path=save_path,
         writer_fps=20,
         palette=None,
-        blit=True
+        blit=True,
+        ship_scale=1.0
     )
 
 # Plot Trajectory
-instance.PlotFleetTrajectory()
+instance.PlotFleetTrajectory(mode="quick", ship_scale=1.0)
 
 # Plot Simulation Results
 key_group_list = [
