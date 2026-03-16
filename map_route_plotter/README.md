@@ -1,5 +1,4 @@
 # Getting Map Data
-
 This guide explains how to generate the map data required for the route planner.
 
 The workflow consists of three main steps:
@@ -8,13 +7,12 @@ The workflow consists of three main steps:
 2.  Extract the region of interest
 3.  Convert the data into a GeoPackage (`.gpkg`) used by the application
 
+Special thanks for **Aduragbemi Adetunji** (**aduragbemi.s.adetunji@ntnu.no**) for developing this method.
+
 ------------------------------------------------------------------------
 
 ## 1. Download OpenStreetMap Data
-
-First download the raw OpenStreetMap data for the region of interest.
-
-Visit:
+First download the raw OpenStreetMap data for the region of interest. Visit:
 
 https://download.geofabrik.de/
 
@@ -52,9 +50,7 @@ This file contains all OpenStreetMap data for the selected region.
 ------------------------------------------------------------------------
 
 ## 2. Download Land Polygons
-
-To correctly render coastlines and oceans, you must download the global
-**land polygon dataset**.
+To correctly render coastlines and oceans, you must download the global **land polygon dataset**.
 
 Download from:
 
@@ -75,9 +71,7 @@ This dataset is used to create the **land/ocean mask**.
 ------------------------------------------------------------------------
 
 ## 3. (Optional) Download Water Polygons
-
-If you want additional inland water bodies such as lakes and reservoirs,
-download:
+If you want additional inland water bodies such as lakes and reservoirs, download:
 
 https://osmdata.openstreetmap.de/data/water-polygons.html
 
@@ -88,9 +82,7 @@ Recommended file:
 ------------------------------------------------------------------------
 
 ## 4. Extract the Area of Interest
-
-The downloaded `.osm.pbf` file contains a large region.\
-You must extract a smaller **Area of Interest (AOI)** using `osmium`.
+The downloaded `.osm.pbf` file contains a large region. You must extract a smaller **Area of Interest (AOI)** using `osmium`.
 
 General command:
 
@@ -116,7 +108,6 @@ Then try to set the bounding box for the region of interest that we want to capt
 ------------------------------------------------------------------------
 
 ## 5. Convert `.pbf` to `.osm`
-
 Next convert the extracted `.pbf` file into `.osm` format.
 
 Command:
@@ -130,7 +121,6 @@ Example:
 ------------------------------------------------------------------------
 
 ## 6. Convert `.osm` to `.gpkg`
-
 The project uses **GeoPackage (`.gpkg`)** files for fast map loading.
 
 1.  Open the script:
@@ -139,8 +129,7 @@ The project uses **GeoPackage (`.gpkg`)** files for fast map loading.
 map_route_plotter/osm2gpkg.py
 ```
 
-2.  Modify the `map_name` variable (around line 28) so that it matches
-    your `.osm` filename **without the extension**.
+2.  Modify the `map_name` variable (around line 28) so that it matches your `.osm` filename **without the extension**.
 
 Example:
 
@@ -155,7 +144,6 @@ python map_route_plotter/osm2gpkg.py
 ------------------------------------------------------------------------
 
 ## 7. Output Location
-
 The generated GeoPackage will be saved to:
 
     root/data/map/
@@ -181,16 +169,13 @@ This file is used by the route planner for rendering the map.
     Generate map .gpkg
 
 # Route Planner
-
 This guide explains how to generate a route consisting of sequential waypoints using the interactive route planner and a prepared GeoPackage map.
 
-The process uses an interactive `matplotlib` interface where the user
-selects waypoints directly on the map.
+The process uses an interactive `matplotlib` interface where the user selects waypoints directly on the map.
 
 ------------------------------------------------------------------------
 
 ## Workflow
-
 1.  Open the script:
 
 ```{=html}
@@ -218,7 +203,6 @@ This file should be generated previously using the `osm2gpkg.py` script.
 ------------------------------------------------------------------------
 
 ## Running the Route Planner
-
 Run the script:
 
     python route_planner.py
@@ -230,11 +214,9 @@ An interactive map window will appear.
 ------------------------------------------------------------------------
 
 ## Creating Waypoints
-
 1.  **Left-click on the map** to add a waypoint.
 
-2.  Each click adds a waypoint to the route in the **same order as
-    clicked**.
+2.  Each click adds a waypoint to the route in the **same order as clicked**.
 
 3.  Waypoints will appear with numbered labels indicating their order.
 
@@ -250,7 +232,6 @@ An interactive map window will appear.
 ------------------------------------------------------------------------
 
 ## Saving the Route
-
 Once all desired waypoints are added:
 
 1.  Click **Finish & Save**.
@@ -267,7 +248,6 @@ Example:
 ------------------------------------------------------------------------
 
 ## Route File Format
-
 The saved file contains waypoint coordinates in the following format:
 
     #Y/North, X/East
@@ -280,8 +260,5 @@ Each line represents one waypoint in projected map coordinates.
 ------------------------------------------------------------------------
 
 ## Tips
-
--   Plan the route carefully since waypoint order determines the
-    navigation sequence.
--   Avoid placing waypoints on land if the route is intended for
-    maritime navigation.
+-   Plan the route carefully since waypoint order determines the navigation sequence.
+-   Avoid placing waypoints on land if the route is intended for maritime navigation.

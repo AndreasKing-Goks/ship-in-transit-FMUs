@@ -81,7 +81,7 @@ Think of `FMU` as a seperate sub-simulator describing a sub-system that can be s
 This simulator includes several FMU groups, which are:
 * **[Ship](FMUs/ship/)** (*with Machinery System*)
 * **[Simplified Ship](FMUs/simplified_ship/)** (*without Machinery System*)
-* **[Environmental Loads](FMUs/env_Loads)** (*Wind and Current*)
+* **[Environmental Loads](FMUs/env_loads)** (*Wind and Current*)
 
 This simulator is developed based on Ship in Transit Simulator created by **Børge Rokseth** (**borge.rokseth@ntnu.no**). Original simulator can be found [here](https://github.com/BorgeRokseth/ship_in_transit_simulator.git).
 
