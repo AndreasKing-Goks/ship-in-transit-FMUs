@@ -76,9 +76,7 @@ pip3 install torch torchvision --index-url https://download.pytorch.org/whl/cu12
 
 The **ship-in-transit co-simulation** is a modular Python-based co-simulation framework for modeling and running transit scenarios of a marine vessel. It includes ship dynamics, machinery system behaviors, navigation logic, and environmental effects each in a form of a Functional Mockup Unit (`FMU`).
 
-Think of `FMU` as a seperate sub-simulator describing a sub-system that can be simulated independently. Using `libcosimpy`, we can orchestrate all of these `FMUs` in harmony into a single complex system simulated as one entity. Below are shown an example of how all FMUs is connected and orchestrated together as a single ship:
-
-![Simulation Architecture](0_docs/img/SiT_FMUs.png)
+Think of `FMU` as a seperate sub-simulator describing a sub-system that can be simulated independently. Using `libcosimpy`, we can orchestrate all of these `FMUs` in harmony into a single complex system simulated as one entity.
 
 This simulator includes several FMU groups, which are:
 * **[Ship](FMUs/ship/)** (*with Machinery System*)
