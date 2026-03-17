@@ -126,7 +126,7 @@ where the initial conditions must vary between simulation runs.
 
 
 ## 4. Instantiate the Co-Simulation Orchestrator
-Create the main simulator instance using `ShipInTransitCosimulation`. Direct link is [here](orchestrator/sit_cosim.py). This class acts as the **central orchestrator** responsible for:
+Create the main simulator instance using `ShipInTransitCosimulation`. Direct link to the script is [here](orchestrator/sit_cosim.py). The detailed behavior of the `ShipInTransitCosimulation` is documented [here](orchestrator/README.md).  This class acts as the **central orchestrator** responsible for:
 -   initializing ship subsystems
 -   coordinating FMU components
 -   managing simulation time progression
@@ -139,7 +139,7 @@ To execute a single simulation run
 
     instance.Simulate() 
     
-The detailed behavior of the simulation loop is documented in [here](orchestrator/README.md). The simulation runs until the configured stop condition is reached.
+The simulation runs until the configured stop condition is reached.
 
 
 ## 6. Visualize the Results

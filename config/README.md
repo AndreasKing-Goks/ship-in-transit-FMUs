@@ -25,7 +25,7 @@ An example structure is shown below:
     │       ├── show_harbour: bool
     │       ├── show_bridges: bool
     │       ├── show_tss: bool
-    │       └──  show_docks: bool
+    │       └── show_docks: bool
     │
     └── ships {list}
         ├── ship_1 {dict}
