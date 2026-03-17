@@ -58,7 +58,6 @@ spawn_requests = {
 # Instantiate
 instance = ShipInTransitCoSimulation(config=config, ROOT=ROOT, spawn_requests=spawn_requests)
 
-
 # =========================
 # Simulate
 # =========================

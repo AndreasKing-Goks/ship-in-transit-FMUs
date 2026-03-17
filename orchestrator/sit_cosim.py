@@ -454,7 +454,7 @@ class ShipInTransitCoSimulation(CoSimInstance):
             
             
 # =============================================================================================================
-# Simulator Step Up
+# Simulator Step Up and Reset
 # =============================================================================================================
     def get_fmu_base_name(self, slave_name: str) -> str:
         """
@@ -715,6 +715,55 @@ class ShipInTransitCoSimulation(CoSimInstance):
         self.PreSolverFunctionCall()
         self.execution.step()
         self.PostSolverFunctionCall()
+        
+    
+    def reset(self, ship_id="*", slave_name="*"):
+        """
+            [UNTESTED]
+            Method to reset the FMU(s) to its/their initial state.
+            
+            Parameter
+            ---------
+            ship_id : str
+                - Use to reset the target FMU with ship_id tag. 
+                - If ship_id is set to "*", reset the target FMUs for all ships asset given the ship has the FMU
+            slave_name: str
+                - Use to set the target FMU to reset.
+                - If slave_name is set to "*", reset all of the FMUs associated with the ship_id
+                - If both ship_id and slave_name is set to "*", reset all of the FMUs in the simulator
+        """
+        def get_target_ship_configs():
+            if ship_id == "*":
+                return self.ship_configs
+
+            for ship_config in self.ship_configs:
+                if ship_config.get("id") == ship_id:
+                    return [ship_config]
+
+            raise ValueError(f"Unknown ship_id: {ship_id}")
+
+        for ship_config in get_target_ship_configs():
+            prefix = ship_config.get("id")
+            fmu_params = compile_ship_params(ship_config)
+
+            if slave_name == "*":
+                for block, params in fmu_params.items():
+                    self.SetInitialValues(
+                        slaveName=self.ship_slave(prefix, block),
+                        params=params
+                    )
+            else:
+                params = fmu_params.get(slave_name)
+                if params is None:
+                    raise ValueError(
+                        f"Unknown slave_name '{slave_name}' for ship_id '{prefix}'"
+                    )
+
+                self.SetInitialValues(
+                    slaveName=self.ship_slave(prefix, slave_name),
+                    params=params
+                )
+        return
     
     
     def Simulate(self):
