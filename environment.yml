@@ -1,10 +1,6 @@
 name: sit-cosim
 channels:
   - conda-forge
-  - defaults
-  - https://repo.anaconda.com/pkgs/main
-  - https://repo.anaconda.com/pkgs/r
-  - https://repo.anaconda.com/pkgs/msys2
 dependencies:
   - _openmp_mutex=4.5=20_gnu
   - brotli=1.2.0=h2d644bc_1
@@ -119,4 +115,3 @@ dependencies:
       - requests==2.32.5
       - shapely==2.1.2
       - urllib3==2.6.3
-prefix: C:\Users\andre\anaconda3\envs\sit-cosim
