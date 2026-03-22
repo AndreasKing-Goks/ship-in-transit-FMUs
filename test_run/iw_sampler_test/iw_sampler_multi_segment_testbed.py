@@ -114,7 +114,8 @@ untraversed_segment_length_list = []
 segment_arm_length_list         = []
 
 # Commands
-# scope_angles_deg = [30, -30, -30, -15, 0]
+# scope_angles_deg = [30, -30, -30]
+# scope_angles_deg = [30, -30, -30, -15, 15]
 scope_angles_deg = [30, -30, -30, -15, -30, 0, 15, 30, 0]
 scope_length     = 25
 
@@ -230,8 +231,8 @@ while idx <= max_idx:
     idx += 1
     
 # Ensure trajectory is closed at the final route endpoint
-final_north = segment_north[-1]
-final_east  = segment_east[-1]
+final_north = segment_north[segment_idx]
+final_east  = segment_east[segment_idx]
 
 if traj_n[-1] != final_north or traj_e[-1] != final_east:
     traj_n.append(final_north)
