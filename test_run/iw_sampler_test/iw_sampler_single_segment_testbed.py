@@ -15,9 +15,9 @@ segment_east            = [base_east , end_east ]
 d_segment_north         = end_north - base_north
 d_segment_east          = end_east - base_east
 
-segment_length          = np.hypot(d_segment_east, d_segment_north)
+segment_length          = np.hypot(d_segment_north, d_segment_east)
 
-beta                    = np.atan2(d_segment_north, d_segment_east)
+beta                    = np.atan2(d_segment_east, d_segment_north)
 
 ######################## TEST_FUNCTION ########################
 
@@ -28,20 +28,27 @@ def _get_iw_sampler_component(n_iw, e_iw):
     d_base_to_iw_east  = e_iw  - base_east
     
     # Base to IW length
-    base_iw_length     = np.hypot(d_base_to_iw_east, d_base_to_iw_north)
+    base_iw_length     = np.hypot(d_base_to_iw_north, d_base_to_iw_east)
     
     # Angle from east axis to the IW line
-    beta_iw            = np.atan2(d_base_to_iw_north, d_base_to_iw_east)
+    beta_iw            = np.atan2(d_base_to_iw_east, d_base_to_iw_north)
     
     # Angle from the route segment to the IW line
-    theta               = beta - beta_iw
+    psi                = beta_iw - beta
     
     # Traversed Segment Length
-    traversed_segment_length    = base_iw_length * np.cos(theta)
+    traversed_segment_length    = base_iw_length * np.cos(psi)
+    segment_arm_length          = base_iw_length * np.sin(psi)
     untraversed_segment_length  = segment_length - traversed_segment_length
-    segment_arm_length          = base_iw_length * np.sin(theta)
     
     # IW to route projection coordinate
+    # print("base_north: ", base_north)
+    # print("base_east: ", base_east)
+    # print("base_iw_length: ", base_iw_length)
+    # print("traversed_segment_length: ", traversed_segment_length)
+    # print("psi: ", np.rad2deg(psi))
+    # print("d_tsl_n: ", traversed_segment_length*np.cos(psi))
+    # print("d_tsl_e: ", traversed_segment_length*np.sin(psi))
     p_north                     = base_north + traversed_segment_length * np.cos(beta)
     p_east                      = base_east  + traversed_segment_length * np.sin(beta)
     
@@ -53,14 +60,14 @@ def _get_iw_sampler_component(n_iw, e_iw):
     
 def _scope_next_iw(scope_angle_deg, scope_length, prev_wp_north, prev_wp_east):
     # Convert scope angle deg to rad
-    scope_angle = np.deg2rad(scope_angle_deg)
+    psi         = np.deg2rad(scope_angle_deg)
     
     # Get angle form east axist to the IW line
-    beta_iw     = beta - scope_angle
+    beta_iw     = beta + psi
     
     # Get the d_north and d_east
-    d_north     = scope_length * np.sin(beta_iw)
-    d_east     = scope_length * np.cos(beta_iw)
+    d_north     = scope_length * np.cos(beta_iw)
+    d_east      = scope_length * np.sin(beta_iw)
     
     # Get the next waypoint
     next_wp_north = prev_wp_north + d_north
@@ -93,7 +100,7 @@ segment_arm_length_list         = []
 
 # Commands
 scope_angles_deg = [30, -30, -30, -15, 0]
-scope_length    = 25
+scope_length    = 30
 
 # FIRST TRIGGER
 # Set the current ship position as IW0
