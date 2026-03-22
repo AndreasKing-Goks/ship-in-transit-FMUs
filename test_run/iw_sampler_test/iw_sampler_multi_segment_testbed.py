@@ -95,7 +95,7 @@ n_ship                  = np.float64(10.0)
 e_ship                  = np.float64(20.0)
 
 ## Container for plottings
-# Intermediate Waypoints
+# True Intermediate Waypoints List
 n_iw_list = []
 e_iw_list = []
 
@@ -114,8 +114,8 @@ segment_arm_length_list         = []
 
 # Commands
 # scope_angles_deg = [30, -30, -30, -15, 0]
-scope_angles_deg = [30, -30, -30, -15, 0]
-scope_length     = 20
+scope_angles_deg = [30, -30, -30, -15, -30]
+scope_length     = 25
 
 # FIRST TRIGGER
 # Set the current ship position as IW0
@@ -145,6 +145,7 @@ traj_e.append(e_iw_0)
 # Loop
 idx = 0
 max_idx = len(scope_angles_deg)-1
+segment_switch = False
 while idx <= max_idx:
     # Get scope angle
     scope_angle_deg = scope_angles_deg[idx]
@@ -157,11 +158,17 @@ while idx <= max_idx:
     print("head_north: ", head_north)
     print("head_east: ", head_east)
     print("segment_length: ", segment_length)
-    print("beta: ", beta)
+    print("beta: ", np.rad2deg(beta))
     
     # Get the waypoint
-    prev_n_iw = n_iw_list[idx]
-    prev_e_iw = e_iw_list[idx]
+    if segment_switch:
+        print("THIS WILL SHOW UP ONLY ONCE AFTER THE SEGMENT SWITCH")
+        prev_n_iw = base_north
+        prev_e_iw = base_east
+        segment_switch = False
+    else:
+        prev_n_iw = n_iw_list[idx]
+        prev_e_iw = e_iw_list[idx]
     print("prev_n_iw: ", prev_n_iw)
     print("prev_e_iw: ", prev_e_iw)
     
@@ -180,17 +187,22 @@ while idx <= max_idx:
     print("segment_arm_length: ", segment_arm_length)
     print("p_n: ", p_n)
     print("p_e: ", p_e)
+    print("#####")
     
     # Condition to switch segment
     if untraversed_segment_length < scope_length:
-        print("hi")
+        print("###################################################################")
+        print("SEGMENT SWITCH")
+        print("###################################################################")
         p_n_list.append(head_north)
         p_e_list.append(head_east)
         n_iw_list.append(head_north)
         e_iw_list.append(head_east)
         traj_n.append(head_north)
         traj_e.append(head_east)
+        segment_switch = True
         segment_idx += 1
+        continue
         
     # Store
     traversed_segment_length_list.append(traversed_segment_length)
