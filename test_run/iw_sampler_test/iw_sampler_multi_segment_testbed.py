@@ -2,32 +2,45 @@ import numpy as np
 import matplotlib.pyplot as plt
 import math
 
-# Base
-base_north              = np.float64(0.0)
-base_east               = np.float64(0.0)
+# Start
+start_north             = np.float64(0.0)
+start_east              = np.float64(0.0)
 
-end_north               = np.float64(100.0)
-end_east                = np.float64(100.0)
+mid_north               = np.float64(100.0)
+mid_east                = np.float64(100.0)
 
-segment_north           = [base_north, end_north]
-segment_east            = [base_east , end_east ]
+end_north               = np.float64(0.0)
+end_east                = np.float64(200.0)
 
-d_segment_north         = end_north - base_north
-d_segment_east          = end_east - base_east
-
-segment_length          = np.hypot(d_segment_north, d_segment_east)
-
-beta                    = np.atan2(d_segment_east, d_segment_north)
+segment_north           = [start_north, mid_north, end_north]
+segment_east            = [start_east , mid_east , end_east ]
+segment_idx             = 1                                     # First segment
 
 ######################## TEST_FUNCTION ########################
 
-# Zeroeth IWP
-def _get_iw_sampler_component(n_iw, e_iw):
-    # Base to IW component lengths
-    d_base_to_iw_north = n_iw - base_north
-    d_base_to_iw_east  = e_iw  - base_east
+# Route segment component
+def _get_route_segment_component(segment_idx):
+    base_north      = segment_north[segment_idx - 1]
+    base_east       = segment_east[segment_idx - 1]
     
-    # Base to IW length
+    head_north      = segment_north[segment_idx]
+    head_east       = segment_east[segment_idx]
+    
+    d_segment_north = head_north - base_north
+    d_segment_east  = head_east  - base_east
+    
+    segment_length  = np.hypot(d_segment_north, d_segment_east)
+    beta            = np.atan2(d_segment_east, d_segment_north)
+    
+    return base_north, base_east, head_north, head_east, segment_length, beta
+    
+# IW Sampler Component
+def _get_iw_sampler_component(n_iw, e_iw, base_north, base_east, beta, segment_length):
+    # Start to IW component lengths
+    d_base_to_iw_north = n_iw - base_north
+    d_base_to_iw_east  = e_iw - base_east
+    
+    # Start to IW length
     base_iw_length     = np.hypot(d_base_to_iw_north, d_base_to_iw_east)
     
     # Angle from east axis to the IW line
@@ -49,6 +62,7 @@ def _get_iw_sampler_component(n_iw, e_iw):
     # print("psi: ", np.rad2deg(psi))
     # print("d_tsl_n: ", traversed_segment_length*np.cos(psi))
     # print("d_tsl_e: ", traversed_segment_length*np.sin(psi))
+    
     p_north                     = base_north + traversed_segment_length * np.cos(beta)
     p_east                      = base_east  + traversed_segment_length * np.sin(beta)
     
@@ -58,7 +72,7 @@ def _get_iw_sampler_component(n_iw, e_iw):
             p_north,
             p_east)
     
-def _scope_next_iw(scope_angle_deg, scope_length, prev_wp_north, prev_wp_east):
+def _scope_next_iw(scope_angle_deg, scope_length, beta, prev_wp_north, prev_wp_east):
     # Convert scope angle deg to rad
     psi         = np.deg2rad(scope_angle_deg)
     
@@ -86,8 +100,8 @@ n_iw_list = []
 e_iw_list = []
 
 # Ship trajectory
-traj_n      = [base_north]
-traj_e      = [base_east]
+traj_n      = [start_north]
+traj_e      = [start_east]
 
 # IW Projection
 p_n_list = []
@@ -99,19 +113,23 @@ untraversed_segment_length_list = []
 segment_arm_length_list         = []
 
 # Commands
+# scope_angles_deg = [30, -30, -30, -15, 0]
 scope_angles_deg = [30, -30, -30, -15, 0]
-scope_length    = 25
+scope_length     = 20
 
 # FIRST TRIGGER
 # Set the current ship position as IW0
 n_iw_0                  = n_ship
 e_iw_0                  = e_ship
 
+# Route component
+base_north, base_east, head_north, head_east, segment_length, beta = _get_route_segment_component(segment_idx)
+
 # Get the IW sampler component
 (traversed_segment_length_0, 
 untraversed_segment_length_0,
 segment_arm_length_0, 
-p_n_0, p_e_0) = _get_iw_sampler_component(n_iw_0, e_iw_0)
+p_n_0, p_e_0) = _get_iw_sampler_component(n_iw_0, e_iw_0, base_north, base_east, beta, segment_length)
 
 # Store
 traversed_segment_length_list.append(traversed_segment_length_0)
@@ -125,16 +143,55 @@ traj_n.append(n_iw_0)
 traj_e.append(e_iw_0)
 
 # Loop
-for i, scope_angle_deg in enumerate(scope_angles_deg):
+idx = 0
+max_idx = len(scope_angles_deg)-1
+while idx <= max_idx:
+    # Get scope angle
+    scope_angle_deg = scope_angles_deg[idx]
+    
+    # Get segment info
+    base_north, base_east, head_north, head_east, segment_length, beta = _get_route_segment_component(segment_idx)
+    print("scope_angle_deg: ", scope_angle_deg)
+    print("base_north: ", base_north)
+    print("base_east: ", base_east)
+    print("head_north: ", head_north)
+    print("head_east: ", head_east)
+    print("segment_length: ", segment_length)
+    print("beta: ", beta)
+    
+    # Get the waypoint
+    prev_n_iw = n_iw_list[idx]
+    prev_e_iw = e_iw_list[idx]
+    print("prev_n_iw: ", prev_n_iw)
+    print("prev_e_iw: ", prev_e_iw)
+    
     # Get the next waypoint
-    n_iw, e_iw = _scope_next_iw(scope_angle_deg, scope_length, n_iw_list[i], e_iw_list[i])
+    n_iw, e_iw = _scope_next_iw(scope_angle_deg, scope_length, beta, prev_n_iw, prev_e_iw)
+    print("n_iw: ", n_iw)
+    print("e_iw: ", e_iw)
     
     # Get the IW sampler component
     (traversed_segment_length, 
     untraversed_segment_length,
     segment_arm_length, 
-    p_n, p_e) = _get_iw_sampler_component(n_iw, e_iw)
+    p_n, p_e) = _get_iw_sampler_component(n_iw, e_iw, base_north, base_east, beta, segment_length)
+    print("traversed_segment_length: ", traversed_segment_length)
+    print("untraversed_segment_length: ", untraversed_segment_length)
+    print("segment_arm_length: ", segment_arm_length)
+    print("p_n: ", p_n)
+    print("p_e: ", p_e)
     
+    # Condition to switch segment
+    if untraversed_segment_length < scope_length:
+        print("hi")
+        p_n_list.append(head_north)
+        p_e_list.append(head_east)
+        n_iw_list.append(head_north)
+        e_iw_list.append(head_east)
+        traj_n.append(head_north)
+        traj_e.append(head_east)
+        segment_idx += 1
+        
     # Store
     traversed_segment_length_list.append(traversed_segment_length)
     untraversed_segment_length_list.append(untraversed_segment_length)
@@ -146,12 +203,13 @@ for i, scope_angle_deg in enumerate(scope_angles_deg):
     traj_n.append(n_iw)
     traj_e.append(e_iw)
     
-    if untraversed_segment_length < scope_length:
-        break
+    # Increment the IW Sampler
+    idx += 1
     
 # Add endpoint
-traj_n.append(end_north)
-traj_e.append(end_east)
+traj_n.append(head_north)
+traj_e.append(head_east)
+        
 
 # Check
 length_list = []
@@ -161,9 +219,14 @@ for i in range(len(e_iw_list)):
     length = np.hypot((e_iw_list[i+1]-e_iw_list[i]), (n_iw_list[i+1]-n_iw_list[i]))
     length_list.append(length)
     
-print(length_list)
+print("length_list: ", length_list)
+print("n_iw_list: ", n_iw_list)
+print("e_iw_list: ", e_iw_list)
+print("p_n_list: ", p_n_list)
+print("p_e_list: ", p_e_list)
+print("#####")
 
-######################## PLOT ########################
+# ######################## PLOT ########################
 # Figure
 plt.figure()
 
@@ -183,7 +246,5 @@ plt.plot(traj_e, traj_n)
 plt.grid()
 plt.title("IW Sampler")
 plt.gca().set_aspect('equal', adjustable='box')
-# plt.xlim([-5, 105])
-# plt.ylim([-5, 105])
 
 plt.show()
