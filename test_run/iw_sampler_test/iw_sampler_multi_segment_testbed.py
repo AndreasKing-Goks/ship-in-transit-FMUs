@@ -15,6 +15,7 @@ end_east                = np.float64(200.0)
 segment_north           = [start_north, mid_north, end_north]
 segment_east            = [start_east , mid_east , end_east ]
 segment_idx             = 1                                     # First segment
+max_segment_idx         = len(segment_north) - 1
 
 ######################## TEST_FUNCTION ########################
 
@@ -114,8 +115,9 @@ segment_arm_length_list         = []
 
 # Commands
 # scope_angles_deg = [30, -30, -30, -15, 0]
-scope_angles_deg = [30, -30, -30, -15, -30]
+scope_angles_deg = [30, -30, -30, -15, -30, 0, 15, 30, 0]
 scope_length     = 25
+
 
 # FIRST TRIGGER
 # Set the current ship position as IW0
@@ -146,6 +148,7 @@ traj_e.append(e_iw_0)
 idx = 0
 max_idx = len(scope_angles_deg)-1
 segment_switch = False
+loop_breaker = False
 while idx <= max_idx:
     # Get scope angle
     scope_angle_deg = scope_angles_deg[idx]
@@ -194,14 +197,22 @@ while idx <= max_idx:
         print("###################################################################")
         print("SEGMENT SWITCH")
         print("###################################################################")
-        p_n_list.append(head_north)
-        p_e_list.append(head_east)
-        n_iw_list.append(head_north)
-        e_iw_list.append(head_east)
-        traj_n.append(head_north)
-        traj_e.append(head_east)
-        segment_switch = True
-        segment_idx += 1
+        
+        if segment_idx < max_segment_idx:
+            segment_idx += 1
+            segment_switch = True
+            traj_n.append(head_north)
+            traj_e.append(head_east)
+        else:
+            p_n_list.append(p_n)
+            p_e_list.append(p_e)
+            n_iw_list.append(n_iw)
+            e_iw_list.append(e_iw)
+            traj_n.append(n_iw)
+            traj_e.append(e_iw)
+            traj_n.append(head_north)
+            traj_e.append(head_east)
+            break
         continue
         
     # Store
@@ -218,11 +229,14 @@ while idx <= max_idx:
     # Increment the IW Sampler
     idx += 1
     
-# Add endpoint
-traj_n.append(head_north)
-traj_e.append(head_east)
-        
+# Ensure trajectory is closed at the final route endpoint
+final_north = segment_north[-1]
+final_east  = segment_east[-1]
 
+if traj_n[-1] != final_north or traj_e[-1] != final_east:
+    traj_n.append(final_north)
+    traj_e.append(final_east)
+        
 # Check
 length_list = []
 for i in range(len(e_iw_list)):
