@@ -340,3 +340,10 @@ allowing the ship to evolve dynamically within the simulation.
 
 ## 3. FMU Reset
 TBD
+
+### Ax Platform
+If you want to use Bayesian optimization or other Ax-based workflows, install Ax manually after activating the base environment:
+
+```bash
+pip install ax-platform==1.2.4
+```

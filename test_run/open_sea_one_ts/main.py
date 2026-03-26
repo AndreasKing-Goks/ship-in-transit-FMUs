@@ -47,7 +47,7 @@ instance.Simulate()
 # - .mov
 
 ## Get the save path for animation
-save_path = ROOT / "saved_animation" / "open_sea_one_ts.mp4"
+save_path = ROOT / "saved_animation" / "open_sea_one_ts.gif"
 
 # Animate Simulation
 instance.AnimateFleetTrajectory(
