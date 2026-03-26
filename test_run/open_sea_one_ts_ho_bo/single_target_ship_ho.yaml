@@ -1,6 +1,6 @@
 simulation:
   instanceName: Ship-Path Following Test
-  stopTime: 300
+  stopTime: 5000
   stepSize: 5.0
 
 ships:

@@ -7,6 +7,7 @@ import sys
 import os
 import traceback
 from ax.service.ax_client import AxClient, ObjectiveProperties
+import pandas as pd
 
 # Ensure libcosim DLL is found
 dll_dir = Path(sys.prefix) / "Lib" / "site-packages" / "libcosimpy" / "libcosimc"
@@ -288,8 +289,13 @@ def evaluate_trial(parameterization):
     return raw_data, metrics
 
 
-def run_ax_optimization(total_trials=15, random_seed=7):
+def run_ax_optimization(total_trials=15, num_sobol_trials=5, random_seed=7):
     """Execute the full Ax optimization loop across multiple trials."""
+    if num_sobol_trials < 0:
+        raise ValueError("num_sobol_trials must be >= 0")
+    if num_sobol_trials > total_trials:
+        raise ValueError("num_sobol_trials cannot be greater than total_trials")
+
     ax_client = AxClient(random_seed=random_seed)
 
     ax_client.create_experiment(
@@ -297,6 +303,9 @@ def run_ax_optimization(total_trials=15, random_seed=7):
         parameters=build_parameter_space(),
         objectives={
             "objective": ObjectiveProperties(minimize=True),
+        },
+        choose_generation_strategy_kwargs={
+            "num_initialization_trials": num_sobol_trials,
         },
     )
 
@@ -405,18 +414,36 @@ def replay_best_trial(best_parameters):
     return instance
 
 
-def save_results(best_parameters, history):
+def save_results(ax_client, best_parameters, history):
     """Save the best parameters and full trial history to JSON."""
+    enriched_history = []
+
+    for item in history:
+        trial_index = int(item["trial_index"])
+        enriched_item = dict(item)
+
+        try:
+            trial = ax_client.get_trial(trial_index)
+            enriched_item["trial_type"] = trial.generation_method_str
+            enriched_item["trial_status"] = str(trial.status).split(".")[-1]
+        except Exception as exc:
+            print(f"Could not extract Ax metadata for trial {trial_index}: {exc}")
+            enriched_item["trial_type"] = "unknown"
+            enriched_item["trial_status"] = enriched_item.get("trial_status", "unknown")
+
+        enriched_history.append(enriched_item)
+
     payload = {
         "best_parameters": best_parameters,
-        "history": history,
+        "history": enriched_history,
     }
+
     with RESULTS_PATH.open("w", encoding="utf-8") as f:
         json.dump(payload, f, indent=2)
 
 
 def print_trial_summary_table(ax_client):
-    """Print a final Ax trial summary table."""
+    """Print a final Ax trial summary table with fixed-width columns."""
     try:
         df = ax_client.get_trials_data_frame()
 
@@ -424,7 +451,6 @@ def print_trial_summary_table(ax_client):
             print("No trial data available.")
             return
 
-        # Optional: keep the most relevant columns first if they exist.
         preferred_columns = [
             "trial_index",
             "trial_status",
@@ -433,25 +459,76 @@ def print_trial_summary_table(ax_client):
         ]
         ordered_columns = [col for col in preferred_columns if col in df.columns]
         remaining_columns = [col for col in df.columns if col not in ordered_columns]
-        df = df[ordered_columns + remaining_columns]
+        df = df[ordered_columns + remaining_columns].copy()
+
+        # Format floats for readability.
+        for col in df.columns:
+            if df[col].dtype.kind in {"f", "i"}:
+                if col == "trial_index":
+                    df[col] = df[col].map(lambda x: f"{int(x)}" if not pd.isna(x) else "")
+                else:
+                    df[col] = df[col].map(
+                        lambda x: f"{float(x):.3f}" if not pd.isna(x) else ""
+                    )
+            else:
+                df[col] = df[col].fillna("").astype(str)
+
+        # Fixed-width layout settings.
+        max_widths = {
+            "trial_index": 11,
+            "trial_status": 14,
+            "generation_method": 18,
+            "objective": 12,
+        }
+        default_width = 14
+
+        def shorten(text, width):
+            text = str(text)
+            if len(text) <= width:
+                return text.ljust(width)
+            return (text[: width - 3] + "...")
+
+        widths = {}
+        for col in df.columns:
+            target_width = max_widths.get(col, default_width)
+            widths[col] = max(target_width, len(col))
+
+        header = " | ".join(shorten(col, widths[col]) for col in df.columns)
+        separator = "-+-".join("-" * widths[col] for col in df.columns)
 
         print("\nFinal Ax trial summary:")
-        print(df.to_string(index=False))
+        print(header)
+        print(separator)
+
+        for _, row in df.iterrows():
+            line = " | ".join(
+                shorten(row[col], widths[col]) for col in df.columns
+            )
+            print(line)
+
     except Exception as exc:
         print(f"Could not build Ax trial summary table: {exc}")
 
 
 def main():
     """Run BO, persist results, and optionally replay the best trial."""
-    total_trials = 3
+    num_sobol_trials = 2
+    num_bo_trials = 2
+    total_trials = num_sobol_trials + num_bo_trials
     replay_best = True
+
+    print(
+        f"Running Ax optimization with {num_sobol_trials} Sobol trials "
+        f"and {num_bo_trials} BO trials (total={total_trials})."
+    )
 
     ax_client, best_parameters, history = run_ax_optimization(
         total_trials=total_trials,
+        num_sobol_trials=num_sobol_trials,
         random_seed=7,
     )
 
-    save_results(best_parameters, history)
+    save_results(ax_client, best_parameters, history)
     print_trial_summary_table(ax_client)
 
     if best_parameters is None:

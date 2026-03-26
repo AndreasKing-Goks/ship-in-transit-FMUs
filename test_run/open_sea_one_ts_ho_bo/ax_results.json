@@ -41,19 +41,21 @@
         "ts1_leg_speed_4": 2.5982833951711655
       },
       "metrics": {
-        "max_abs_e_ct": 2.621668733941128,
-        "mean_abs_e_ct": 1.2208450396153279,
-        "fuel_consumption": 0.3286471864356533,
-        "reached_end": false,
+        "max_abs_e_ct": 4.451919294338156,
+        "mean_abs_e_ct": 3.513636510193611,
+        "fuel_consumption": 0.23065029863302805,
+        "reached_end": true,
         "collision": false,
         "min_dist": 0.0,
         "min_future_dcpa": 19.30967083656969,
-        "min_future_tcpa": 853.7679758090535,
+        "min_future_tcpa": 0.6750463019886453,
         "dist_margin": 0.0,
         "dcpa_margin": 0.09654835418284845,
-        "tcpa_margin": 0.9486310842322817,
-        "objective": 0.6215145305234269
-      }
+        "tcpa_margin": 0.0007500514466540504,
+        "objective": 0.20023822126729007
+      },
+      "trial_type": "Sobol",
+      "trial_status": "COMPLETED"
     },
     {
       "trial_index": 1,
@@ -77,55 +79,97 @@
         "ts1_leg_speed_4": 5.044225209392607
       },
       "metrics": {
-        "max_abs_e_ct": 1.1247512301488611,
-        "mean_abs_e_ct": 0.5020223576465291,
-        "fuel_consumption": 0.27360434204754325,
-        "reached_end": false,
+        "max_abs_e_ct": 187.87900405447638,
+        "mean_abs_e_ct": 53.94610921169878,
+        "fuel_consumption": 0.21677224675398055,
+        "reached_end": true,
         "collision": false,
         "min_dist": 0.0,
         "min_future_dcpa": 0.00981314760400844,
-        "min_future_tcpa": 700.6861499936998,
+        "min_future_tcpa": 4.886363768450554,
         "dist_margin": 0.0,
         "dcpa_margin": 4.90657380200422e-05,
-        "tcpa_margin": 0.7785401666596664,
-        "objective": 0.17158171757780583
-      }
+        "tcpa_margin": 0.005429293076056171,
+        "objective": 0.16697563026972778
+      },
+      "trial_type": "Sobol",
+      "trial_status": "COMPLETED"
     },
     {
       "trial_index": 2,
       "parameters": {
-        "ts1_spawn_north": 8472.048539668322,
-        "ts1_spawn_east": -8.537286892533302,
-        "ts1_spawn_yaw_angle_deg": 217.13990584015846,
-        "ts1_spawn_forward_speed": 3.214531935751438,
-        "ts1_wp_count": 1,
-        "ts1_end_north": -344.0906088799238,
-        "ts1_end_east": -1360.1765502244234,
-        "ts1_wp_1_north": 752.7590021491051,
-        "ts1_wp_1_east": -102.52855718135834,
-        "ts1_wp_2_north": 7916.787669062614,
-        "ts1_wp_2_east": -533.6814019829035,
-        "ts1_wp_3_north": 7933.7311536073685,
-        "ts1_wp_3_east": -171.9571016728878,
-        "ts1_leg_speed_1": 0.6530962577089667,
-        "ts1_leg_speed_2": 1.7111626076512039,
-        "ts1_leg_speed_3": 5.522604304831475,
-        "ts1_leg_speed_4": 6.3241317654028535
+        "ts1_spawn_north": 8500.0,
+        "ts1_spawn_east": 800.6382802137215,
+        "ts1_spawn_yaw_angle_deg": 120.0,
+        "ts1_spawn_forward_speed": 6.337627154992709,
+        "ts1_wp_count": 0,
+        "ts1_end_north": -299.5852807720629,
+        "ts1_end_east": 1498.6150724132272,
+        "ts1_wp_1_north": 1024.9590906944309,
+        "ts1_wp_1_east": -1500.0,
+        "ts1_wp_2_north": 7999.999948784542,
+        "ts1_wp_2_east": -1500.0,
+        "ts1_wp_3_north": 4688.7768865148755,
+        "ts1_wp_3_east": 1500.0,
+        "ts1_leg_speed_1": 7.571084041465485,
+        "ts1_leg_speed_2": 2.9774503056736563,
+        "ts1_leg_speed_3": 0.5,
+        "ts1_leg_speed_4": 6.4972512510951885
       },
       "metrics": {
-        "max_abs_e_ct": 2.801307274720892,
-        "mean_abs_e_ct": 1.2349646614133079,
-        "fuel_consumption": 0.26427899552783984,
-        "reached_end": false,
+        "max_abs_e_ct": 46.91141153448172,
+        "mean_abs_e_ct": 10.655397760537573,
+        "fuel_consumption": 0.21545266624444004,
+        "reached_end": true,
         "collision": false,
         "min_dist": 0.0,
-        "min_future_dcpa": 0.07742345229902652,
-        "min_future_tcpa": 1131.9089782733797,
+        "min_future_dcpa": 268.0300394972487,
+        "min_future_tcpa": 1.5231982597769356,
         "dist_margin": 0.0,
-        "dcpa_margin": 0.0003871172614951326,
-        "tcpa_margin": 1.0,
-        "objective": 0.5057514472072027
-      }
+        "dcpa_margin": 1.0,
+        "tcpa_margin": 0.0016924425108632618,
+        "objective": 2.0437860333741407
+      },
+      "trial_type": "BoTorch",
+      "trial_status": "COMPLETED"
+    },
+    {
+      "trial_index": 3,
+      "parameters": {
+        "ts1_spawn_north": 7674.961426427153,
+        "ts1_spawn_east": -311.3088101264893,
+        "ts1_spawn_yaw_angle_deg": 151.26485426125038,
+        "ts1_spawn_forward_speed": 3.4395008368739552,
+        "ts1_wp_count": 0,
+        "ts1_end_north": 634.5890631283735,
+        "ts1_end_east": 344.09952661848786,
+        "ts1_wp_1_north": 5235.408504510552,
+        "ts1_wp_1_east": -464.5398213002103,
+        "ts1_wp_2_north": 3994.6397234295464,
+        "ts1_wp_2_east": -596.9172481102731,
+        "ts1_wp_3_north": 4303.429211625757,
+        "ts1_wp_3_east": 175.31045842498267,
+        "ts1_leg_speed_1": 5.450935508849553,
+        "ts1_leg_speed_2": 4.926701172415681,
+        "ts1_leg_speed_3": 2.7461069188894283,
+        "ts1_leg_speed_4": 4.175595857755417
+      },
+      "metrics": {
+        "max_abs_e_ct": 194.5489499097604,
+        "mean_abs_e_ct": 56.3550906738501,
+        "fuel_consumption": 0.1989041093990332,
+        "reached_end": true,
+        "collision": false,
+        "min_dist": 0.0,
+        "min_future_dcpa": 12.314729777470847,
+        "min_future_tcpa": 1.1127703156113289,
+        "dist_margin": 0.0,
+        "dcpa_margin": 0.06157364888735423,
+        "tcpa_margin": 0.0012364114617903655,
+        "objective": 0.28911508098618466
+      },
+      "trial_type": "BoTorch",
+      "trial_status": "COMPLETED"
     }
   ]
 }
