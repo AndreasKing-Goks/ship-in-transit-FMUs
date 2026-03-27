@@ -30,3 +30,4 @@ dependencies:
       - pythonfmu==0.7.0
       - requests
       - ax-platform
+      - trafficgen
