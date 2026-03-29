@@ -37,7 +37,51 @@ instance = ShipInTransitCoSimulation(config=config, ROOT=ROOT)
 # =========================
 # Simulate
 # =========================
-instance.Simulate()
+# # Start timer
+# start_time = time.perf_counter()
+
+scope_angles_deg = [30, -30, -30, -15, -30, 0, 15, 30, 0]
+i = 0
+request_scope_angle = False
+successful_is_sample = False
+
+while instance.time <=  instance.stopTime:
+    
+    # Above 250, ship samples intermediate setpoints
+    if instance.time > 250:
+        # Sethte is_inside_trigger_zone as True at all time
+        instance.SingleVariableManipulation(slaveName="OS0__MISSION_MANAGER", slaveVar="is_inside_trigger_zone", value=True)
+    
+        # Retrieve if IS sampling is succesful
+        successful_is_sample = instance.GetLastValue(slaveName="OS0__MISSION_MANAGER", slaveVar="successful_is_sample")
+        
+        # Is IS sampling is successful, push the state-action transition to the replay buffer
+        if successful_is_sample:
+            pass
+        
+        # Get the request scope angle flag
+        request_scope_angle = instance.GetLastValue(slaveName="OS0__MISSION_MANAGER", slaveVar="request_scope_angle")
+        
+        # Get the request scope angle flag
+        if (instance.time == 250) or request_scope_angle:
+            instance.SingleVariableManipulation(slaveName="OS0__MISSION_MANAGER", slaveVar="scope_angle_deg", value=scope_angles_deg[i])
+            i += 1
+            
+    instance.step()
+    
+        # Integrate or stop the simulator
+    if not instance.stop:
+        instance.time +=instance.stepSize
+    else:
+        break
+
+# # Stop timer
+# end_time = time.perf_counter()
+
+# # Compute elapsed time
+# elapsed_time = end_time -start_time
+
+# print(f"Simulation took {elapsed_time:.6f} seconds.")
 
 # =========================
 # Animation and Plot
@@ -48,30 +92,30 @@ instance.Simulate()
 # - .avi
 # - .mov
 
-# Animate Simulation
-instance.AnimateFleetTrajectory(
-        ship_ids=None,
-        show=True,
-        block=True,
-        mode="quick",
-        fig_width=10.0,
-        margin_frac=0.08,
-        equal_aspect=True,
-        interval_ms=20,
-        frame_step=2,
-        trail_len=50,
-        plot_routes=True,
-        plot_waypoints=True,
-        plot_roa=True,
-        plot_start_end=True,
-        with_labels=True,
-        precompute_ship_outlines=True,
-        # save_path=save_path,
-        writer_fps=20,
-        palette=None,
-        blit=True,
-        ship_scale=1.0
-    )
+# # Animate Simulation
+# instance.AnimateFleetTrajectory(
+#         ship_ids=None,
+#         show=True,
+#         block=True,
+#         mode="quick",
+#         fig_width=10.0,
+#         margin_frac=0.08,
+#         equal_aspect=True,
+#         interval_ms=20,
+#         frame_step=2,
+#         trail_len=50,
+#         plot_routes=True,
+#         plot_waypoints=True,
+#         plot_roa=True,
+#         plot_start_end=True,
+#         with_labels=True,
+#         precompute_ship_outlines=True,
+#         # save_path=save_path,
+#         writer_fps=20,
+#         palette=None,
+#         blit=True,
+#         ship_scale=1.0
+#     )
 
 # Plot Trajectory
 instance.PlotFleetTrajectory(mode="quick", ship_scale=1.0)
@@ -105,15 +149,6 @@ key_group_list = [
     # ["OS0.wind_speed"],
     # ["OS0.wind_direction_deg"],
     
-    ## Target Ship(s)
-    # Base results
-    ["TS1.north"],
-    ["TS1.east"],
-    ["TS1.forward_speed", "TS1.next_wp_speed", "TS1.total_ship_speed"],
-    ["TS1.yaw_angle_rad", "TS1.yaw_angle_ref_rad"],
-    ["TS1.rudder_angle_deg"],
-    ["TS1.e_ct"],
-    ["TS1.thrust_force"]
 ]
 
 # Plot Time Series

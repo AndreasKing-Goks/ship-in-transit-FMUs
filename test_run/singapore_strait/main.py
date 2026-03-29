@@ -28,8 +28,7 @@ with config_path.open("r", encoding="utf-8") as f:
 # =========================
 # Spawn Requests
 # =========================
-# Spawn requests (Singapore Strait)
-own_ship = {
+# Spawn requests (Singapore Strait)  
     "start_time"        : 0.0,
     "speed_setpoints"   : [0, 6, 9, 9, 8, 8, 7, 7]
 }
