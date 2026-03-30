@@ -336,10 +336,13 @@ class ShipInTransitCoSimulation(CoSimInstance):
             group           = None if map is None else map.get("group", None)
             route_filename  = ship_config.get("route_filename")
             
-            ship_route_path = get_ship_route_path_from_group(ROOT=ROOT, 
-                                                             group=group,
-                                                             route_filename=route_filename)
-            raw_route = load_waypoints(ship_route_path)
+            if route_filename is not None:
+                ship_route_path = get_ship_route_path_from_group(ROOT=ROOT, 
+                                                                group=group,
+                                                                route_filename=route_filename)
+                raw_route = load_waypoints(ship_route_path)
+            else:
+                raw_route = (spawn_request.get("north_route"), spawn_request.get("east_route"))
             
             # Prepare the route and spawn request
             route, spawn = self.GetShipSpawn(raw_route=raw_route,
