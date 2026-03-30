@@ -23,7 +23,7 @@ def compile_ship_params(ship_cfg: dict) -> dict:
         raise ValueError("Route must have at least 2 points to compute initial yaw.")
 
     # Mission Manager params
-    mm = dict(ship_cfg["fmu_params"].get("MISSION_MANAGER", {}))  # ra, max_inter_wp, etc.
+    mm = dict(ship_cfg["fmu_params"].get("MISSION_MANAGER", {}))  # ra, max_inner_wp, etc.
     mm["wp_start_north"] = float(north[0])
     mm["wp_start_east"]  = float(east[0])
     mm["wp_end_north"]   = float(north[-1])
@@ -35,13 +35,13 @@ def compile_ship_params(ship_cfg: dict) -> dict:
     iw_east  = east[1:-1]
     iw_speed = speed[0:-1]
 
-    # If you want to enforce max_inter_wp:
-    max_inter_wp = int(len(iw_north))
+    # If you want to enforce max_inner_wp:
+    max_inner_wp = int(len(iw_north))
     if len(iw_north) != len(iw_east):
         raise ValueError("Route north/east lengths mismatch.")
-    mm["max_inter_wp"] = max_inter_wp
+    mm["max_inner_wp"] = max_inner_wp
 
-    if max_inter_wp > 0:
+    if max_inner_wp > 0:
         for i, (n_i, e_i, s_i) in enumerate(zip(iw_north, iw_east, iw_speed), start=1):
             mm[f"wp_{i}_north"] = float(n_i)
             mm[f"wp_{i}_east"]  = float(e_i)

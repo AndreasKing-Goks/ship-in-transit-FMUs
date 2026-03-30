@@ -42,7 +42,7 @@ instance.AddSlave(name="MISSION_MANAGER",
 # Set Points Manager
 mission_manager_params = {
     "ra": 300,
-    "max_inter_wp": 3,
+    "max_inner_wp": 3,
     "wp_start_north": 0.0,
     "wp_start_east": 0.0,
     "wp_start_speed": 5.0,

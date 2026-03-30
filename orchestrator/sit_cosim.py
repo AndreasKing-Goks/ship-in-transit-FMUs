@@ -268,8 +268,6 @@ class ShipInTransitCoSimulation(CoSimInstance):
         ## Compile route
         north_list   = raw_route[0]
         east_list    = raw_route[1]
-        print(type(speed_setpoints))
-        print(isinstance (speed_setpoints, list))
         if isinstance (speed_setpoints, list):
             if len(speed_setpoints) == len(north_list):
                 speed_list  = speed_setpoints
