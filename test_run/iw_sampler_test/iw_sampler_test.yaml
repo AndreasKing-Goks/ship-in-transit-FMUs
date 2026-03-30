@@ -8,7 +8,7 @@ ships:
   - id: OS0
 
     SHIP_BLOCKS:
-      - [MISSION_MANAGER, FMUs/simplified_ship/MissionManagerAST.fmu]
+      - [MISSION_MANAGER, FMUs/simplified_ship/MissionManagerIWSamplerSingleSegment.fmu]
       - [AUTOPILOT, FMUs/simplified_ship/Autopilot.fmu]
       - [SPEED_CONTROLLER, FMUs/simplified_ship/SpeedController.fmu]
       - [RUDDER, FMUs/simplified_ship/Rudder.fmu]

@@ -54,63 +54,74 @@ instance = ShipInTransitCoSimulation(config=config, ROOT=ROOT, spawn_requests=sp
 # start_time = time.perf_counter()
 
 # scope_angles_deg = [30, -30, -30, -15, -30, 0, 15, 30, 0]
-scope_angles_deg = [30, ]
+scope_angles_deg = [30, -30]
 i = 0
-prev_request_scope_angle = False
+request_scope_angle = False
+
+prev_wp_north = instance.GetLastValue("OS0__MISSION_MANAGER", "prev_wp_north")
+prev_wp_east  = instance.GetLastValue("OS0__MISSION_MANAGER", "prev_wp_east")
+next_wp_north = instance.GetLastValue("OS0__MISSION_MANAGER", "next_wp_north")
+next_wp_east  = instance.GetLastValue("OS0__MISSION_MANAGER", "next_wp_east")
+
+# print(
+#     f"t={instance.time:.1f}, "
+#     f"req={request_scope_angle}, "
+#     f"angle_idx={i}, "
+#     f"prev=({prev_wp_north:.1f}, {prev_wp_east:.1f}), "
+#     f"next=({next_wp_north:.1f}, {next_wp_east:.1f})"
+# )
 
 while instance.time <= instance.stopTime:
 
     if instance.time > 500e9:
         instance.SingleVariableManipulation(
             slaveName="OS0__MISSION_MANAGER",
-            slaveVar="is_inside_trigger_zone",
+            slaveVar="inside_trigger_zone",
             value=True
+        )
+        
+        inside = instance.GetLastValue(
+            slaveName="OS0__MISSION_MANAGER",
+            slaveVar="inside_trigger_zone",
         )
 
     # Read outputs from the previous completed step
-    successful_is_sample = instance.GetLastValue(
-        slaveName="OS0__MISSION_MANAGER",
-        slaveVar="successful_is_sample"
-    )
     request_scope_angle = instance.GetLastValue(
         slaveName="OS0__MISSION_MANAGER",
         slaveVar="request_scope_angle"
     )
 
+    print("request_scope_angle: ", request_scope_angle)
+    
+    if request_scope_angle:
+        instance.SingleVariableManipulation(
+            slaveName="OS0__MISSION_MANAGER",
+            slaveVar="scope_angle_deg",
+            value=scope_angles_deg[i]
+        )
+        print(f"  -> injecting scope angle {scope_angles_deg[i]} deg")
+        i += 1
+        request_scope_angle = False
+
+    instance.step()
+    instance.PostSolverFunctionCall()
+    
     prev_wp_north = instance.GetLastValue("OS0__MISSION_MANAGER", "prev_wp_north")
     prev_wp_east  = instance.GetLastValue("OS0__MISSION_MANAGER", "prev_wp_east")
     next_wp_north = instance.GetLastValue("OS0__MISSION_MANAGER", "next_wp_north")
     next_wp_east  = instance.GetLastValue("OS0__MISSION_MANAGER", "next_wp_east")
 
-    print(
-        f"t={instance.time:.1f}, "
-        f"req={request_scope_angle}, "
-        f"succ={successful_is_sample}, "
-        f"angle_idx={i}, "
-        f"prev=({prev_wp_north:.1f}, {prev_wp_east:.1f}), "
-        f"next=({next_wp_north:.1f}, {next_wp_east:.1f})"
-    )
-
-    # Feed a new angle only on rising edge of request
-    new_request = request_scope_angle and (not prev_request_scope_angle)
-
-    if new_request:
-        if i < len(scope_angles_deg):
-            instance.SingleVariableManipulation(
-                slaveName="OS0__MISSION_MANAGER",
-                slaveVar="scope_angle_deg",
-                value=scope_angles_deg[i]
-            )
-            print(f"  -> injecting scope angle {scope_angles_deg[i]} deg")
-            i += 1
-        else:
-            print("  -> no more scope angles available")
-            break
-
-    prev_request_scope_angle = request_scope_angle
-
-    instance.step()
-
+    # print(
+    #     f"t={instance.time:.1f}, "
+    #     f"req={request_scope_angle}, "
+    #     f"angle_idx={i}, "
+    #     f"prev=({prev_wp_north:.1f}, {prev_wp_east:.1f}), "
+    #     f"next=({next_wp_north:.1f}, {next_wp_east:.1f})"
+    # )
+    
+    _idx = instance.GetLastValue("OS0__MISSION_MANAGER", "_idx")
+    print("traj_index", _idx)
+    
     if not instance.stop:
         instance.time += instance.stepSize
     else:
@@ -158,41 +169,43 @@ instance.AnimateFleetTrajectory(
         ship_scale=1.0
     )
 
-# Plot Trajectory
-instance.PlotFleetTrajectory(mode="quick", ship_scale=1.0)
+# # Plot Trajectory
+# instance.PlotFleetTrajectory(mode="quick", ship_scale=1.0)
 
-# # Plot Simulation Results
-# key_group_list = [
-#     ## Own Ship
-#     # Base results
-#     ["OS0.north"],
-#     ["OS0.east"],
-#     ["OS0.forward_speed", "OS0.next_wp_speed", "OS0.total_ship_speed"],
-#     ["OS0.yaw_angle_rad", "OS0.yaw_angle_ref_rad"],
-#     ["OS0.rudder_angle_deg"],
-#     ["OS0.e_ct"],
+# Plot Simulation Results
+key_group_list = [
+    ## Own Ship
+    # Base results
+    # ["OS0.north"],
+    # ["OS0.east"],
+    # ["OS0.forward_speed", "OS0.next_wp_speed", "OS0.total_ship_speed"],
+    # ["OS0.yaw_angle_rad", "OS0.yaw_angle_ref_rad"],
+    # ["OS0.rudder_angle_deg"],
+    # ["OS0.e_ct"],
     
-#     # Waypoints
-#     ["OS0.next_wp_north"],
-#     ["OS0.next_wp_east"]
+    # Waypoints
+    ["OS0.prev_wp_north"],
+    ["OS0.prev_wp_east"],
+    ["OS0.next_wp_north"],
+    ["OS0.next_wp_east"],
     
-#     # # For non-single ship simulation only
-#     # ["OS0.new_throttle_cmd"],
-#     # ["OS0.new_rudder_angle_deg"],
-#     # ["OS0.colav_rud_ang_increment"],
-#     # ["OS0.beta_own_to_tar_1"],
-#     # ["OS0.tcpa_own_to_tar_1"],
-#     # ["OS0.dcpa_own_to_tar_1"],
-#     # ["OS0.dist_own_to_tar_1"],
-#     # ["OS0.rr_own_to_tar_1"],
+    # # For non-single ship simulation only
+    # ["OS0.new_throttle_cmd"],
+    # ["OS0.new_rudder_angle_deg"],
+    # ["OS0.colav_rud_ang_increment"],
+    # ["OS0.beta_own_to_tar_1"],
+    # ["OS0.tcpa_own_to_tar_1"],
+    # ["OS0.dcpa_own_to_tar_1"],
+    # ["OS0.dist_own_to_tar_1"],
+    # ["OS0.rr_own_to_tar_1"],
     
-#     # # For environment load-enabled simulation only
-#     # ["OS0.current_speed"],
-#     # ["OS0.current_direction_deg"],
-#     # ["OS0.wind_speed"],
-#     # ["OS0.wind_direction_deg"],
+    # # For environment load-enabled simulation only
+    # ["OS0.current_speed"],
+    # ["OS0.current_direction_deg"],
+    # ["OS0.wind_speed"],
+    # ["OS0.wind_direction_deg"],
     
-# ]
+]
 
-# # Plot Time Series
-# instance.JoinPlotTimeSeries(list(reversed(key_group_list)),  create_title= False, legend= True, show_instance_name=False, show=True)
+# Plot Time Series
+instance.JoinPlotTimeSeries(list(reversed(key_group_list)),  create_title= False, legend= True, show_instance_name=False, show=True)
