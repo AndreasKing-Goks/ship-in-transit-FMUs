@@ -28,11 +28,24 @@ with config_path.open("r", encoding="utf-8") as f:
     config = yaml.safe_load(f)
 
 # =========================
+# Spawn Requests
+# =========================
+# Spawn requests (Singapore Strait)  
+own_ship = {
+    "start_time"        : 0.0,
+    "north_route"       : [0, 10000],
+    "east_route"        : [0, 10000],
+    "speed_setpoints"   : 4.0,
+}
+spawn_requests = {
+    "OS0": own_ship,
+}
+
+# =========================
 # Instantiate Co-simulation Wrapper
 # =========================
 # Instantiate
-instance = ShipInTransitCoSimulation(config=config, ROOT=ROOT)
-
+instance = ShipInTransitCoSimulation(config=config, ROOT=ROOT, spawn_requests=spawn_requests)
 
 # =========================
 # Simulate
@@ -41,13 +54,13 @@ instance = ShipInTransitCoSimulation(config=config, ROOT=ROOT)
 # start_time = time.perf_counter()
 
 # scope_angles_deg = [30, -30, -30, -15, -30, 0, 15, 30, 0]
-scope_angles_deg = [-30]
+scope_angles_deg = [30, ]
 i = 0
 prev_request_scope_angle = False
 
 while instance.time <= instance.stopTime:
 
-    if instance.time > 1000e9:
+    if instance.time > 500e9:
         instance.SingleVariableManipulation(
             slaveName="OS0__MISSION_MANAGER",
             slaveVar="is_inside_trigger_zone",

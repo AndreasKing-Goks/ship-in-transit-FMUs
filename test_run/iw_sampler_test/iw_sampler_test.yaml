@@ -7,18 +7,6 @@ ships:
   
   - id: OS0
 
-    spawn:
-      start_time: 0.0
-      north: 0.0
-      east: 0.0
-      yaw_angle_deg: -135.0
-      forward_speed: 0
-
-    route:
-      north: [0 , -10000]
-      east:  [0 , -10000]
-      speed: [4.0]          # Upon reaching the next waypoint
-
     SHIP_BLOCKS:
       - [MISSION_MANAGER, FMUs/simplified_ship/MissionManagerAST.fmu]
       - [AUTOPILOT, FMUs/simplified_ship/Autopilot.fmu]
