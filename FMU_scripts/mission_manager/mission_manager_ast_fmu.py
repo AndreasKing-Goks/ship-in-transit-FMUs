@@ -24,8 +24,8 @@ class MissionManagerAST(Fmi2Slave):
 
         # Parameters
         self.ra                         = 300.0
-        self.max_inter_wp               = 8
-        self.max_sampled_sp             = 5
+        self.max_inner_wp               = 8
+        self.max_sampled_inter_wp       = 5
         self.scope_angle_max_deg        = 45
         self.scope_length               = 2500  # 2.5 km
 
@@ -86,8 +86,8 @@ class MissionManagerAST(Fmi2Slave):
 
         # Registration
         self.register_variable(Real("ra", causality=Fmi2Causality.parameter, variability=Fmi2Variability.tunable))
-        self.register_variable(Integer("max_inter_wp", causality=Fmi2Causality.parameter, variability=Fmi2Variability.tunable))
-        self.register_variable(Integer("max_sampled_sp", causality=Fmi2Causality.parameter, variability=Fmi2Variability.tunable))
+        self.register_variable(Integer("max_inner_wp", causality=Fmi2Causality.parameter, variability=Fmi2Variability.tunable))
+        self.register_variable(Integer("max_sampled_inter_wp", causality=Fmi2Causality.parameter, variability=Fmi2Variability.tunable))
         self.register_variable(Real("scope_angle_max_deg", causality=Fmi2Causality.parameter, variability=Fmi2Variability.tunable))
         self.register_variable(Real("scope_length", causality=Fmi2Causality.parameter, variability=Fmi2Variability.tunable))
         
@@ -135,8 +135,8 @@ class MissionManagerAST(Fmi2Slave):
         if self._valid_triplet(self.wp_start_north, self.wp_start_east, self.wp_start_speed):
             traj.append((float(self.wp_start_north), float(self.wp_start_east), float(self.wp_start_speed)))
 
-        # Intermediate (1..max_inter_wp)
-        m = int(self.max_inter_wp)
+        # Intermediate (1..max_inner_wp)
+        m = int(self.max_inner_wp)
         m = max(0, min(m, 8))
         for i in range(1, m + 1):
             n = getattr(self, f"wp_{i}_north")
@@ -388,7 +388,7 @@ class MissionManagerAST(Fmi2Slave):
             init_is_sampling            = self.is_inside_trigger_zone and self._init_i_setpoint_sampler
             is_sampling                 = self.is_inside_trigger_zone and entering_roa and next_sp_is_intermediate and (not self._segment_switch)
             is_sampling_after_switch    = self.is_inside_trigger_zone and entering_roa and (not next_sp_is_intermediate) and self._segment_switch
-            within_sampling_bound       = self._actual_is_sampling_count < self.max_sampled_sp
+            within_sampling_bound       = self._actual_is_sampling_count < self.max_sampled_inter_wp
             
             # Place the zeroeth IS ONCE if the IS sampler is active and
             # if inside the trigger zone, prepare for sampling new intermediate setpoint

@@ -332,10 +332,13 @@ class ShipInTransitCoSimulation(CoSimInstance):
             
             # Get the ship's unprocessed route
             # If route is not belong to any group, access it from data/route/ directly
-            group = simu_config["map"].get("group", None)
+            map             = simu_config.get("map", None)
+            group           = None if map is None else map.get("group", None)
+            route_filename  = ship_config.get("route_file_name")
+            
             ship_route_path = get_ship_route_path_from_group(ROOT=ROOT, 
                                                              group=group,
-                                                             route_filename=ship_config["route_filename"])
+                                                             route_filename=route_filename)
             raw_route = load_waypoints(ship_route_path)
             
             # Prepare the route and spawn request
