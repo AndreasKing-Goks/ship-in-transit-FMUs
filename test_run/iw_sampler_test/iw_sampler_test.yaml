@@ -11,12 +11,12 @@ ships:
       start_time: 0.0
       north: 0.0
       east: 0.0
-      yaw_angle_deg: 45.0
+      yaw_angle_deg: -135.0
       forward_speed: 0
 
     route:
-      north: [0 , 10000]
-      east:  [0 , 10000]
+      north: [0 , -10000]
+      east:  [0 , -10000]
       speed: [4.0]          # Upon reaching the next waypoint
 
     SHIP_BLOCKS:
@@ -88,7 +88,7 @@ ships:
     fmu_params:
       MISSION_MANAGER:
         ra: 300
-        max_sampled_sp: 1
+        max_sampled_inter_wp: 1
         scope_angle_max_deg: 45
         scope_length: 2500
 

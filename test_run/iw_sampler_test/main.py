@@ -26,7 +26,7 @@ save_path = ROOT / "saved_animation" / "iw_sampler_test.gif"
 
 with config_path.open("r", encoding="utf-8") as f:
     config = yaml.safe_load(f)
-    
+
 # =========================
 # Instantiate Co-simulation Wrapper
 # =========================
@@ -41,7 +41,7 @@ instance = ShipInTransitCoSimulation(config=config, ROOT=ROOT)
 # start_time = time.perf_counter()
 
 # scope_angles_deg = [30, -30, -30, -15, -30, 0, 15, 30, 0]
-scope_angles_deg = [30]
+scope_angles_deg = [-30]
 i = 0
 prev_request_scope_angle = False
 
@@ -148,38 +148,38 @@ instance.AnimateFleetTrajectory(
 # Plot Trajectory
 instance.PlotFleetTrajectory(mode="quick", ship_scale=1.0)
 
-# Plot Simulation Results
-key_group_list = [
-    ## Own Ship
-    # Base results
-    ["OS0.north"],
-    ["OS0.east"],
-    ["OS0.forward_speed", "OS0.next_wp_speed", "OS0.total_ship_speed"],
-    ["OS0.yaw_angle_rad", "OS0.yaw_angle_ref_rad"],
-    ["OS0.rudder_angle_deg"],
-    ["OS0.e_ct"],
+# # Plot Simulation Results
+# key_group_list = [
+#     ## Own Ship
+#     # Base results
+#     ["OS0.north"],
+#     ["OS0.east"],
+#     ["OS0.forward_speed", "OS0.next_wp_speed", "OS0.total_ship_speed"],
+#     ["OS0.yaw_angle_rad", "OS0.yaw_angle_ref_rad"],
+#     ["OS0.rudder_angle_deg"],
+#     ["OS0.e_ct"],
     
-    # Waypoints
-    ["OS0.next_wp_north"],
-    ["OS0.next_wp_east"]
+#     # Waypoints
+#     ["OS0.next_wp_north"],
+#     ["OS0.next_wp_east"]
     
-    # # For non-single ship simulation only
-    # ["OS0.new_throttle_cmd"],
-    # ["OS0.new_rudder_angle_deg"],
-    # ["OS0.colav_rud_ang_increment"],
-    # ["OS0.beta_own_to_tar_1"],
-    # ["OS0.tcpa_own_to_tar_1"],
-    # ["OS0.dcpa_own_to_tar_1"],
-    # ["OS0.dist_own_to_tar_1"],
-    # ["OS0.rr_own_to_tar_1"],
+#     # # For non-single ship simulation only
+#     # ["OS0.new_throttle_cmd"],
+#     # ["OS0.new_rudder_angle_deg"],
+#     # ["OS0.colav_rud_ang_increment"],
+#     # ["OS0.beta_own_to_tar_1"],
+#     # ["OS0.tcpa_own_to_tar_1"],
+#     # ["OS0.dcpa_own_to_tar_1"],
+#     # ["OS0.dist_own_to_tar_1"],
+#     # ["OS0.rr_own_to_tar_1"],
     
-    # # For environment load-enabled simulation only
-    # ["OS0.current_speed"],
-    # ["OS0.current_direction_deg"],
-    # ["OS0.wind_speed"],
-    # ["OS0.wind_direction_deg"],
+#     # # For environment load-enabled simulation only
+#     # ["OS0.current_speed"],
+#     # ["OS0.current_direction_deg"],
+#     # ["OS0.wind_speed"],
+#     # ["OS0.wind_direction_deg"],
     
-]
+# ]
 
-# Plot Time Series
-instance.JoinPlotTimeSeries(list(reversed(key_group_list)),  create_title= False, legend= True, show_instance_name=False, show=True)
+# # Plot Time Series
+# instance.JoinPlotTimeSeries(list(reversed(key_group_list)),  create_title= False, legend= True, show_instance_name=False, show=True)
