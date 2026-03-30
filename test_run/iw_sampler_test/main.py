@@ -40,38 +40,66 @@ instance = ShipInTransitCoSimulation(config=config, ROOT=ROOT)
 # # Start timer
 # start_time = time.perf_counter()
 
-scope_angles_deg = [30, -30, -30, -15, -30, 0, 15, 30, 0]
+# scope_angles_deg = [30, -30, -30, -15, -30, 0, 15, 30, 0]
+scope_angles_deg = [30]
 i = 0
-request_scope_angle = False
-successful_is_sample = False
+prev_request_scope_angle = False
 
-while instance.time <=  instance.stopTime:
-    
-    # Above 250, ship samples intermediate setpoints
-    if instance.time > 250:
-        # Sethte is_inside_trigger_zone as True at all time
-        instance.SingleVariableManipulation(slaveName="OS0__MISSION_MANAGER", slaveVar="is_inside_trigger_zone", value=True)
-    
-        # Retrieve if IS sampling is succesful
-        successful_is_sample = instance.GetLastValue(slaveName="OS0__MISSION_MANAGER", slaveVar="successful_is_sample")
-        
-        # Is IS sampling is successful, push the state-action transition to the replay buffer
-        if successful_is_sample:
-            pass
-        
-        # Get the request scope angle flag
-        request_scope_angle = instance.GetLastValue(slaveName="OS0__MISSION_MANAGER", slaveVar="request_scope_angle")
-        
-        # Get the request scope angle flag
-        if (instance.time == 250) or request_scope_angle:
-            instance.SingleVariableManipulation(slaveName="OS0__MISSION_MANAGER", slaveVar="scope_angle_deg", value=scope_angles_deg[i])
+while instance.time <= instance.stopTime:
+
+    if instance.time > 1000e9:
+        instance.SingleVariableManipulation(
+            slaveName="OS0__MISSION_MANAGER",
+            slaveVar="is_inside_trigger_zone",
+            value=True
+        )
+
+    # Read outputs from the previous completed step
+    successful_is_sample = instance.GetLastValue(
+        slaveName="OS0__MISSION_MANAGER",
+        slaveVar="successful_is_sample"
+    )
+    request_scope_angle = instance.GetLastValue(
+        slaveName="OS0__MISSION_MANAGER",
+        slaveVar="request_scope_angle"
+    )
+
+    prev_wp_north = instance.GetLastValue("OS0__MISSION_MANAGER", "prev_wp_north")
+    prev_wp_east  = instance.GetLastValue("OS0__MISSION_MANAGER", "prev_wp_east")
+    next_wp_north = instance.GetLastValue("OS0__MISSION_MANAGER", "next_wp_north")
+    next_wp_east  = instance.GetLastValue("OS0__MISSION_MANAGER", "next_wp_east")
+
+    print(
+        f"t={instance.time:.1f}, "
+        f"req={request_scope_angle}, "
+        f"succ={successful_is_sample}, "
+        f"angle_idx={i}, "
+        f"prev=({prev_wp_north:.1f}, {prev_wp_east:.1f}), "
+        f"next=({next_wp_north:.1f}, {next_wp_east:.1f})"
+    )
+
+    # Feed a new angle only on rising edge of request
+    new_request = request_scope_angle and (not prev_request_scope_angle)
+
+    if new_request:
+        if i < len(scope_angles_deg):
+            instance.SingleVariableManipulation(
+                slaveName="OS0__MISSION_MANAGER",
+                slaveVar="scope_angle_deg",
+                value=scope_angles_deg[i]
+            )
+            print(f"  -> injecting scope angle {scope_angles_deg[i]} deg")
             i += 1
-            
+        else:
+            print("  -> no more scope angles available")
+            break
+
+    prev_request_scope_angle = request_scope_angle
+
     instance.step()
-    
-        # Integrate or stop the simulator
+
     if not instance.stop:
-        instance.time +=instance.stepSize
+        instance.time += instance.stepSize
     else:
         break
 
@@ -92,30 +120,30 @@ while instance.time <=  instance.stopTime:
 # - .avi
 # - .mov
 
-# # Animate Simulation
-# instance.AnimateFleetTrajectory(
-#         ship_ids=None,
-#         show=True,
-#         block=True,
-#         mode="quick",
-#         fig_width=10.0,
-#         margin_frac=0.08,
-#         equal_aspect=True,
-#         interval_ms=20,
-#         frame_step=2,
-#         trail_len=50,
-#         plot_routes=True,
-#         plot_waypoints=True,
-#         plot_roa=True,
-#         plot_start_end=True,
-#         with_labels=True,
-#         precompute_ship_outlines=True,
-#         # save_path=save_path,
-#         writer_fps=20,
-#         palette=None,
-#         blit=True,
-#         ship_scale=1.0
-#     )
+# Animate Simulation
+instance.AnimateFleetTrajectory(
+        ship_ids=None,
+        show=True,
+        block=True,
+        mode="quick",
+        fig_width=10.0,
+        margin_frac=0.08,
+        equal_aspect=True,
+        interval_ms=20,
+        frame_step=2,
+        trail_len=50,
+        plot_routes=True,
+        plot_waypoints=True,
+        plot_roa=True,
+        plot_start_end=True,
+        with_labels=True,
+        precompute_ship_outlines=True,
+        # save_path=save_path,
+        writer_fps=20,
+        palette=None,
+        blit=True,
+        ship_scale=1.0
+    )
 
 # Plot Trajectory
 instance.PlotFleetTrajectory(mode="quick", ship_scale=1.0)
@@ -130,8 +158,10 @@ key_group_list = [
     ["OS0.yaw_angle_rad", "OS0.yaw_angle_ref_rad"],
     ["OS0.rudder_angle_deg"],
     ["OS0.e_ct"],
-    ["OS0.shaft_speed_rpm", "OS0.shaft_speed_cmd_rpm"],
-    ["OS0.throttle_cmd"],
+    
+    # Waypoints
+    ["OS0.next_wp_north"],
+    ["OS0.next_wp_east"]
     
     # # For non-single ship simulation only
     # ["OS0.new_throttle_cmd"],

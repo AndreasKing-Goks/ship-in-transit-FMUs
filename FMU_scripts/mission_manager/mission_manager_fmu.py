@@ -22,7 +22,7 @@ class MissionManager(Fmi2Slave):
 
         # Parameters
         self.ra = 300.0
-        self.max_inter_wp = 8
+        self.max_inner_wp = 8
 
         # Waypoints (parameters)
         self.wp_start_north = 0.0
@@ -62,7 +62,7 @@ class MissionManager(Fmi2Slave):
 
         # Registration
         self.register_variable(Real("ra", causality=Fmi2Causality.parameter, variability=Fmi2Variability.tunable))
-        self.register_variable(Integer("max_inter_wp", causality=Fmi2Causality.parameter, variability=Fmi2Variability.tunable))
+        self.register_variable(Integer("max_inner_wp", causality=Fmi2Causality.parameter, variability=Fmi2Variability.tunable))
 
         self.register_variable(Real("north", causality=Fmi2Causality.input))
         self.register_variable(Real("east", causality=Fmi2Causality.input))
@@ -102,8 +102,8 @@ class MissionManager(Fmi2Slave):
         if self._valid_triplet(self.wp_start_north, self.wp_start_east, self.wp_start_speed):
             traj.append((float(self.wp_start_north), float(self.wp_start_east), float(self.wp_start_speed)))
 
-        # Intermediate (1..max_inter_wp)
-        m = int(self.max_inter_wp)
+        # Intermediate (1..max_inner_wp)
+        m = int(self.max_inner_wp)
         m = max(0, min(m, 8))
         for i in range(1, m + 1):
             n = getattr(self, f"wp_{i}_north")
