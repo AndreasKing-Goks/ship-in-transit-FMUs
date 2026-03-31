@@ -61,7 +61,7 @@ class MissionManagerIWSamplerSingleSegment(Fmi2Slave):
         ## Internal
         # Base trajectory
         self._traj                      = []
-        self._idx                       = 1
+        self._idx                       = 0
         self._traj_built                = False
         
         # For Intermediate waypoint sampling
@@ -83,7 +83,7 @@ class MissionManagerIWSamplerSingleSegment(Fmi2Slave):
         self.register_variable(Real("north", causality=Fmi2Causality.input))
         self.register_variable(Real("east", causality=Fmi2Causality.input))
         self.register_variable(Real("scope_angle_deg", causality=Fmi2Causality.input))
-        self.register_variable(Real("inside_trigger_zone", causality=Fmi2Causality.input))
+        self.register_variable(Boolean("inside_trigger_zone", causality=Fmi2Causality.input))
 
         self.register_variable(Real("wp_start_north", causality=Fmi2Causality.parameter, variability=Fmi2Variability.fixed))
         self.register_variable(Real("wp_start_east",  causality=Fmi2Causality.parameter, variability=Fmi2Variability.fixed))
@@ -136,7 +136,7 @@ class MissionManagerIWSamplerSingleSegment(Fmi2Slave):
             traj.append((float(self.wp_end_north), float(self.wp_end_east), float(self.wp_end_speed)))
 
         self._traj                      = traj.copy()
-        self._idx                       = 1
+        self._idx                       = 0
         self._traj_built                = True
         
         self._traj_base                 = traj.copy()
@@ -161,9 +161,9 @@ class MissionManagerIWSamplerSingleSegment(Fmi2Slave):
             self.last_segment_active = False
 
     def _dist2_to_next(self) -> float:
-        if self._idx >= len(self._traj):
+        if (self._idx + 1) >= len(self._traj):
             return np.inf
-        n2, e2, _ = self._traj[self._idx]
+        n2, e2, _ = self._traj[self._idx + 1]
         dn = n2 - float(self.north)
         de = e2 - float(self.east)
         return dn * dn + de * de
@@ -297,10 +297,10 @@ class MissionManagerIWSamplerSingleSegment(Fmi2Slave):
         self._inter_wp_proj_list.append(inter_wp_proj)
         self._insert_inter_wp_to_traj(inter_wp)
     
-    def _current_traj(self):
+    def _stay_at_current_traj(self):
         # Update prev/next using new index
-        p = self._traj[self._idx - 1]
-        q = self._traj[self._idx] if self._idx < len(self._traj) else self._traj[-1]
+        p = self._traj[self._idx] if (self._idx + 1) < len(self._traj) else self._traj[-2]
+        q = self._traj[self._idx + 1] if (self._idx + 1) < len(self._traj) else self._traj[-1]
 
         self.prev_wp_north, self.prev_wp_east, self.prev_wp_speed = p
         self.next_wp_north, self.next_wp_east, self.next_wp_speed = q
@@ -309,8 +309,8 @@ class MissionManagerIWSamplerSingleSegment(Fmi2Slave):
         self._idx += 1
 
         # Update prev/next using new index
-        p = self._traj[self._idx - 1]
-        q = self._traj[self._idx] if self._idx < len(self._traj) else self._traj[-1]
+        p = self._traj[self._idx] if (self._idx + 1) < len(self._traj) else self._traj[-2]
+        q = self._traj[self._idx + 1] if (self._idx + 1) < len(self._traj) else self._traj[-1]
 
         self.prev_wp_north, self.prev_wp_east, self.prev_wp_speed = p
         self.next_wp_north, self.next_wp_east, self.next_wp_speed = q
@@ -325,91 +325,115 @@ class MissionManagerIWSamplerSingleSegment(Fmi2Slave):
             if len(self._traj) < 2:
                 return True
             
-            # Finished state: no next waypoint exists anymore
-            if self._idx >= len(self._traj):
-                self.last_segment_active    = True
-                self.reach_wp_end           = True
-                self.prev_wp_speed          = 0.0
-                self.next_wp_speed          = 0.0
-                return True
-
-            ra2 = float(self.ra) * float(self.ra)
+            # Check if the ship enters radius of acceptance
+            ra2                 = float(self.ra) * float(self.ra)
+            entering_ra         = self._dist2_to_next() <= ra2          # Ship enters RoA
+            
+            # Last segment flag
+            on_final_leg                = (self._idx == len(self._traj) - 2)
+            self.last_segment_active    = on_final_leg
+            
+            # On the last segment
+            if self.last_segment_active:
+                # Update the reach wp end
+                self.reach_wp_end   = False if self.reach_wp_end is False else True # If it's already switched to True, stay True.
+            
+                # Finished state: no next waypoint exists anymore
+                if entering_ra:
+                    self.last_segment_active    = True
+                    self.reach_wp_end           = True
+                    self.prev_wp_speed          = 0.0
+                    self.next_wp_speed          = 0.0
+                    
+                # Immediate return itf the end waypoint already reached
+                if self.reach_wp_end:
+                    return True
+                
+                # No planned intermediate waypoint sampling
+                if self.max_sampled_inter_wp == 0:
+                    return True
+                
+                # If there exists later intermediate waypoint sampling, cancel the last_segment_active
+                else:
+                    self.last_segment_active = False
             
             ########################################## IS SAMPLE ##########################################
             # List of triggers
-            entering_ra                 = self._dist2_to_next() <= ra2      # Ship enters RoA
             within_sampling_max_count   = self._accepted_sampled_inter_wp < self.max_sampled_inter_wp
+            next_wp_is_inter            = ((self._idx + 1) < len(self._traj) 
+                                           and self._traj[self._idx + 1] not in self._traj_base)
             
             # List of conditions
-            place_zeroeth_inter_wp      = within_sampling_max_count and self.inside_trigger_zone and self._first_enter_trigger_zone
-            enable_inter_wp_sampling    = within_sampling_max_count and self.inside_trigger_zone and not self._first_enter_trigger_zone and entering_ra
+            place_zeroeth_inter_wp      = (within_sampling_max_count 
+                                           and self.inside_trigger_zone 
+                                           and self._first_enter_trigger_zone)
+            enable_inter_wp_sampling    = (within_sampling_max_count 
+                                           and self.inside_trigger_zone 
+                                           and not self._first_enter_trigger_zone 
+                                           and entering_ra 
+                                           and next_wp_is_inter)
             
-            ## Zeroeth and first intermediate waypoint placement phase begin when first entering the trigger zone
-            if place_zeroeth_inter_wp:
-                
-                # At first step, request the scope angle for the next step
-                if not self.request_scope_angle:
-                    # Place the zeroeth intermediate waypoint
-                    self._get_zeroeth_intermediate_waypoint()
-                    
-                    # Request the scope angle for the next step
-                    self.request_scope_angle        = True
-
-                    return True
-                
-                # After the request, use the input scope angle to compute the intermediate waypoint
-                elif self.request_scope_angle:
+            # ======================================================================================
+            # First Condition: handle the scope angle request
+            # ======================================================================================
+            if self.request_scope_angle:
+                # Condition when then ship first enter the trigger zone after getting the zeroeth intermediate waypoint
+                if self._first_enter_trigger_zone:
                     # Compute the first intermediate waypoint
                     self._get_intermediate_waypoint(self.scope_angle_deg)
                     
-                    # Advance the trajectory segment
-                    self._advance_traj()
-                    
-                    # Turn off the scope angle request after receiving it
-                    self.request_scope_angle        = False
+                    # Stay at the current trajectory segment
+                    self._stay_at_current_traj()
                     
                     # Now exit the zeroeth intermediate waypoint placement phase
                     self._first_enter_trigger_zone  = False
-                    
-                    return True
-            
-            # ## Second and onwards intermediate waypoints placement phase
-            # if enable_inter_wp_sampling:
                 
-            #     # Request the scope angle for the next step
-            #     if not self.request_scope_angle:
+                # Applicable for the rest of intermediate waypoint samples    
+                else:
+                    # Compute the second intermediate waypoint and onwards
+                    self._get_intermediate_waypoint(self.scope_angle_deg)
                     
-            #         # Request the scope angle for the next step
-            #         self.request_scope_angle        = True
-
-            #         return True
+                    # This time advance the trajectory
+                    self._advance_traj()
+                    
+                # Then turn off the scope angle request after receiving it
+                self.request_scope_angle        = False
                 
-            #     # After the request, use the input scope angle to compute the intermediate waypoint
-            #     elif self.request_scope_angle:
-            #         # Compute the first intermediate waypoint
-            #         self._get_intermediate_waypoint(self.scope_angle_deg)
-                    
-            #         # Advance the trajectory segment
-            #         self._advance_traj()
-                    
-            #         # Turn off the scope angle request after receiving it
-            #         self.request_scope_angle        = False
-                    
-            #         # Now exit the zeroeth intermediate waypoint placement phase
-            #         self._first_enter_trigger_zone  = False
-                    
-            #         return True
+                # Increment the sampling count after the sampling
+                self._accepted_sampled_inter_wp += 1
                 
-            
-            ###############################################################################################
-
-            # If we're already on last segment, latch and keep outputs fixed
-            self.last_segment_active = (self._idx == len(self._traj) - 1)
-
-            # Advance ONLY when close to the NEXT waypoint
-            if entering_ra:
-                self._advance_traj()
                 return True
+                    
+            # ======================================================================================
+            # Second Condition: Zeroeth intermediate waypoint placement + request first scope angle
+            # ======================================================================================
+            if place_zeroeth_inter_wp:
+                # Place the zeroeth intermediate waypoint
+                self._get_zeroeth_intermediate_waypoint()
+                
+                # Advance the trajectory segment
+                self._advance_traj()
+                
+                # Request the scope angle for the next step
+                self.request_scope_angle        = True
+
+                return True
+            
+            # ======================================================================================
+            # Third Condition: Request second and onward scope angle
+            # ======================================================================================
+            elif enable_inter_wp_sampling:
+                # Request the scope angle for the next step
+                self.request_scope_angle        = True
+
+                return True
+                
+            ###############################################################################################
+                    
+            if entering_ra and not self.last_segment_active:
+                self._advance_traj()
+            
+            return True
             
         except Exception as e:
             # Keep host alive; do not crash co-sim

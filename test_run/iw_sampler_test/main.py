@@ -30,7 +30,6 @@ with config_path.open("r", encoding="utf-8") as f:
 # =========================
 # Spawn Requests
 # =========================
-# Spawn requests (Singapore Strait)  
 own_ship = {
     "start_time"        : 0.0,
     "north_route"       : [0, 10000],
@@ -58,10 +57,10 @@ scope_angles_deg = [30, -30]
 i = 0
 request_scope_angle = False
 
-prev_wp_north = instance.GetLastValue("OS0__MISSION_MANAGER", "prev_wp_north")
-prev_wp_east  = instance.GetLastValue("OS0__MISSION_MANAGER", "prev_wp_east")
-next_wp_north = instance.GetLastValue("OS0__MISSION_MANAGER", "next_wp_north")
-next_wp_east  = instance.GetLastValue("OS0__MISSION_MANAGER", "next_wp_east")
+# prev_wp_north = instance.GetLastValue("OS0__MISSION_MANAGER", "prev_wp_north")
+# prev_wp_east  = instance.GetLastValue("OS0__MISSION_MANAGER", "prev_wp_east")
+# next_wp_north = instance.GetLastValue("OS0__MISSION_MANAGER", "next_wp_north")
+# next_wp_east  = instance.GetLastValue("OS0__MISSION_MANAGER", "next_wp_east")
 
 # print(
 #     f"t={instance.time:.1f}, "
@@ -91,7 +90,7 @@ while instance.time <= instance.stopTime:
         slaveVar="request_scope_angle"
     )
 
-    print("request_scope_angle: ", request_scope_angle)
+    # print("request_scope_angle: ", request_scope_angle)
     
     if request_scope_angle:
         instance.SingleVariableManipulation(
@@ -102,14 +101,21 @@ while instance.time <= instance.stopTime:
         print(f"  -> injecting scope angle {scope_angles_deg[i]} deg")
         i += 1
         request_scope_angle = False
+        
+        _idx = instance.GetLastValue("OS0__MISSION_MANAGER", "_idx")
+        print("traj_index", _idx)
+        
+        next_wp_north = instance.GetLastValue("OS0__MISSION_MANAGER", "next_wp_north")
+        next_wp_east  = instance.GetLastValue("OS0__MISSION_MANAGER", "next_wp_east")
+        print(f"next=({next_wp_north:.1f}, {next_wp_east:.1f})")
 
     instance.step()
     instance.PostSolverFunctionCall()
     
-    prev_wp_north = instance.GetLastValue("OS0__MISSION_MANAGER", "prev_wp_north")
-    prev_wp_east  = instance.GetLastValue("OS0__MISSION_MANAGER", "prev_wp_east")
-    next_wp_north = instance.GetLastValue("OS0__MISSION_MANAGER", "next_wp_north")
-    next_wp_east  = instance.GetLastValue("OS0__MISSION_MANAGER", "next_wp_east")
+    # prev_wp_north = instance.GetLastValue("OS0__MISSION_MANAGER", "prev_wp_north")
+    # prev_wp_east  = instance.GetLastValue("OS0__MISSION_MANAGER", "prev_wp_east")
+    # next_wp_north = instance.GetLastValue("OS0__MISSION_MANAGER", "next_wp_north")
+    # next_wp_east  = instance.GetLastValue("OS0__MISSION_MANAGER", "next_wp_east")
 
     # print(
     #     f"t={instance.time:.1f}, "
@@ -118,9 +124,6 @@ while instance.time <= instance.stopTime:
     #     f"prev=({prev_wp_north:.1f}, {prev_wp_east:.1f}), "
     #     f"next=({next_wp_north:.1f}, {next_wp_east:.1f})"
     # )
-    
-    _idx = instance.GetLastValue("OS0__MISSION_MANAGER", "_idx")
-    print("traj_index", _idx)
     
     if not instance.stop:
         instance.time += instance.stepSize
