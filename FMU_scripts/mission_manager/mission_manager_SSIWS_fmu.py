@@ -1,11 +1,12 @@
 """
-Mission Manager Python FMU implementation.
-This FMU manages a list of mission (waypoints and desired speeds) and provides the previous and next setpoints.
-It includes a switching mechanism based on a radius of acceptance.
-This FMU contains a minimum 2 setpoints to a maximum 10 setpoints.
+Mission Manager FMU for single-segment trajector-intermediate waypoint sampling. 
+This FMU manages waypoint progression using previous and next setpoints, 
+supports zeroeth and sampled intermediate waypoint insertion inside a trigger zone, 
+and requests external scope-angle inputs to generate new intermediate waypoints 
+during runtime.
 
 Authors : Andreas R.G. Sitorus
-Date    : Januari 2026
+Date    : April 2026
 """
 
 from pythonfmu import Fmi2Causality, Fmi2Slave, Fmi2Variability, Real, Integer, Boolean, String
@@ -13,9 +14,9 @@ import numpy as np
 import traceback
 
 
-class MissionManagerIWSamplerSingleSegment(Fmi2Slave):
+class MissionManagerSingleSegmentIWSampler(Fmi2Slave):
     author = "Andreas R.G. Sitorus"
-    description = "Mission Manager (index-based, deterministic)"
+    description = "Mission Manager for single-segment trajectory-intermediate waypoint sampling"
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -57,6 +58,9 @@ class MissionManagerIWSamplerSingleSegment(Fmi2Slave):
         self.last_segment_active        = False
         self.reach_wp_end               = False
         self.request_scope_angle        = False
+        
+        # Debug
+        self.messages                   = "-"
 
         ## Internal
         # Base trajectory
@@ -108,8 +112,9 @@ class MissionManagerIWSamplerSingleSegment(Fmi2Slave):
         self.register_variable(Boolean("reach_wp_end", causality=Fmi2Causality.output))
         self.register_variable(Boolean("request_scope_angle", causality=Fmi2Causality.output))
         
-        # debug
+        # Debug
         self.register_variable(Integer("_idx", causality=Fmi2Causality.output))
+        self.register_variable(String("messages", causality=Fmi2Causality.output))
 
     def _valid_triplet(self, n, e, s) -> bool:
         return np.isfinite(n) and np.isfinite(e) and np.isfinite(s)
@@ -296,18 +301,14 @@ class MissionManagerIWSamplerSingleSegment(Fmi2Slave):
         self._inter_wp_list.append(inter_wp)
         self._inter_wp_proj_list.append(inter_wp_proj)
         self._insert_inter_wp_to_traj(inter_wp)
-    
-    def _stay_at_current_traj(self):
-        # Update prev/next using new index
-        p = self._traj[self._idx] if (self._idx + 1) < len(self._traj) else self._traj[-2]
-        q = self._traj[self._idx + 1] if (self._idx + 1) < len(self._traj) else self._traj[-1]
-
-        self.prev_wp_north, self.prev_wp_east, self.prev_wp_speed = p
-        self.next_wp_north, self.next_wp_east, self.next_wp_speed = q
         
     def _advance_traj(self):
         self._idx += 1
+        
+    def _reverse_traj(self):
+        self._idx -= 1
 
+    def _get_prev_and_next_waypoint(self):
         # Update prev/next using new index
         p = self._traj[self._idx] if (self._idx + 1) < len(self._traj) else self._traj[-2]
         q = self._traj[self._idx + 1] if (self._idx + 1) < len(self._traj) else self._traj[-1]
@@ -329,41 +330,17 @@ class MissionManagerIWSamplerSingleSegment(Fmi2Slave):
             ra2                 = float(self.ra) * float(self.ra)
             entering_ra         = self._dist2_to_next() <= ra2          # Ship enters RoA
             
+            # Next-point status
+            next_wp_exists = (self._idx + 1) < len(self._traj)
+            next_wp_is_end = next_wp_exists and (self._traj[self._idx + 1] == self._traj_base[-1])
+            next_wp_is_inter = next_wp_exists and (self._traj[self._idx + 1] not in self._traj_base)
+
             # Last segment flag
             on_final_leg                = (self._idx == len(self._traj) - 2)
             self.last_segment_active    = on_final_leg
             
-            # On the last segment
-            if self.last_segment_active:
-                # Update the reach wp end
-                self.reach_wp_end   = False if self.reach_wp_end is False else True # If it's already switched to True, stay True.
-            
-                # Finished state: no next waypoint exists anymore
-                if entering_ra:
-                    self.last_segment_active    = True
-                    self.reach_wp_end           = True
-                    self.prev_wp_speed          = 0.0
-                    self.next_wp_speed          = 0.0
-                    
-                # Immediate return itf the end waypoint already reached
-                if self.reach_wp_end:
-                    return True
-                
-                # No planned intermediate waypoint sampling
-                if self.max_sampled_inter_wp == 0:
-                    return True
-                
-                # If there exists later intermediate waypoint sampling, cancel the last_segment_active
-                else:
-                    self.last_segment_active = False
-            
-            ########################################## IS SAMPLE ##########################################
             # List of triggers
             within_sampling_max_count   = self._accepted_sampled_inter_wp < self.max_sampled_inter_wp
-            next_wp_is_inter            = ((self._idx + 1) < len(self._traj) 
-                                           and self._traj[self._idx + 1] not in self._traj_base)
-            
-            # List of conditions
             place_zeroeth_inter_wp      = (within_sampling_max_count 
                                            and self.inside_trigger_zone 
                                            and self._first_enter_trigger_zone)
@@ -371,36 +348,40 @@ class MissionManagerIWSamplerSingleSegment(Fmi2Slave):
                                            and self.inside_trigger_zone 
                                            and not self._first_enter_trigger_zone 
                                            and entering_ra 
-                                           and next_wp_is_inter)
-            
+                                           and next_wp_is_inter
+                                           )
+
             # ======================================================================================
-            # First Condition: handle the scope angle request
+            # First Condition: Handle the scope angle request
             # ======================================================================================
             if self.request_scope_angle:
+                # Compute the intermediate waypoint
+                self._get_intermediate_waypoint(self.scope_angle_deg)
+                
                 # Condition when then ship first enter the trigger zone after getting the zeroeth intermediate waypoint
-                if self._first_enter_trigger_zone:
-                    # Compute the first intermediate waypoint
-                    self._get_intermediate_waypoint(self.scope_angle_deg)
-                    
-                    # Stay at the current trajectory segment
-                    self._stay_at_current_traj()
+                if self._first_enter_trigger_zone:    
+                    # Advance the trajectory
+                    self._advance_traj()
+                    self._get_prev_and_next_waypoint()
                     
                     # Now exit the zeroeth intermediate waypoint placement phase
                     self._first_enter_trigger_zone  = False
-                
-                # Applicable for the rest of intermediate waypoint samples    
-                else:
-                    # Compute the second intermediate waypoint and onwards
-                    self._get_intermediate_waypoint(self.scope_angle_deg)
                     
-                    # This time advance the trajectory
+                    messages= "First IW Sampling"
+                else:
+                    # Advance the trajectory
                     self._advance_traj()
+                    self._get_prev_and_next_waypoint()
+                    messages= "Second and Onwards IW Sampling"
                     
                 # Then turn off the scope angle request after receiving it
                 self.request_scope_angle        = False
                 
                 # Increment the sampling count after the sampling
                 self._accepted_sampled_inter_wp += 1
+                
+                # Debug
+                self.messages = f"Scope Angle Request Handling: {messages}"
                 
                 return True
                     
@@ -411,28 +392,58 @@ class MissionManagerIWSamplerSingleSegment(Fmi2Slave):
                 # Place the zeroeth intermediate waypoint
                 self._get_zeroeth_intermediate_waypoint()
                 
-                # Advance the trajectory segment
-                self._advance_traj()
+                # Stay at the current trajectory
+                self._get_prev_and_next_waypoint()
                 
                 # Request the scope angle for the next step
-                self.request_scope_angle        = True
+                self.request_scope_angle    = True
+                
+                # Debug
+                self.messages = f"Zeroeth IW Sampling + First Scope Angle Request"
 
                 return True
             
             # ======================================================================================
-            # Third Condition: Request second and onward scope angle
+            # Third Condition: Request second and onwards scope angle
             # ======================================================================================
             elif enable_inter_wp_sampling:
                 # Request the scope angle for the next step
-                self.request_scope_angle        = True
-
+                self.request_scope_angle    = True
+                
+                # Debug
+                self.messages = f"Second and Onwards Scope Angle Request"
+                
+                return True
+            
+            # ======================================================================================
+            # Fourth Condition: End Condition
+            # ======================================================================================
+            if entering_ra and next_wp_is_end:
+                self.reach_wp_end           = True
+                self.prev_wp_speed          = 0.0
+                self.next_wp_speed          = 0.0
+                
+                # Debug
+                self.messages = f"Reaching the Final Waypoint"
+                
                 return True
                 
-            ###############################################################################################
-                    
-            if entering_ra and not self.last_segment_active:
+            # ======================================================================================
+            # Fifth Condition: Normal Progression
+            # ======================================================================================
+            if entering_ra:
+                # Advance the trajectory
                 self._advance_traj()
+                self._get_prev_and_next_waypoint()
+                
+                # Debug
+                self.messages = f"Normal Progression"
+                
+                return True
             
+            # Debug
+            self.messages = f"Passthrough"
+                
             return True
             
         except Exception as e:

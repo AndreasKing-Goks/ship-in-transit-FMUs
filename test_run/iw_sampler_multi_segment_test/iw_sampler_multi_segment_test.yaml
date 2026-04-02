@@ -8,7 +8,7 @@ ships:
   - id: OS0
 
     SHIP_BLOCKS:
-      - [MISSION_MANAGER, FMUs/simplified_ship/MissionManagerIWSamplerSingleSegment.fmu]
+      - [MISSION_MANAGER, FMUs/simplified_ship/MissionManagerSingleSegmentIWSampler.fmu]
       - [AUTOPILOT, FMUs/simplified_ship/Autopilot.fmu]
       - [SPEED_CONTROLLER, FMUs/simplified_ship/SpeedController.fmu]
       - [RUDDER, FMUs/simplified_ship/Rudder.fmu]
@@ -76,7 +76,7 @@ ships:
     fmu_params:
       MISSION_MANAGER:
         ra: 300
-        max_sampled_inter_wp: 1
+        max_sampled_inter_wp: 7
         scope_angle_max_deg: 45
         scope_length: 2500
 
