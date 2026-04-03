@@ -32,8 +32,8 @@ with config_path.open("r", encoding="utf-8") as f:
 # =========================
 own_ship = {
     "start_time"        : 0.0,
-    "north_route"       : [0, 10000],
-    "east_route"        : [0, 10000],
+    "north_route"       : [0, 10000, 0],
+    "east_route"        : [0, 10000, 20000],
     "speed_setpoints"   : 4.0,
 }
 spawn_requests = {
