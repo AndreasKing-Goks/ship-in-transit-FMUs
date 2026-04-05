@@ -28,10 +28,10 @@ class ShipInTransitCoSimulation(CoSimInstance):
         especially built for running the FMU-based Ship In Transit Simulator
     '''
     def __init__(self,
-                 config             : dict,
-                 ROOT               : Path,
-                 spawn_requests     : dict=None,
-                 IW_sampling_anim   : bool=False,
+                 config                 : dict,
+                 ROOT                   : Path,
+                 spawn_requests         : dict=None,
+                 IW_sampling_animated   : bool=False,
                  ):
         # =========================
         # Instantiate the Parent Class
@@ -88,56 +88,56 @@ class ShipInTransitCoSimulation(CoSimInstance):
             self.AddMap(ROOT=ROOT, map_filename=self.map.get("filename"))
 
         # =========================
-        # For IW sampling animation
+        # For IW sampling
         # =========================
-        self.IW_sampling_anim           = False
-        if IW_sampling_anim:
-            self.IW_sampling_anim       = IW_sampling_anim
+        self.ship_with_IW_sampling  = []
+        self.IW_sampling_animated   = IW_sampling_animated
+        self.segment_idx            = 1
+        self.idx_in_segment         = 1
+
+        if self.IW_sampling_animated:
             self.IW_sampling_anim_data  = {}
-            
-            IW_sampling_available_list  = []
-            
-            # Pre-load the animation data
-            for ship_config in ship_configs:
-                ship_id = ship_config["id"]
-                
-                IW_sampling_animated = ship_config.get("IW_sampling_animated", False)
-                IW_sampling_available_list.append(IW_sampling_animated)
-                if not IW_sampling_animated:
-                    continue
-                    
-                inter_wp_north_base = self.GetLastValue(
-                    slaveName=self.ship_slave(prefix=ship_id, block="MISSION_MANAGER"),
-                    slaveVar="prev_wp_north"
-                )
-                inter_wp_east_base = self.GetLastValue(
-                    slaveName=self.ship_slave(prefix=ship_id, block="MISSION_MANAGER"),
-                    slaveVar="prev_wp_east"
-                )
-                inter_wp_north_head = self.GetLastValue(
-                    slaveName=self.ship_slave(prefix=ship_id, block="MISSION_MANAGER"),
-                    slaveVar="next_wp_north"
-                )
-                inter_wp_east_head = self.GetLastValue(
-                    slaveName=self.ship_slave(prefix=ship_id, block="MISSION_MANAGER"),
-                    slaveVar="next_wp_east"
-                )
-                
-                # Initial animation data
-                data = {
-                    "active_path_north"     : [inter_wp_north_base, inter_wp_north_head],
-                    "active_path_east"      : [inter_wp_east_base,  inter_wp_east_head],
-                    "inter_wp_proj_north"   : None,
-                    "inter_wp_proj_east"    : None,
-                }
-                
-                # Initialize per-ship container
-                self.IW_sampling_anim_data[ship_id]               = {}
-                self.IW_sampling_anim_data[ship_id][self.time]    = data
-            
-            # If no ship uses IW sampling animation, turn the feature off
-            if not any(IW_sampling_available_list):
-                self.IW_sampling_anim = False
+            any_IW_sampling_animated    = False
+
+        for ship_config in ship_configs:
+            ship_id = ship_config["id"]
+
+            # Normalize IW_sampling config
+            IW_sampling_cfg = ship_config.get("IW_sampling", None)
+
+            has_IW_sampling = False
+            animate_ship_IW = False
+
+            if isinstance(IW_sampling_cfg, dict):
+                has_IW_sampling = True
+                animate_ship_IW = IW_sampling_cfg.get("active", False)
+
+            # Skip ships without IW sampling
+            if not has_IW_sampling:
+                continue
+
+            self.ship_with_IW_sampling.append(ship_id)
+
+            # Skip animation prep if globally off or per-ship off
+            if not self.IW_sampling_animated or not animate_ship_IW:
+                continue
+
+            any_IW_sampling_animated = True
+
+            data = {
+                "active_path": {
+                    "north": ship_config.get("north"),
+                    "east": ship_config.get("east"),
+                },
+                "sampled_inter_wps": [],
+                "sampled_proj_points": [],
+            }
+
+            self.IW_sampling_anim_data[ship_id] = {self.time: data}
+
+        # Turn off animation if no ship actually uses it
+        if self.IW_sampling_animated and not any_IW_sampling_animated:
+            self.IW_sampling_animated = False
             
 
 # =============================================================================================================
@@ -677,13 +677,48 @@ class ShipInTransitCoSimulation(CoSimInstance):
                 sys.exit(1)
     
     
-    def PreSolverFunctionCall(self):
+    def PreSolverFunctionCall(self, action=None, cond=None):
         """
             Function to handle:
             - External input handling (such as RL-action)
             - Additional FMU manipulation using given external input
         """
-        pass
+        # If one of the argumen is None, skip this phase
+        if (action is None) or (cond is None):
+            return
+        
+        scope_angle_deg     = action    # Obtained from the policy
+        inside_trigger_zone = cond      # Obtained when the target ships is within proximity to the own ship, dict
+        
+        for ship_config in self.ship_configs:
+            ship_id = ship_config.get("id")
+            
+            # Exclude ship without IW sampling
+            if ship_id not in self.ship_with_IW_sampling:
+                continue
+            
+            self.SingleVariableManipulation(
+                slaveName=self.ship_slave(prefix=ship_id, block="MISSION_MANAGER"),
+                slaveVar="inside_trigger_zone",
+                value=inside_trigger_zone
+            )
+
+            # Read outputs from the previous completed step
+            request_scope_angle = self.GetLastValue(
+                slaveName=self.ship_slave(prefix=ship_id, block="MISSION_MANAGER"),
+                slaveVar="request_scope_angle"
+            )
+            
+            if request_scope_angle:
+                self.SingleVariableManipulation(
+                    slaveName=self.ship_slave(prefix=ship_id, block="MISSION_MANAGER"),
+                    slaveVar="scope_angle_deg",
+                    value=scope_angle_deg
+                )
+                print(f"  -> injecting scope angle {scope_angle_deg} deg")
+                i += 1
+            
+        return
     
     
     def update_ship_reach_end_point_status(self, ship_id):
@@ -763,6 +798,48 @@ class ShipInTransitCoSimulation(CoSimInstance):
         
         ## Conclude the stop flag
         self.stop = own_ship_reaches_end_waypoint or (all_ship_reaches_end_waypoint or any_ship_collides)
+        
+        # ==================================
+        # Gather IW sampling animation data
+        # ==================================
+        if self.IW_sampling_animated:
+            # Pre-load the animation data
+            for ship_config in self.ship_configs:
+                ship_id = ship_config["id"]
+                
+                IW_sampling_animated = ship_config.get("IW_sampling_animated", False)
+                if not IW_sampling_animated:
+                    continue
+                    
+                inter_wp_north_base = self.GetLastValue(
+                    slaveName=self.ship_slave(prefix=ship_id, block="MISSION_MANAGER"),
+                    slaveVar="prev_wp_north"
+                )
+                inter_wp_east_base = self.GetLastValue(
+                    slaveName=self.ship_slave(prefix=ship_id, block="MISSION_MANAGER"),
+                    slaveVar="prev_wp_east"
+                )
+                inter_wp_north_head = self.GetLastValue(
+                    slaveName=self.ship_slave(prefix=ship_id, block="MISSION_MANAGER"),
+                    slaveVar="next_wp_north"
+                )
+                inter_wp_east_head = self.GetLastValue(
+                    slaveName=self.ship_slave(prefix=ship_id, block="MISSION_MANAGER"),
+                    slaveVar="next_wp_east"
+                )
+                
+                # Initial animation data
+                data = {
+                    "active_path": { 
+                        "north"     : [inter_wp_north_base, inter_wp_north_head], 
+                        "east"      : [inter_wp_east_base,  inter_wp_east_head]
+                    },
+                    "sampled_inter_wps"   : [],
+                    "sampled_proj_points" : [],
+                }
+                
+                # Update per-ship container
+                self.IW_sampling_anim_data[ship_id][self.time]    = data
         
 
     def step(self):
@@ -1598,7 +1675,7 @@ class ShipInTransitCoSimulation(CoSimInstance):
         if palette is None:
             palette = ["#0c3c78", "#d90808", "#2a9d8f", "#f4a261", "#6a4c93", "#264653"]
 
-        if self.IW_sampling_anim:
+        if self.IW_sampling_animated:
             artists = {
                 "trail": {},
                 "outline": {},

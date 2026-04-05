@@ -6,7 +6,9 @@ simulation:
 ships:
   
   - id: OS0
-    IW_sampling_animated: True
+    IW_sampling:
+      active: True
+      animated: True
 
     SHIP_BLOCKS:
       - [MISSION_MANAGER, FMUs/simplified_ship/MissionManagerSingleSegmentIWSampler.fmu]
