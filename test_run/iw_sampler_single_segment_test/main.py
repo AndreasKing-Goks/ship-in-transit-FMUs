@@ -53,7 +53,7 @@ instance = ShipInTransitCoSimulation(config=config, ROOT=ROOT, spawn_requests=sp
 # start_time = time.perf_counter()
 
 # scope_angles_deg = [30, -30, -30, -15, -30, 0, 15, 30, 0]
-scope_angles_deg = [30, -30, -45, 30, 40, 0, 30]
+scope_angles_deg = [30, -30, -45, 30, 40]
 i = 0
 request_scope_angle = False
 

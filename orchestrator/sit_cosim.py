@@ -28,9 +28,10 @@ class ShipInTransitCoSimulation(CoSimInstance):
         especially built for running the FMU-based Ship In Transit Simulator
     '''
     def __init__(self,
-                 config         : dict,
-                 ROOT           : Path,
-                 spawn_requests : dict=None,
+                 config             : dict,
+                 ROOT               : Path,
+                 spawn_requests     : dict=None,
+                 IW_sampling_anim   : bool=False,
                  ):
         # =========================
         # Instantiate the Parent Class
@@ -86,6 +87,58 @@ class ShipInTransitCoSimulation(CoSimInstance):
             self.map_name = self.map.get("name")
             self.AddMap(ROOT=ROOT, map_filename=self.map.get("filename"))
 
+        # =========================
+        # For IW sampling animation
+        # =========================
+        self.IW_sampling_anim           = False
+        if IW_sampling_anim:
+            self.IW_sampling_anim       = IW_sampling_anim
+            self.IW_sampling_anim_data  = {}
+            
+            IW_sampling_available_list  = []
+            
+            # Pre-load the animation data
+            for ship_config in ship_configs:
+                ship_id = ship_config["id"]
+                
+                IW_sampling_animated = ship_config.get("IW_sampling_animated", False)
+                IW_sampling_available_list.append(IW_sampling_animated)
+                if not IW_sampling_animated:
+                    continue
+                    
+                inter_wp_north_base = self.GetLastValue(
+                    slaveName=self.ship_slave(prefix=ship_id, block="MISSION_MANAGER"),
+                    slaveVar="prev_wp_north"
+                )
+                inter_wp_east_base = self.GetLastValue(
+                    slaveName=self.ship_slave(prefix=ship_id, block="MISSION_MANAGER"),
+                    slaveVar="prev_wp_east"
+                )
+                inter_wp_north_head = self.GetLastValue(
+                    slaveName=self.ship_slave(prefix=ship_id, block="MISSION_MANAGER"),
+                    slaveVar="next_wp_north"
+                )
+                inter_wp_east_head = self.GetLastValue(
+                    slaveName=self.ship_slave(prefix=ship_id, block="MISSION_MANAGER"),
+                    slaveVar="next_wp_east"
+                )
+                
+                # Initial animation data
+                data = {
+                    "active_path_north"     : [inter_wp_north_base, inter_wp_north_head],
+                    "active_path_east"      : [inter_wp_east_base,  inter_wp_east_head],
+                    "inter_wp_proj_north"   : None,
+                    "inter_wp_proj_east"    : None,
+                }
+                
+                # Initialize per-ship container
+                self.IW_sampling_anim_data[ship_id]               = {}
+                self.IW_sampling_anim_data[ship_id][self.time]    = data
+            
+            # If no ship uses IW sampling animation, turn the feature off
+            if not any(IW_sampling_available_list):
+                self.IW_sampling_anim = False
+            
 
 # =============================================================================================================
 # Prepare Map
@@ -1545,13 +1598,25 @@ class ShipInTransitCoSimulation(CoSimInstance):
         if palette is None:
             palette = ["#0c3c78", "#d90808", "#2a9d8f", "#f4a261", "#6a4c93", "#264653"]
 
-        artists = {
-            "trail": {},
-            "outline": {},
-            "label": {},
-            "status_text": None,
-            "dynamic_list": []
-        }
+        if self.IW_sampling_anim:
+            artists = {
+                "trail": {},
+                "outline": {},
+                "label": {},
+                "status_text": None,
+                "inter_wp": {},
+                "inter_wp_proj": {},
+                "inter_wp_proj_line": {},
+                "dynamic_list": []
+            }
+        else:
+            artists = {
+                "trail": {},
+                "outline": {},
+                "label": {},
+                "status_text": None,
+                "dynamic_list": []
+            }
 
         for k, sid in enumerate(ship_ids):
             color = palette[k % len(palette)]
@@ -1600,7 +1665,11 @@ class ShipInTransitCoSimulation(CoSimInstance):
 
         return artists
 
-
+    
+    def draw_intermediate_waypoint_artists(self):
+        pass
+    
+    
     def update_dynamic(self, i, ship_ids, artists, data, precomputed_outlines=None, trail_len=None, ship_scale=1.0):
         artists["status_text"].set_text(f"time = {i * self.stepSize / 1e9:.2f} s   |   frame = {i}")
 
