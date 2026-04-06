@@ -6,6 +6,9 @@ simulation:
 ships:
   
   - id: OS0
+    IW_sampling:
+      active: True
+      animated: True
 
     SHIP_BLOCKS:
       - [MISSION_MANAGER, FMUs/simplified_ship/MissionManagerMultiSegmentIWSampler.fmu]
@@ -78,7 +81,7 @@ ships:
         ra: 300
         max_sampled_inter_wp: 5
         scope_angle_max_deg: 45
-        scope_length: 2500
+        scope_length: 3500
 
       AUTOPILOT:
         r: 1000

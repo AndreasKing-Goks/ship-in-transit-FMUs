@@ -53,9 +53,8 @@ instance = ShipInTransitCoSimulation(config=config, ROOT=ROOT, spawn_requests=sp
 # start_time = time.perf_counter()
 
 # scope_angles_deg = [30, -30, -30, -15, -30, 0, 15, 30, 0]
-scope_angles_deg = [30, -30, -45, 30, 40, 0, 30]
+scope_angles_deg = [30, 0, -45, 10, 0]
 i = 0
-request_scope_angle = False
 
 # Initialize outside your timestep loop
 last_idx = None
@@ -82,8 +81,6 @@ while instance.time <= instance.stopTime:
         slaveName="OS0__MISSION_MANAGER",
         slaveVar="request_scope_angle"
     )
-
-    # print("request_scope_angle: ", request_scope_angle)
     
     if request_scope_angle:
         instance.SingleVariableManipulation(
@@ -91,12 +88,10 @@ while instance.time <= instance.stopTime:
             slaveVar="scope_angle_deg",
             value=scope_angles_deg[i]
         )
-        print(f"  -> injecting scope angle {scope_angles_deg[i]} deg")
+        # print(f"  -> injecting scope angle {scope_angles_deg[i]} deg")
         i += 1
-        request_scope_angle = False
 
     instance.step()
-    instance.PostSolverFunctionCall()
     
     prev_wp_north   = instance.GetLastValue("OS0__MISSION_MANAGER", "prev_wp_north")
     prev_wp_east    = instance.GetLastValue("OS0__MISSION_MANAGER", "prev_wp_east")
@@ -157,6 +152,9 @@ instance.AnimateFleetTrajectory(
         blit=True,
         ship_scale=1.0
     )
+
+# Plot Trajectory
+instance.PlotFleetTrajectory(mode="quick", ship_scale=1.0)
 
 # Plot Simulation Results
 key_group_list = [

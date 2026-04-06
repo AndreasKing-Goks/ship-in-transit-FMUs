@@ -1,9 +1,9 @@
 """
-Mission Manager FMU for multi-segment trajectory-intermediate waypoint sampling. 
+Mission Manager FMU for multi-segment trajector-intermediate waypoint sampling. 
 This FMU manages waypoint progression using previous and next setpoints, 
 supports zeroeth and sampled intermediate waypoint insertion inside a trigger zone, 
-segment switch and requests external scope-angle inputs to generate new intermediate 
-waypoints during runtime.
+and requests external scope-angle inputs to generate new intermediate waypoints 
+during runtime. Can only holds 5 intermediate waypoints at max.
 
 Authors : Andreas R.G. Sitorus
 Date    : April 2026
@@ -16,7 +16,7 @@ import traceback
 
 class MissionManagerMultiSegmentIWSampler(Fmi2Slave):
     author = "Andreas R.G. Sitorus"
-    description = "Mission Manager for multi-segment trajectory-intermediate waypoint sampling"
+    description = "Mission Manager for single-segment trajectory-intermediate waypoint sampling"
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -27,6 +27,7 @@ class MissionManagerMultiSegmentIWSampler(Fmi2Slave):
         self.max_sampled_inter_wp       = 5
         self.scope_angle_max_deg        = 45
         self.scope_length               = 2500  # 2.5 km
+        self.IW_sampler_active          = True
 
         # Waypoints (parameters)
         self.wp_start_north             = 0.0
@@ -58,7 +59,13 @@ class MissionManagerMultiSegmentIWSampler(Fmi2Slave):
         self.last_segment_active        = False
         self.reach_wp_end               = False
         self.request_scope_angle        = False
-        
+        for i in range(1, 5):
+            setattr(self, f"inter_wp_sampling_time_{i}",  0.0)
+            setattr(self, f"inter_wp_{i}_north", 0.0)
+            setattr(self, f"inter_wp_{i}_east",  0.0)
+            setattr(self, f"inter_wp_proj_{i}_north", 0.0)
+            setattr(self, f"inter_wp_proj_{i}_east",  0.0)
+            
         # Debug
         self.messages                   = "-"
 
@@ -76,6 +83,7 @@ class MissionManagerMultiSegmentIWSampler(Fmi2Slave):
         self._accepted_sampled_inter_wp = 0
         self._segment_idx               = 1
         self._first_enter_trigger_zone  = True
+        self._handle_pending_IW_request = False
         
         # Registration
         self.register_variable(Real("ra", causality=Fmi2Causality.parameter, variability=Fmi2Variability.tunable))
@@ -111,6 +119,12 @@ class MissionManagerMultiSegmentIWSampler(Fmi2Slave):
         self.register_variable(Boolean("last_segment_active", causality=Fmi2Causality.output))
         self.register_variable(Boolean("reach_wp_end", causality=Fmi2Causality.output))
         self.register_variable(Boolean("request_scope_angle", causality=Fmi2Causality.output))
+        for i in range(1, 5):
+            self.register_variable(Real(f"inter_wp_sampling_time_{i}", causality=Fmi2Causality.output))
+            self.register_variable(Real(f"inter_wp_{i}_north", causality=Fmi2Causality.output))
+            self.register_variable(Real(f"inter_wp_{i}_east",  causality=Fmi2Causality.output))
+            self.register_variable(Real(f"inter_wp_proj_{i}_north", causality=Fmi2Causality.output))
+            self.register_variable(Real(f"inter_wp_proj_{i}_east", causality=Fmi2Causality.output))
         
         # Debug
         self.register_variable(Integer("_idx", causality=Fmi2Causality.output))
@@ -149,8 +163,11 @@ class MissionManagerMultiSegmentIWSampler(Fmi2Slave):
         self._inter_wp_list             = []
         self._inter_wp_proj_list        = []
         self._accepted_sampled_inter_wp = 0
+        self._inter_wp_idx              = 0                 # For output label only
         self._segment_idx               = 1
+        self._max_segment_idx           = len(traj)
         self._first_enter_trigger_zone  = True
+        self._handle_pending_IW_request = False
 
         # Initialize outputs if we have at least 2 points
         if len(self._traj) >= 2:
@@ -265,7 +282,7 @@ class MissionManagerMultiSegmentIWSampler(Fmi2Slave):
         # Increment the segment's waypoint index
         self._idx_in_segment += 1
     
-    def _get_zeroeth_intermediate_waypoint(self):
+    def _get_zeroeth_intermediate_waypoint(self, current_time):
         # Set the first ship position that triggers IS sampler as the 0th IS
         inter_wp  = (float(self.north), float(self.east), self.next_wp_speed)   # IS's desired speed follows the segment route
         
@@ -280,8 +297,15 @@ class MissionManagerMultiSegmentIWSampler(Fmi2Slave):
         self._inter_wp_proj_list.append(inter_wp_proj)
         self._insert_inter_wp_to_traj(inter_wp)
         
+        # Store output
+        inter_wp_idx = self._inter_wp_idx
+        setattr(self, f"inter_wp_sampling_time_{inter_wp_idx}", current_time)
+        setattr(self, f"inter_wp_{inter_wp_idx}_north", inter_wp[0])
+        setattr(self, f"inter_wp_{inter_wp_idx}_east", inter_wp[1])
+        setattr(self, f"inter_wp_proj_{inter_wp_idx}_north", inter_wp_proj[0])
+        setattr(self, f"inter_wp_proj_{inter_wp_idx}_east", inter_wp_proj[1])
     
-    def _get_intermediate_waypoint(self, scope_angle_deg=None):        
+    def _get_intermediate_waypoint(self, current_time, scope_angle_deg=None):        
         # Get route segment parameters
         base_setpoint, head_setpoint, segment_length, beta = self._get_route_segment_parameters()
         
@@ -296,12 +320,38 @@ class MissionManagerMultiSegmentIWSampler(Fmi2Slave):
         
         # Get the IW parameters
         _, untraversed_segment_length, _, inter_wp_proj = self._get_inter_wp_parameters(inter_wp, base_setpoint, beta, segment_length)
-
-        # Insert the zeroeth waypoint to and its projection to its respected lists
-        self._inter_wp_list.append(inter_wp)
-        self._inter_wp_proj_list.append(inter_wp_proj)
-        self._insert_inter_wp_to_traj(inter_wp)
         
+        # Determine if switching segment or not
+        segment_switch = self._do_segment_switch(untraversed_segment_length)
+
+        if not segment_switch:
+            # Insert the zeroeth waypoint to and its projection to its respected lists
+            self._inter_wp_list.append(inter_wp)
+            self._inter_wp_proj_list.append(inter_wp_proj)
+            self._insert_inter_wp_to_traj(inter_wp)
+            
+            # Store output
+            inter_wp_idx = self._inter_wp_idx
+            setattr(self, f"inter_wp_sampling_time_{inter_wp_idx}", current_time)
+            setattr(self, f"inter_wp_{inter_wp_idx}_north", inter_wp[0])
+            setattr(self, f"inter_wp_{inter_wp_idx}_east", inter_wp[1])
+            setattr(self, f"inter_wp_proj_{inter_wp_idx}_north", inter_wp_proj[0])
+            setattr(self, f"inter_wp_proj_{inter_wp_idx}_east", inter_wp_proj[1])
+        
+        return segment_switch
+        
+    def _do_segment_switch(self, untraversed_segment_length):
+        """
+        Decide what to do with the proposed intermediate setpoint.
+        If the scope length is shorter than the untraversed segment length, do segment switch
+        """
+        # If no segment switch, return False
+        if untraversed_segment_length >= self.scope_length:
+            return False
+        
+        # Else return True
+        return True
+    
     def _advance_traj(self):
         self._idx += 1
         
@@ -314,7 +364,7 @@ class MissionManagerMultiSegmentIWSampler(Fmi2Slave):
         q = self._traj[self._idx + 1] if (self._idx + 1) < len(self._traj) else self._traj[-1]
 
         self.prev_wp_north, self.prev_wp_east, self.prev_wp_speed = p
-        self.next_wp_north, self.next_wp_east, self.next_wp_speed = q
+        self.next_wp_north, self.next_wp_east, self.next_wp_speed = q        
         
     def do_step(self, current_time: float, step_size: float) -> bool:
         try:
@@ -351,12 +401,47 @@ class MissionManagerMultiSegmentIWSampler(Fmi2Slave):
                                            and next_wp_is_inter
                                            )
 
+            messages = ""
+            
             # ======================================================================================
             # First Condition: Handle the scope angle request
             # ======================================================================================
+            if entering_ra and self._handle_pending_IW_request:
+                # Advance the base route segment index and reset
+                if self._segment_idx < self._max_segment_idx:
+                    self._segment_idx          += 1
+                    self._idx_in_segment        = 1
+                    self.request_scope_angle    = True
+                else:
+                    self.request_scope_angle    = False
+                
+                # Reset the handle pending IW request flag
+                self._handle_pending_IW_request = False
+                
+                # Debug
+                messages        += f"Scope Angle Request at Base Waypoint ({self.next_wp_north:.1f},{self.next_wp_east:.1f}) -> "
+                self.messages    = messages
+            
+            # ======================================================================================
+            # Second Condition: Handle the scope angle request
+            # ======================================================================================
             if self.request_scope_angle:
                 # Compute the intermediate waypoint
-                self._get_intermediate_waypoint(self.scope_angle_deg)
+                segment_switch = self._get_intermediate_waypoint(current_time=current_time, scope_angle_deg=self.scope_angle_deg)
+                
+                # Advance the trajectory and temporarily pending the IW request while awaiting for the next waypoint RoA visit
+                if segment_switch:
+                    self._advance_traj()
+                    self._get_prev_and_next_waypoint()
+                    
+                    self._handle_pending_IW_request = True
+                    self.request_scope_angle        = False
+                    
+                    # Debug
+                    messages                        = f"Segment switch from segment {self._segment_idx - 1} to segment {self._segment_idx}"
+                    self.messages                   = messages
+                    
+                    return True
                 
                 # Condition when then ship first enter the trigger zone after getting the zeroeth intermediate waypoint
                 if self._first_enter_trigger_zone:    
@@ -367,30 +452,32 @@ class MissionManagerMultiSegmentIWSampler(Fmi2Slave):
                     # Now exit the zeroeth intermediate waypoint placement phase
                     self._first_enter_trigger_zone  = False
                     
-                    messages= "First IW Sampling"
+                    sub_messages  = f"First IW Sampling using scope angle of {self.scope_angle_deg:.1f} degrees"
                 else:
                     # Advance the trajectory
                     self._advance_traj()
                     self._get_prev_and_next_waypoint()
-                    messages= "Second and Onwards IW Sampling"
+                    sub_messages  = f"Second and Onwards IW Sampling using scope angle of {self.scope_angle_deg:.1f} degrees"
                     
                 # Then turn off the scope angle request after receiving it
                 self.request_scope_angle        = False
                 
-                # Increment the sampling count after the sampling
+                # Increment the sampling count and intermediate waypoint index after the sampling
                 self._accepted_sampled_inter_wp += 1
+                self._inter_wp_idx              += 1
                 
                 # Debug
-                self.messages = f"Scope Angle Request Handling: {messages}"
+                messages        += f"Scope Angle Request Handling: {sub_messages}"
+                self.messages    = messages
                 
                 return True
                     
             # ======================================================================================
-            # Second Condition: Zeroeth intermediate waypoint placement + request first scope angle
+            # Third Condition: Zeroeth intermediate waypoint placement + request first scope angle
             # ======================================================================================
             if place_zeroeth_inter_wp:
                 # Place the zeroeth intermediate waypoint
-                self._get_zeroeth_intermediate_waypoint()
+                self._get_zeroeth_intermediate_waypoint(current_time=current_time)
                 
                 # Stay at the current trajectory
                 self._get_prev_and_next_waypoint()
@@ -398,25 +485,30 @@ class MissionManagerMultiSegmentIWSampler(Fmi2Slave):
                 # Request the scope angle for the next step
                 self.request_scope_angle    = True
                 
+                # Increment the intermediate waypoint index after the sampling
+                self._inter_wp_idx              += 1
+                
                 # Debug
-                self.messages = f"Zeroeth IW Sampling + First Scope Angle Request"
+                messages       += f"Zeroeth IW Placement at ({self.next_wp_north:.1f},{self.next_wp_east:.1f}) + First Scope Angle Request"
+                self.messages   = messages
 
                 return True
             
             # ======================================================================================
-            # Third Condition: Request second and onwards scope angle
+            # Fourth Condition: Request second and onwards scope angle
             # ======================================================================================
             elif enable_inter_wp_sampling:
                 # Request the scope angle for the next step
                 self.request_scope_angle    = True
                 
                 # Debug
-                self.messages = f"Second and Onwards Scope Angle Request"
+                messages       += f"Entering waypoint ({self.next_wp_north:.1f},{self.next_wp_east:.1f}) RoA -> Second and Onwards Scope Angle Request"
+                self.messages   = messages
                 
                 return True
             
             # ======================================================================================
-            # Fourth Condition: End Condition
+            # Fifth Condition: End Condition
             # ======================================================================================
             if entering_ra and next_wp_is_end:
                 self.reach_wp_end           = True
@@ -424,12 +516,13 @@ class MissionManagerMultiSegmentIWSampler(Fmi2Slave):
                 self.next_wp_speed          = 0.0
                 
                 # Debug
-                self.messages = f"Reaching the Final Waypoint"
+                messages       += f"Reaching the Final Waypoint ({self.next_wp_north:.1f},{self.next_wp_east:.1f})"
+                self.messages   = messages
                 
                 return True
                 
             # ======================================================================================
-            # Fifth Condition: Normal Progression
+            # Sixth Condition: Normal Progression
             # ======================================================================================
             if entering_ra:
                 # Advance the trajectory
@@ -437,12 +530,14 @@ class MissionManagerMultiSegmentIWSampler(Fmi2Slave):
                 self._get_prev_and_next_waypoint()
                 
                 # Debug
-                self.messages = f"Normal Progression"
+                messages       += f"Entering waypoint ({self.prev_wp_north:.1f},{self.prev_wp_east:.1f}) RoA"
+                self.messages   = messages
                 
                 return True
             
             # Debug
-            self.messages = f"Passthrough"
+            messages       += f"Try to converge to segment ({self.prev_wp_north:.1f},{self.prev_wp_east:.1f})-({self.next_wp_north:.1f},{self.next_wp_east:.1f})"
+            self.messages   = messages
                 
             return True
             
@@ -455,14 +550,18 @@ class MissionManagerMultiSegmentIWSampler(Fmi2Slave):
             self.prev_wp_north          = 0.0
             self.prev_wp_east           = 0.0
             self.prev_wp_speed          = 0.0
-
             self.next_wp_north          = 0.0
             self.next_wp_east           = 0.0
             self.next_wp_speed          = 0.0
-            
             self.last_segment_active    = False
-            
             self.reach_wp_end           = False
+            self.request_scope_angle    = False
+            for i in range(1, 5):
+                setattr(self, f"inter_wp_sampling_time_{i}",  0.0)
+                setattr(self, f"inter_wp_{i}_north", 0.0)
+                setattr(self, f"inter_wp_{i}_east",  0.0)
+                setattr(self, f"inter_wp_proj_{i}_north", 0.0)
+                setattr(self, f"inter_wp_proj_{i}_east",  0.0)
             
         return True
 

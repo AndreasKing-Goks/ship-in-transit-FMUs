@@ -153,6 +153,9 @@ instance.AnimateFleetTrajectory(
         ship_scale=1.0
     )
 
+# Plot Trajectory
+instance.PlotFleetTrajectory(mode="quick", ship_scale=1.0)
+
 # Plot Simulation Results
 key_group_list = [
     ## Own Ship
