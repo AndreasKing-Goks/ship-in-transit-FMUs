@@ -13,6 +13,7 @@ import numpy as np
 
 from orchestrator.cosim_instance import *
 from orchestrator.utils import ShipDraw, compile_ship_params, get_ship_route_path_from_group, get_map_path
+from orchestrator import check_condition
 from map_route_plotter.prepare_map_route import get_gdf_from_gpkg, get_polygon_from_gdf, load_waypoints
 
 import time
@@ -62,9 +63,6 @@ class ShipInTransitCoSimulation(CoSimInstance):
         # Reach end waypoint status
         self.ship_reach_end_waypoint    = {ship_config["id"]: [] for ship_config in ship_configs}
         
-        # # Colav active flag
-        # self.ship_colav_active          = {ship_config["id"]: [] for ship_config in ship_configs}
-        
         # If we have a custom spawn_request, alter the ship_configs
         if spawn_requests is not None:
             ship_configs = self.AddShipSpawn(spawn_requests=spawn_requests,
@@ -83,10 +81,41 @@ class ShipInTransitCoSimulation(CoSimInstance):
         self.is_map_exists  = True if self.map is not None else False
         
         # Add the Map
+        self.land_poly      = None
         if self.is_map_exists:
-            self.map_name = self.map.get("name")
-            self.AddMap(ROOT=ROOT, map_filename=self.map.get("filename"))
+            self.map_name  = self.map.get("name")
+            self.land_poly = self.AddMap(ROOT=ROOT, map_filename=self.map.get("filename"))
 
+        # =========================
+        # Containers and Relevant Parameters for Termination Flags
+        # =========================
+        # Relevant parameters
+        self._navwarn_active        = False
+        self._navrecover_printed    = False
+        self._nav_warn_time_counter = 0.0
+        self._navfail_printed       = False
+        
+        # Containers
+        self.stop_info = {}
+        
+        for ship_config in ship_configs:
+            ship_id = ship_config.get("id")
+            
+            data    = {
+                'colav_active'          : [],
+                'collision'             : {
+                        'status'        : [],
+                        'colliders'     : None
+                    },
+                'grounding'             : [],
+                'nav_fail_warning'      : [],
+                'navigation_failure'    : [],
+                'reaches_end_waypoint'  : [],
+                'outside_horizon'       : [],
+            }
+            
+            self.stop_info[ship_id]     = data
+        
         # =========================
         # For IW sampling
         # =========================
@@ -188,7 +217,9 @@ class ShipInTransitCoSimulation(CoSimInstance):
             
         # Merge land geometries into a single Shapely polygon
         # (useful for spatial checks such as grounding detection)
-        self.land_poly = get_polygon_from_gdf(self.land_gdf)
+        land_poly = get_polygon_from_gdf(self.land_gdf) 
+        
+        return land_poly
     
     
     def set_map_static_aspect(self, frame_gdf, aspect: float=None):
@@ -752,13 +783,106 @@ class ShipInTransitCoSimulation(CoSimInstance):
                                  slaveVar="ship_collision")
         
 
+    # def PostSolverFunctionCall(self):
+    #     """
+    #         Function to handle:
+    #             - Simulation termination assesment and handling
+    #             - Reward Function for reward signal (RL only)
+    #     """
+    #     ## Get the reach end point and collision flag for all assets
+    #     rew_flags       = {ship_config["id"]: False for ship_config in self.ship_configs}
+    #     collision_flags = {ship_config["id"]: False for ship_config in self.ship_configs}
+        
+    #     for ship_config in self.ship_configs:
+    #         ship_id = ship_config.get("id")
+    #         spawn   = ship_config["spawn"] if "spawn" in list(ship_config.keys()) else None
+            
+    #         ## Update ship active status
+    #         if spawn is not None:
+    #             self.update_ship_delayed_status(ship_id, spawn)
+            
+    #         ## Update reach end point status
+    #         rew_flag  = self.update_ship_reach_end_point_status(ship_id)
+    #         rew_flags[ship_id] = rew_flag
+            
+    #         if ship_config.get("enable_colav"):
+    #             ## Update colav active flag
+    #             colav_active    = self.update_colav_active_flag(ship_id)
+                
+    #             ## Update collision status
+    #             collision_flag  = self.update_collision_status(ship_id)
+    #             collision_flags[ship_id] = collision_flag
+                
+    #             ## Update message
+    #             if colav_active and (not collision_flag) and (not self.print_col_msg):
+    #                 print(f"{ship_id}_COLAV is active!")
+    #                 self.print_col_msg = True
+    #             elif (not colav_active) and self.print_col_msg:
+    #                 print(f"{ship_id}_COLAV is deactivated!")
+    #                 self.print_col_msg = False
+    #             elif collision_flag:
+    #                 print(f"{ship_id} collides!")
+        
+    #     own_ship_reaches_end_waypoint   = rew_flags[self.ship_configs[0]["id"]]
+    #     all_ship_reaches_end_waypoint   = np.all([rew_flags[ship_id] for ship_id in list(rew_flags.keys())])
+    #     any_ship_collides               = np.any([collision_flags[ship_id] for ship_id in list(collision_flags.keys())])
+        
+    #     ## Conclude the stop flag
+    #     self.stop = own_ship_reaches_end_waypoint or (all_ship_reaches_end_waypoint or any_ship_collides)
+        
+    #     # ==================================
+    #     # Gather IW sampling animation data
+    #     # ==================================
+    #     if self.IW_sampling_animated:
+    #         # Pre-load the animation data
+    #         for ship_config in self.ship_configs:
+    #             ship_id = ship_config["id"]
+                
+    #             IW_sampling_animated = ship_config.get("IW_sampling_animated", False)
+    #             if not IW_sampling_animated:
+    #                 continue
+                    
+    #             inter_wp_north_base = self.GetLastValue(
+    #                 slaveName=self.ship_slave(prefix=ship_id, block="MISSION_MANAGER"),
+    #                 slaveVar="prev_wp_north"
+    #             )
+    #             inter_wp_east_base = self.GetLastValue(
+    #                 slaveName=self.ship_slave(prefix=ship_id, block="MISSION_MANAGER"),
+    #                 slaveVar="prev_wp_east"
+    #             )
+    #             inter_wp_north_head = self.GetLastValue(
+    #                 slaveName=self.ship_slave(prefix=ship_id, block="MISSION_MANAGER"),
+    #                 slaveVar="next_wp_north"
+    #             )
+    #             inter_wp_east_head = self.GetLastValue(
+    #                 slaveName=self.ship_slave(prefix=ship_id, block="MISSION_MANAGER"),
+    #                 slaveVar="next_wp_east"
+    #             )
+                
+    #             # Initial animation data
+    #             data = {
+    #                 "active_path": { 
+    #                     "north"     : [inter_wp_north_base, inter_wp_north_head], 
+    #                     "east"      : [inter_wp_east_base,  inter_wp_east_head]
+    #                 },
+    #                 "sampled_inter_wps"   : [],
+    #                 "sampled_proj_points" : [],
+    #             }
+                
+    #             # Update per-ship container
+    #             self.IW_sampling_anim_data[ship_id][self.time]    = data
+    
+    
     def PostSolverFunctionCall(self):
         """
             Function to handle:
                 - Simulation termination assesment and handling
                 - Reward Function for reward signal (RL only)
         """
-        ## Get the reach end point and collision flag for all assets
+        ## Termination flags container
+        grounding_flags = {ship_config["id"]: False for ship_config in self.ship_configs}
+        outside_flags   = {ship_config["id"]: False for ship_config in self.ship_configs}
+        nav_fail_flags  = {ship_config["id"]: False for ship_config in self.ship_configs}
         rew_flags       = {ship_config["id"]: False for ship_config in self.ship_configs}
         collision_flags = {ship_config["id"]: False for ship_config in self.ship_configs}
         
@@ -770,78 +894,215 @@ class ShipInTransitCoSimulation(CoSimInstance):
             if spawn is not None:
                 self.update_ship_delayed_status(ship_id, spawn)
             
-            ## Update reach end point status
-            rew_flag  = self.update_ship_reach_end_point_status(ship_id)
-            rew_flags[ship_id] = rew_flag
+            ## Evaluate Ship Condition
+            (grounded, outside, navigational_failure, 
+             reaches_end_waypoint, collision) = self.evaluate_ship_condition(ship_id=ship_id, ship_config=ship_config)
             
-            if ship_config.get("enable_colav"):
-                ## Update colav active flag
-                colav_active    = self.update_colav_active_flag(ship_id)
-                
-                ## Update collision status
-                collision_flag  = self.update_collision_status(ship_id)
-                collision_flags[ship_id] = collision_flag
-                
-                ## Update message
-                if colav_active and (not collision_flag) and (not self.print_col_msg):
-                    print(f"{ship_id}_COLAV is active!")
-                    self.print_col_msg = True
-                elif (not colav_active) and self.print_col_msg:
-                    print(f"{ship_id}_COLAV is deactivated!")
-                    self.print_col_msg = False
-                elif collision_flag:
-                    print(f"{ship_id} collides!")
+            ## Update the container flags container
+            grounding_flags[ship_id]    = grounded
+            outside_flags[ship_id]      = outside
+            nav_fail_flags[ship_id]     = navigational_failure
+            rew_flags[ship_id]          = reaches_end_waypoint
+            collision_flags[ship_id]    = collision
         
+        any_ship_grounding              = np.any([grounding_flags[ship_id] for ship_id in list(grounding_flags.keys())])
+        any_ship_outside                = np.any([outside_flags[ship_id] for ship_id in list(outside_flags.keys())])
+        any_ship_nav_fail               = np.any([nav_fail_flags[ship_id] for ship_id in list(nav_fail_flags.keys())])
         own_ship_reaches_end_waypoint   = rew_flags[self.ship_configs[0]["id"]]
         all_ship_reaches_end_waypoint   = np.all([rew_flags[ship_id] for ship_id in list(rew_flags.keys())])
         any_ship_collides               = np.any([collision_flags[ship_id] for ship_id in list(collision_flags.keys())])
         
         ## Conclude the stop flag
-        self.stop = own_ship_reaches_end_waypoint or (all_ship_reaches_end_waypoint or any_ship_collides)
+        self.stop = (any_ship_grounding
+                     or any_ship_outside
+                     or any_ship_nav_fail
+                     or own_ship_reaches_end_waypoint 
+                     or all_ship_reaches_end_waypoint 
+                     or any_ship_collides)
+        
+    def evaluate_ship_condition(self, ship_id:str, ship_config:dict):
+        """
+            [UNTESTED]
+            Evaluate ship condition and conclude the possible termination flags.
+            Record all the flags for every time steps
+        """
+        # ==================================
+        # Helpers
+        # ==================================
+        def push_flag(ship_id:str, flag_name:str, value:bool, detail=None):
+            # Update stop info
+            if detail is None:
+                self.stop_info[ship_id][flag_name].append(value)
+            # Specific for collision related
+            else:
+                self.stop_info[ship_id][flag_name]['status'].append(value)
+                self.stop_info[ship_id][flag_name]['colliders'] = detail
+                
+        # ==================================
+        # Related Variables
+        # ==================================
+        # Ship Position
+        north = self.GetLastValue(
+            slaveName=self.ship_slave(prefix=ship_id, block="SHIP_MODEL"),
+            slaveVar="north"
+        )
+        east = self.GetLastValue(
+            slaveName=self.ship_slave(prefix=ship_id, block="SHIP_MODEL"),
+            slaveVar="east"
+        )
+        pos = [north, east]
+        
+        # Ship Length
+        ship_length = ship_config['fmu_params']['SHIP_MODEL'].get("length_of_ship")
+        
+        # Navigational Failure Parameter
+        e_ct  = self.GetLastValue(
+            slaveName=self.ship_slave(prefix=ship_id, block="AUTOPILOT"),
+            slaveVar="e_ct"
+        )
+                
+        # ==================================
+        # Map Related Checks
+        # ==================================
+        grounded = False
+        outside  = False
+        if self.land_poly is not None:
+            # Grounding
+            grounded = check_condition.is_grounding(
+                land_poly   = self.land_poly,
+                pos         = pos,
+                ship_length = ship_length,
+            )
+            push_flag(ship_id=ship_id, flag_name="grounding", value=grounded)
+            if grounded:
+                print(f"{ship_id} experiences grounding")
+                
+            # Outside Horizon
+            outside = check_condition.is_point_outside_horizon(
+                land_poly   = self.land_poly,
+                pos         = pos,
+                ship_length = ship_length
+            )
+            push_flag(ship_id=ship_id, flag_name="outside_horizon", value=outside)
+            if outside:
+                print(f"{ship_id} goes outside the map horizon")
         
         # ==================================
-        # Gather IW sampling animation data
+        # Navigation Failures
         # ==================================
-        if self.IW_sampling_animated:
-            # Pre-load the animation data
-            for ship_config in self.ship_configs:
-                ship_id = ship_config["id"]
+        # First compute the navigation failure warning
+        nav_warn_now    = check_condition.is_ship_navigation_warning(
+            e_ct    = e_ct,
+            e_tol   = 500
+        )
+        
+        # If no potential navigation failure recovery happens before the threshold time, turn this as True
+        navigational_failure = False
+        
+        # If entering warning phase
+        if nav_warn_now:
+            # Warning just started
+            if not getattr(self, '_navwarn_active', False):
+                self._navwarn_active        = True
+                self._navrecover_printed    = False
+                self._nav_warn_time_counter = 0.0
+                self._navfail_printed       = False
+                print(f"{ship_id} prones to have navigational failure")
+            
+            # Increment the warning time counter
+            self._nav_warn_time_counter += self.stepSize
+            
+            # Condition 1: Ships being in th ewarning zone longer than the time limit
+            condition_1 = self._nav_warn_time_counter > 600
+            
+            # Promote to failure if limit exceeded
+            if condition_1:
+                navigational_failure = True
+                nav_warn_now         = False # Once failed, no longer "warning"
+                if not getattr(self, '_navfail_printed', False):
+                    print(f"{ship_id} experiences navigational failure")
+                    self._navfail_printed   = True
+        
+        # If manages to recover
+        else:
+            if getattr(self, '_navwarn_active', False):
+                print(f"{ship_id} recovers form navigational failure warning")
+                self._navrecover_printed    = True
+            self._navwarn_active        = False
+            self._nav_warn_time_counter = 0.0
+            self._navfail_printed       = False
+            
+        # Record
+        self.stop_info[ship_id]['nav_fail_warning'].append(nav_warn_now)
+        push_flag(ship_id=ship_id, flag_name="navigation_failure", value=navigational_failure)
                 
-                IW_sampling_animated = ship_config.get("IW_sampling_animated", False)
-                if not IW_sampling_animated:
+        # ==================================
+        # Reaches end waypoint
+        # ==================================
+        reaches_end_waypoint = self.update_ship_reach_end_point_status(ship_id)
+        push_flag(ship_id=ship_id, flag_name="reaches_end_waypoint", value=reaches_end_waypoint)
+        if reaches_end_waypoint:
+            print(f"{ship_id} reaches its final trajectory's waypoint")
+        
+        # ==================================
+        # Collisions
+        # ==================================
+        colliders = []
+        collision = False
+        
+        # If COLAV is enabled
+        if ship_config["enable_colav"] is True:
+            for test_ship_config in self.ship_configs:
+                test_sid = test_ship_config["id"]
+                
+                # If evaluating on the same ship, skip
+                if test_sid == ship_id:
                     continue
-                    
-                inter_wp_north_base = self.GetLastValue(
-                    slaveName=self.ship_slave(prefix=ship_id, block="MISSION_MANAGER"),
-                    slaveVar="prev_wp_north"
-                )
-                inter_wp_east_base = self.GetLastValue(
-                    slaveName=self.ship_slave(prefix=ship_id, block="MISSION_MANAGER"),
-                    slaveVar="prev_wp_east"
-                )
-                inter_wp_north_head = self.GetLastValue(
-                    slaveName=self.ship_slave(prefix=ship_id, block="MISSION_MANAGER"),
-                    slaveVar="next_wp_north"
-                )
-                inter_wp_east_head = self.GetLastValue(
-                    slaveName=self.ship_slave(prefix=ship_id, block="MISSION_MANAGER"),
-                    slaveVar="next_wp_east"
-                )
                 
-                # Initial animation data
-                data = {
-                    "active_path": { 
-                        "north"     : [inter_wp_north_base, inter_wp_north_head], 
-                        "east"      : [inter_wp_east_base,  inter_wp_east_head]
-                    },
-                    "sampled_inter_wps"   : [],
-                    "sampled_proj_points" : [],
-                }
+                # Ship Position
+                test_north = self.GetLastValue(
+                    slaveName=self.ship_slave(prefix=ship_id, block="SHIP_MODEL"),
+                    slaveVar="north"
+                )
+                test_east = self.GetLastValue(
+                    slaveName=self.ship_slave(prefix=ship_id, block="SHIP_MODEL"),
+                    slaveVar="east"
+                )
+                test_pos = [test_north, test_east]
                 
-                # Update per-ship container
-                self.IW_sampling_anim_data[ship_id][self.time]    = data
+                # Check collision to the respected ship
+                if check_condition.is_ship_collision(
+                    own_pos     = pos,
+                    test_pos    = test_pos,
+                    minimum_ship_distance = ship_config["fmu_params"]["COLAV"].get("collision_zone_radius")
+                ):
+                    colliders.append(test_sid)
+            
+            collision = bool(colliders)
+            push_flag(ship_id=ship_id, flag_name="collision", value=collision, detail=(collision if colliders else None))
+            
+            colav_active    = self.update_colav_active_flag(ship_id)
+            self.stop_info[ship_id]['colav_active'].append(colav_active)
+            
+            # Update message
+            if colav_active and (not collision) and (not self.print_col_msg):
+                print(f"{ship_id}__COLAV is active!")
+                self.print_col_msg = True
+            elif (not colav_active) and self.print_col_msg:
+                print(f"{ship_id}__COLAV is deactivated!")
+                self.print_col_msg = False
+            elif collision:
+                print(f"{ship_id} collides with {', '.join(colliders)}")
         
-
+        # If the COLAV is not enabled
+        else:
+            self.stop_info[ship_id]['colav_active'].append(False)
+            self.stop_info[ship_id]['collision']['status'].append(False)
+            self.stop_info[ship_id]['collision']['colliders'] = None
+        
+        return grounded, outside, navigational_failure, reaches_end_waypoint, collision
+                
+    
     def step(self):
         # Simulate
         self.CoSimManipulate()

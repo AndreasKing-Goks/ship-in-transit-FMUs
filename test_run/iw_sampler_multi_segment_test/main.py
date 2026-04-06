@@ -53,7 +53,7 @@ instance = ShipInTransitCoSimulation(config=config, ROOT=ROOT, spawn_requests=sp
 # start_time = time.perf_counter()
 
 # scope_angles_deg = [30, -30, -30, -15, -30, 0, 15, 30, 0]
-scope_angles_deg = [30, 0, -45, 10, 0]
+scope_angles_deg = [30, 0, -45, -45, 0]
 i = 0
 
 # Initialize outside your timestep loop
