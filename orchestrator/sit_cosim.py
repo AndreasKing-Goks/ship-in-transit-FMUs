@@ -45,8 +45,10 @@ class ShipInTransitCoSimulation(CoSimInstance):
         instanceName    = simu_config["instanceName"]
 
         # Time
-        stopTime        = simu_config["stopTime"] # Number of steps in seconds (int)
-        stepSize        = simu_config["stepSize"] # Number of seconds (int)
+        stopTime            = simu_config["stopTime"] # Number of steps in seconds (int)
+        stepSize            = simu_config["stepSize"] # Number of seconds (int)
+        self.stopTimeSec    = stopTime
+        self.stepSizeSec    = stepSize
         
         # Initiate the parent class
         super().__init__(instanceName, stopTime, stepSize)
@@ -993,7 +995,7 @@ class ShipInTransitCoSimulation(CoSimInstance):
         # First compute the navigation failure warning
         nav_warn_now    = check_condition.is_ship_navigation_warning(
             e_ct    = e_ct,
-            e_tol   = 500
+            e_tol   = 150
         )
         
         # If no potential navigation failure recovery happens before the threshold time, turn this as True
@@ -1010,13 +1012,14 @@ class ShipInTransitCoSimulation(CoSimInstance):
                 print(f"{ship_id} prones to have navigational failure")
             
             # Increment the warning time counter
-            self._nav_warn_time_counter += self.stepSize
+            self._nav_warn_time_counter += self.stepSizeSec
             
             # Condition 1: Ships being in th ewarning zone longer than the time limit
             condition_1 = self._nav_warn_time_counter > 600
             
             # Promote to failure if limit exceeded
             if condition_1:
+                print(self._nav_warn_time_counter)
                 navigational_failure = True
                 nav_warn_now         = False # Once failed, no longer "warning"
                 if not getattr(self, '_navfail_printed', False):
