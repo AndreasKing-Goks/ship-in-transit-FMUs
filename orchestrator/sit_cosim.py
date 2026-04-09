@@ -15,6 +15,7 @@ from orchestrator.cosim_instance import *
 from orchestrator.utils import ShipDraw, compile_ship_params, get_ship_route_path_from_group, get_map_path
 from orchestrator import check_condition
 from map_route_plotter.prepare_map_route import get_gdf_from_gpkg, get_polygon_from_gdf, load_waypoints
+from map_route_plotter.polygon_obstacle import PolygonObstacle
 
 import time
 
@@ -220,9 +221,8 @@ class ShipInTransitCoSimulation(CoSimInstance):
             
         # Merge land geometries into a single Shapely polygon
         # (useful for spatial checks such as grounding detection)
-        land_poly = get_polygon_from_gdf(self.land_gdf) 
-        
-        return land_poly
+        land_poly       = get_polygon_from_gdf(self.land_gdf) 
+        self.map_obj    = [PolygonObstacle(land_poly), self.frame_gdf]
     
     
     def set_map_static_aspect(self, frame_gdf, aspect: float=None):
@@ -952,7 +952,7 @@ class ShipInTransitCoSimulation(CoSimInstance):
         if self.land_poly is not None:
             # Grounding
             grounded = check_condition.is_grounding(
-                land_poly   = self.land_poly,
+                land_poly   = self.map_obj,
                 pos         = pos,
                 ship_length = ship_length,
             )
@@ -962,7 +962,7 @@ class ShipInTransitCoSimulation(CoSimInstance):
                 
             # Outside Horizon
             outside = check_condition.is_point_outside_horizon(
-                land_poly   = self.land_poly,
+                land_poly   = self.map_obj,
                 pos         = pos,
                 ship_length = ship_length
             )
