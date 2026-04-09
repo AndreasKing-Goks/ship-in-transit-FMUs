@@ -32,16 +32,7 @@ def load_base_config():
         return yaml.safe_load(f)
 
 
-def set_fmu_param(config, ship_id, block_name, param_name, value):
-    """Set one FMU parameter for a specific ship in the config dict."""
-    for ship_cfg in config["ships"]:
-        if ship_cfg.get("id") == ship_id:
-            ship_cfg["fmu_params"][block_name][param_name] = value
-            return
-    raise KeyError(f"Could not find ship_id={ship_id}")
-
-
-def apply_trial_parameters(config, parameterization, max_intermediate_wps=3):
+def apply_trial_parameters(config, parameterization):
     """Apply Ax trial parameters to the target-ship spawn and route."""
     ts1_cfg = next(ship for ship in config["ships"] if ship["id"] == "TS1")
 
@@ -414,6 +405,28 @@ def replay_best_trial(best_parameters):
     return instance
 
 
+def _trim_parameters(parameters):
+    """Return a copy of parameters with unused intermediate WP entries removed."""
+    wp_count = int(parameters.get("ts1_wp_count", 0))
+    trimmed = {}
+    for key, value in parameters.items():
+        if key.startswith("ts1_wp_") and (key.endswith("_north") or key.endswith("_east")):
+            parts = key.split("_")  # e.g. ['ts1', 'wp', '1', 'north']
+            try:
+                if int(parts[2]) > wp_count:
+                    continue
+            except (IndexError, ValueError):
+                pass
+        elif key.startswith("ts1_leg_speed_"):
+            try:
+                if int(key[len("ts1_leg_speed_"):]) > wp_count + 1:
+                    continue
+            except ValueError:
+                pass
+        trimmed[key] = value
+    return trimmed
+
+
 def save_results(ax_client, best_parameters, history):
     """Save the best parameters and full trial history to JSON."""
     enriched_history = []
@@ -421,6 +434,7 @@ def save_results(ax_client, best_parameters, history):
     for item in history:
         trial_index = int(item["trial_index"])
         enriched_item = dict(item)
+        enriched_item["parameters"] = _trim_parameters(item["parameters"])  # <-- trim here
 
         try:
             trial = ax_client.get_trial(trial_index)
@@ -434,7 +448,7 @@ def save_results(ax_client, best_parameters, history):
         enriched_history.append(enriched_item)
 
     payload = {
-        "best_parameters": best_parameters,
+        "best_parameters": _trim_parameters(best_parameters) if best_parameters is not None else None,  # <-- trim here
         "history": enriched_history,
     }
 
