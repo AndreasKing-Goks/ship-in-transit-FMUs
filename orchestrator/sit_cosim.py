@@ -1914,8 +1914,199 @@ class ShipInTransitCoSimulation(CoSimInstance):
                         static_artists.append(circ)
 
         return static_artists
+    
+    
+    ### ADAPTER FUNCTION FOR INTERMEDIATE WAPYOINT DATA HANDLING
+    def points_to_xy(self, points):
+        """
+            Convert a list of points stored as [(north, east), ...]
+            into plotting arrays x=east and y=north.
+        """
+        if not points:
+            return np.array([]), np.array([])
 
+        north = [p[0] for p in points]
+        east  = [p[1] for p in points]
+        return np.asarray(east, dtype=float), np.asarray(north, dtype=float)
+    
+    
+    def points_to_offsets(self, points):
+        """
+            Convert a list of points stored as [(north, east), ...]
+            into scatter offsets of shape (N, 2), where columns are [east, north].
+        """
+        if not points:
+            return np.empty((0, 2), dtype=float)
 
+        return np.asarray([[p[1], p[0]] for p in points], dtype=float)
+    
+    
+    def iw_pairs_to_segment_xy(self, sampled_inter_wps, sampled_inter_wp_projs):
+        """
+            Convert paired lists of:
+                sampled_inter_wps      = [(north, east), ...]
+                sampled_inter_wp_projs = [(north, east), ...]
+            into x/y arrays for a single Line2D artist using NaN-separated segments.
+        """
+        if not sampled_inter_wps or not sampled_inter_wp_projs:
+            return np.array([]), np.array([])
+
+        n_seg = min(len(sampled_inter_wps), len(sampled_inter_wp_projs))
+
+        xs = []
+        ys = []
+
+        for k in range(n_seg):
+            iw_n, iw_e = sampled_inter_wps[k]
+            pj_n, pj_e = sampled_inter_wp_projs[k]
+
+            xs.extend([iw_e, pj_e, np.nan])
+            ys.extend([iw_n, pj_n, np.nan])
+
+        return np.asarray(xs, dtype=float), np.asarray(ys, dtype=float)
+    
+    
+    def get_iw_state_at_frame(self, ship_id, frame):
+        """
+            Return the latest IW animation snapshot for ship_id whose key <= frame.
+            If none exists, return None.
+        """
+        ship_hist = getattr(self, "IW_sampling_anim_data", {}).get(ship_id, None)
+        if not ship_hist:
+            return None
+
+        valid_frames = [f for f in ship_hist.keys() if f <= frame]
+        if not valid_frames:
+            return None
+
+        latest_frame = max(valid_frames)
+        return ship_hist[latest_frame]
+    
+    
+    def get_ship_roa(self, ship_id):
+        """
+        Get Radius of Acceptance (RoA) for a ship from ship_configs.
+        Returns None if not available.
+        """
+        cfg = next((sc for sc in self.ship_configs if sc.get("id") == ship_id), None)
+        if cfg is None:
+            return None
+
+        fmu_params = cfg.get("fmu_params", {})
+        mm = fmu_params.get("MISSION_MANAGER", {})
+        return mm.get("ra", None)
+    
+    
+    def clear_inter_wp_roa_artists(self, sid, artists):
+        """
+        Remove previously drawn dynamic IW RoA circle patches for one ship.
+        """
+        if "inter_wp_roa" not in artists:
+            return
+        if sid not in artists["inter_wp_roa"]:
+            return
+
+        for circ in artists["inter_wp_roa"][sid]:
+            try:
+                circ.remove()
+            except ValueError:
+                # already removed or not attached
+                pass
+
+        artists["inter_wp_roa"][sid] = []
+        
+        
+    def update_inter_wp_roa_artists(self, sid, artists, sampled_inter_wps, color, mode="quick"):
+        """
+        Rebuild dynamic RoA circles for sampled intermediate waypoints of one ship.
+        Returns the newly created circle artists.
+        """
+        style = self.get_plot_style(mode)
+
+        self.clear_inter_wp_roa_artists(sid, artists)
+
+        ra = self.get_ship_roa(sid)
+        if ra is None or ra <= 0:
+            return []
+
+        if not sampled_inter_wps:
+            return []
+
+        ax_map = artists["inter_wp"][sid].axes
+
+        new_circles = []
+        for iw_n, iw_e in sampled_inter_wps:
+            circ = patches.Circle(
+                (iw_e, iw_n),
+                radius=ra,
+                fill=True,
+                color=color,
+                alpha=style["roa_alpha"],
+                zorder=2.5
+            )
+            ax_map.add_patch(circ)
+            new_circles.append(circ)
+
+        artists["inter_wp_roa"][sid] = new_circles
+        return new_circles
+    
+    
+    def update_iw_dynamic_artists(self, i, sid, artists, mode="quick", plot_inter_wp_roa=True):
+        """
+        Update IW-related artists for a given ship and frame.
+        Returns any newly created artists that must also be redrawn.
+        """
+        extra_artists = []
+
+        if not self.IW_sampling_animated:
+            return extra_artists
+
+        state = self.get_iw_state_at_frame(sid, i)
+
+        if state is None:
+            if sid in artists.get("active_path", {}):
+                artists["active_path"][sid].set_data([], [])
+            if sid in artists.get("inter_wp", {}):
+                artists["inter_wp"][sid].set_offsets(np.empty((0, 2), dtype=float))
+            if sid in artists.get("inter_wp_proj", {}):
+                artists["inter_wp_proj"][sid].set_data([], [])
+            if plot_inter_wp_roa:
+                self.clear_inter_wp_roa_artists(sid, artists)
+            return extra_artists
+
+        active_path = state.get("active_path", [])
+        sampled_inter_wps = state.get("sampled_inter_wps", [])
+        sampled_inter_wp_projs = state.get("sampled_inter_wp_projs", [])
+
+        x_path, y_path = self.points_to_xy(active_path)
+        artists["active_path"][sid].set_data(x_path, y_path)
+
+        offsets = self.points_to_offsets(sampled_inter_wps)
+        artists["inter_wp"][sid].set_offsets(offsets)
+
+        x_proj, y_proj = self.iw_pairs_to_segment_xy(
+            sampled_inter_wps,
+            sampled_inter_wp_projs
+        )
+        artists["inter_wp_proj"][sid].set_data(x_proj, y_proj)
+
+        if plot_inter_wp_roa:
+            color = artists["color"][sid]
+            new_circles = self.update_inter_wp_roa_artists(
+                sid=sid,
+                artists=artists,
+                sampled_inter_wps=sampled_inter_wps,
+                color=color,
+                mode=mode
+            )
+            extra_artists.extend(new_circles)
+
+        return extra_artists
+    
+    
+    ######
+    
+    
     def init_dynamic_artists(self, ax_map, ax_status, ship_ids, mode="quick", palette=None, with_labels=True):
         """
         Dynamic artists: trajectory trail, ship outline, ship id label, status text.
@@ -1931,9 +2122,12 @@ class ShipInTransitCoSimulation(CoSimInstance):
                 "outline": {},
                 "label": {},
                 "status_text": None,
+                "active_path": {},
                 "inter_wp": {},
-                "new_trajectory": {},
-                "dynamic_list": []
+                "inter_wp_proj": {},
+                "inter_wp_roa": {},
+                "dynamic_list": [],
+                "color": {}
             }
         else:
             artists = {
@@ -1941,7 +2135,8 @@ class ShipInTransitCoSimulation(CoSimInstance):
                 "outline": {},
                 "label": {},
                 "status_text": None,
-                "dynamic_list": []
+                "dynamic_list": [],
+                "color": {}
             }
 
         for k, sid in enumerate(ship_ids):
@@ -1980,22 +2175,45 @@ class ShipInTransitCoSimulation(CoSimInstance):
                 artists["dynamic_list"].append(txt)
             
             if self.IW_sampling_animated:
-                # Intermediate waypoints
-                inter_wp, = ax_map.scatter([], [], 
-                            s=style["waypoint_s"],
-                            edgecolors="white",
-                            color=color,
-                            zorder=3)
-                artists["inter_wp"][sid] = inter_wp 
-                artists["dynamic_list"].append(inter_wp) 
+                active_path_line, = ax_map.plot(
+                    [], [],
+                    lw=style["route_lw"],
+                    ls="-.",
+                    alpha=0.85,
+                    color=color,
+                    zorder=4
+                )
+                artists["active_path"][sid] = active_path_line
+                artists["dynamic_list"].append(active_path_line)
+
+                inter_wp = ax_map.scatter(
+                    [], [],
+                    s=style["waypoint_s"],
+                    marker="o",
+                    edgecolors="white",
+                    color=color,
+                    alpha=0.95,
+                    zorder=5
+                )
+                artists["inter_wp"][sid] = inter_wp
+                artists["dynamic_list"].append(inter_wp)
+
+                inter_wp_proj_line, = ax_map.plot(
+                    [], [],
+                    lw=style["route_lw"],
+                    ls=":",
+                    alpha=0.9,
+                    color=color,
+                    zorder=4
+                )
+                artists["inter_wp_proj"][sid] = inter_wp_proj_line
+                artists["dynamic_list"].append(inter_wp_proj_line)
                 
-                # New trajectory
-                new_trajectory, = ax_map.plot([], [],
-                                            lw=style["own_lw"], 
-                                            alpha=0.9, 
-                                            color=color)
-                artists["new_trajectory"][sid] = new_trajectory
-                artists["dynamic_list"].append(new_trajectory)
+                # Dynamic IW RoA circles
+                artists["inter_wp_roa"][sid] = []
+                
+                # Colort
+                artists["color"][sid] = color
 
         status_txt = ax_status.text(
             0.01, 0.5, "",
@@ -2008,24 +2226,31 @@ class ShipInTransitCoSimulation(CoSimInstance):
         artists["dynamic_list"].append(status_txt)
 
         return artists
-
-    
-    def draw_intermediate_waypoint_artists(self):
-        pass
     
     
-    def update_dynamic(self, i, ship_ids, artists, data, precomputed_outlines=None, trail_len=None, ship_scale=1.0):
+    def update_dynamic(
+        self,
+        i,
+        ship_ids,
+        artists,
+        data,
+        precomputed_outlines=None,
+        trail_len=None,
+        ship_scale=1.0,
+        mode="quick",
+        plot_inter_wp_roa=True
+    ):
         artists["status_text"].set_text(f"time = {i * self.stepSize / 1e9:.2f} s   |   frame = {i}")
+
+        returned_artists = list(artists["dynamic_list"])
 
         for sid in ship_ids:
             east  = data[sid]["east"]
             north = data[sid]["north"]
 
-            # Trail
             j0 = 0 if trail_len is None else max(0, i - int(trail_len))
             artists["trail"][sid].set_data(east[j0:i+1], north[j0:i+1])
 
-            # Outline
             if precomputed_outlines is not None:
                 artists["outline"][sid].set_xy(precomputed_outlines[sid][i])
             else:
@@ -2037,11 +2262,20 @@ class ShipInTransitCoSimulation(CoSimInstance):
                 xy = np.column_stack([y_tr, x_tr])
                 artists["outline"][sid].set_xy(xy)
 
-            # Ship id text
             if sid in artists["label"]:
                 artists["label"][sid].set_position((east[i], north[i]))
 
-        return artists["dynamic_list"]
+            if self.IW_sampling_animated:
+                extra_artists = self.update_iw_dynamic_artists(
+                    i=i,
+                    sid=sid,
+                    artists=artists,
+                    mode=mode,
+                    plot_inter_wp_roa=plot_inter_wp_roa
+                )
+                returned_artists.extend(extra_artists)
+
+        return returned_artists
 
 
     def AnimateFleetTrajectory(
@@ -2060,6 +2294,7 @@ class ShipInTransitCoSimulation(CoSimInstance):
         plot_waypoints=True,
         plot_roa=True,
         plot_start_end=True,
+        plot_inter_wp_roa=True,
         with_labels=True,
         precompute_ship_outlines=True,
         save_path=None,
@@ -2231,7 +2466,9 @@ class ShipInTransitCoSimulation(CoSimInstance):
                 data=data,
                 precomputed_outlines=outlines,
                 trail_len=trail_len,
-                ship_scale=ship_scale
+                ship_scale=ship_scale,
+                mode=mode,
+                plot_inter_wp_roa=plot_inter_wp_roa
             )
 
         self.ani = FuncAnimation(
