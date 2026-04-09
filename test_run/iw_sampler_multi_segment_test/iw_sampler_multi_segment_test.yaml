@@ -7,7 +7,6 @@ ships:
   
   - id: OS0
     IW_sampling:
-      active: True
       animated: True
 
     SHIP_BLOCKS:

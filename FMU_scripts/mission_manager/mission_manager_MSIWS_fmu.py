@@ -59,12 +59,10 @@ class MissionManagerMultiSegmentIWSampler(Fmi2Slave):
         self.last_segment_active        = False
         self.reach_wp_end               = False
         self.request_scope_angle        = False
-        for i in range(1, 5):
-            setattr(self, f"inter_wp_sampling_time_{i}",  0.0)
-            setattr(self, f"inter_wp_{i}_north", 0.0)
-            setattr(self, f"inter_wp_{i}_east",  0.0)
-            setattr(self, f"inter_wp_proj_{i}_north", 0.0)
-            setattr(self, f"inter_wp_proj_{i}_east",  0.0)
+        self.insert_wp_now              = False
+        self.idx                        = 0
+        self.next_wp_proj_north         = 0.0
+        self.next_wp_proj_east          = 0.0
             
         # Debug
         self.messages                   = "-"
@@ -72,7 +70,6 @@ class MissionManagerMultiSegmentIWSampler(Fmi2Slave):
         ## Internal
         # Base trajectory
         self._traj                      = []
-        self._idx                       = 0
         self._traj_built                = False
         
         # For Intermediate waypoint sampling
@@ -119,15 +116,12 @@ class MissionManagerMultiSegmentIWSampler(Fmi2Slave):
         self.register_variable(Boolean("last_segment_active", causality=Fmi2Causality.output))
         self.register_variable(Boolean("reach_wp_end", causality=Fmi2Causality.output))
         self.register_variable(Boolean("request_scope_angle", causality=Fmi2Causality.output))
-        for i in range(1, 5):
-            self.register_variable(Real(f"inter_wp_sampling_time_{i}", causality=Fmi2Causality.output))
-            self.register_variable(Real(f"inter_wp_{i}_north", causality=Fmi2Causality.output))
-            self.register_variable(Real(f"inter_wp_{i}_east",  causality=Fmi2Causality.output))
-            self.register_variable(Real(f"inter_wp_proj_{i}_north", causality=Fmi2Causality.output))
-            self.register_variable(Real(f"inter_wp_proj_{i}_east", causality=Fmi2Causality.output))
+        self.register_variable(Boolean("insert_wp_now", causality=Fmi2Causality.output))
+        self.register_variable(Integer("idx", causality=Fmi2Causality.output))
+        self.register_variable(Real("next_wp_proj_north", causality=Fmi2Causality.output))
+        self.register_variable(Real("next_wp_proj_east", causality=Fmi2Causality.output))
         
         # Debug
-        self.register_variable(Integer("_idx", causality=Fmi2Causality.output))
         self.register_variable(String("messages", causality=Fmi2Causality.output))
 
     def _valid_triplet(self, n, e, s) -> bool:
@@ -155,7 +149,7 @@ class MissionManagerMultiSegmentIWSampler(Fmi2Slave):
             traj.append((float(self.wp_end_north), float(self.wp_end_east), float(self.wp_end_speed)))
 
         self._traj                      = traj.copy()
-        self._idx                       = 0
+        self.idx                       = 0
         self._traj_built                = True
         
         self._traj_base                 = traj.copy()
@@ -183,9 +177,9 @@ class MissionManagerMultiSegmentIWSampler(Fmi2Slave):
             self.last_segment_active = False
 
     def _dist2_to_next(self) -> float:
-        if (self._idx + 1) >= len(self._traj):
+        if (self.idx + 1) >= len(self._traj):
             return np.inf
-        n2, e2, _ = self._traj[self._idx + 1]
+        n2, e2, _ = self._traj[self.idx + 1]
         dn = n2 - float(self.north)
         de = e2 - float(self.east)
         return dn * dn + de * de
@@ -298,20 +292,15 @@ class MissionManagerMultiSegmentIWSampler(Fmi2Slave):
         self._insert_inter_wp_to_traj(inter_wp)
         
         # Store output
-        inter_wp_idx = self._inter_wp_idx
-        setattr(self, f"inter_wp_sampling_time_{inter_wp_idx}", current_time)
-        setattr(self, f"inter_wp_{inter_wp_idx}_north", inter_wp[0])
-        setattr(self, f"inter_wp_{inter_wp_idx}_east", inter_wp[1])
-        setattr(self, f"inter_wp_proj_{inter_wp_idx}_north", inter_wp_proj[0])
-        setattr(self, f"inter_wp_proj_{inter_wp_idx}_east", inter_wp_proj[1])
+        self.next_wp_proj_north, self.next_wp_proj_east = self._inter_wp_proj_list[-1]
     
     def _get_intermediate_waypoint(self, current_time, scope_angle_deg=None):        
         # Get route segment parameters
         base_setpoint, head_setpoint, segment_length, beta = self._get_route_segment_parameters()
         
         # Get the previous waypoint as a base to scope the next intermediate waypoint
-        base_setpoint_idx            = self._traj.index(base_setpoint)
-        prev_wp_idx                  = base_setpoint_idx + self._idx_in_segment - 1 # -1 due to previous increment in _insert_inter_wp_to_traj
+        base_setpoint_idx                    = self._traj.index(base_setpoint)
+        prev_wp_idx                          = base_setpoint_idx + self._idx_in_segment - 1 # -1 due to previous increment in _insert_inter_wp_to_traj
         prev_n_inter_wp, prev_e_inter_wp, _  = self._traj[prev_wp_idx]
         
         # Scope the next intermediate waypoint given the input scope angle
@@ -331,12 +320,7 @@ class MissionManagerMultiSegmentIWSampler(Fmi2Slave):
             self._insert_inter_wp_to_traj(inter_wp)
             
             # Store output
-            inter_wp_idx = self._inter_wp_idx
-            setattr(self, f"inter_wp_sampling_time_{inter_wp_idx}", current_time)
-            setattr(self, f"inter_wp_{inter_wp_idx}_north", inter_wp[0])
-            setattr(self, f"inter_wp_{inter_wp_idx}_east", inter_wp[1])
-            setattr(self, f"inter_wp_proj_{inter_wp_idx}_north", inter_wp_proj[0])
-            setattr(self, f"inter_wp_proj_{inter_wp_idx}_east", inter_wp_proj[1])
+            self.next_wp_proj_north, self.next_wp_proj_east = self._inter_wp_proj_list[-1]
         
         return segment_switch
         
@@ -353,15 +337,15 @@ class MissionManagerMultiSegmentIWSampler(Fmi2Slave):
         return True
     
     def _advance_traj(self):
-        self._idx += 1
+        self.idx += 1
         
     def _reverse_traj(self):
-        self._idx -= 1
+        self.idx -= 1
 
     def _get_prev_and_next_waypoint(self):
         # Update prev/next using new index
-        p = self._traj[self._idx] if (self._idx + 1) < len(self._traj) else self._traj[-2]
-        q = self._traj[self._idx + 1] if (self._idx + 1) < len(self._traj) else self._traj[-1]
+        p = self._traj[self.idx] if (self.idx + 1) < len(self._traj) else self._traj[-2]
+        q = self._traj[self.idx + 1] if (self.idx + 1) < len(self._traj) else self._traj[-1]
 
         self.prev_wp_north, self.prev_wp_east, self.prev_wp_speed = p
         self.next_wp_north, self.next_wp_east, self.next_wp_speed = q        
@@ -381,12 +365,12 @@ class MissionManagerMultiSegmentIWSampler(Fmi2Slave):
             entering_ra         = self._dist2_to_next() <= ra2          # Ship enters RoA
             
             # Next-point status
-            next_wp_exists = (self._idx + 1) < len(self._traj)
-            next_wp_is_end = next_wp_exists and (self._traj[self._idx + 1] == self._traj_base[-1])
-            next_wp_is_inter = next_wp_exists and (self._traj[self._idx + 1] not in self._traj_base)
+            next_wp_exists = (self.idx + 1) < len(self._traj)
+            next_wp_is_end = next_wp_exists and (self._traj[self.idx + 1] == self._traj_base[-1])
+            next_wp_is_inter = next_wp_exists and (self._traj[self.idx + 1] not in self._traj_base)
 
             # Last segment flag
-            on_final_leg                = (self._idx == len(self._traj) - 2)
+            on_final_leg                = (self.idx == len(self._traj) - 2)
             self.last_segment_active    = on_final_leg
             
             # List of triggers
@@ -401,7 +385,9 @@ class MissionManagerMultiSegmentIWSampler(Fmi2Slave):
                                            and next_wp_is_inter
                                            )
 
-            messages = ""
+            # Output for external function
+            messages            = ""
+            self.insert_wp_now  = False
             
             # ======================================================================================
             # First Condition: Handle the scope angle request
@@ -466,6 +452,9 @@ class MissionManagerMultiSegmentIWSampler(Fmi2Slave):
                 self._accepted_sampled_inter_wp += 1
                 self._inter_wp_idx              += 1
                 
+                # Set the internal function to insert the wp now for recording
+                self.insert_wp_now              = True
+                
                 # Debug
                 messages        += f"Scope Angle Request Handling: {sub_messages}"
                 self.messages    = messages
@@ -476,6 +465,10 @@ class MissionManagerMultiSegmentIWSampler(Fmi2Slave):
             # Third Condition: Zeroeth intermediate waypoint placement + request first scope angle
             # ======================================================================================
             if place_zeroeth_inter_wp:
+                # Update the actual segment index. Inside WP trigger does not immediately triggers at the first waypoint
+                prev_wp = (self.prev_wp_north, self.prev_wp_east, self.prev_wp_speed)
+                self._segment_idx = self._traj_base.index(prev_wp) + 1
+                
                 # Place the zeroeth intermediate waypoint
                 self._get_zeroeth_intermediate_waypoint(current_time=current_time)
                 
@@ -488,8 +481,11 @@ class MissionManagerMultiSegmentIWSampler(Fmi2Slave):
                 # Increment the intermediate waypoint index after the sampling
                 self._inter_wp_idx              += 1
                 
+                # Set the internal function to insert the wp now for recording
+                self.insert_wp_now              = True
+                
                 # Debug
-                messages       += f"Zeroeth IW Placement at ({self.next_wp_north:.1f},{self.next_wp_east:.1f}) + First Scope Angle Request"
+                messages       += f"Zeroeth IW Placement at ({self.next_wp_north:.1f},{self.next_wp_east:.1f}) + First Scope Angle Request."
                 self.messages   = messages
 
                 return True
@@ -556,12 +552,10 @@ class MissionManagerMultiSegmentIWSampler(Fmi2Slave):
             self.last_segment_active    = False
             self.reach_wp_end           = False
             self.request_scope_angle    = False
-            for i in range(1, 5):
-                setattr(self, f"inter_wp_sampling_time_{i}",  0.0)
-                setattr(self, f"inter_wp_{i}_north", 0.0)
-                setattr(self, f"inter_wp_{i}_east",  0.0)
-                setattr(self, f"inter_wp_proj_{i}_north", 0.0)
-                setattr(self, f"inter_wp_proj_{i}_east",  0.0)
+            self.insert_wp_now          = False
+            self.idx                    = 0
+            self.next_wp_proj_north     = 0.0
+            self.next_wp_proj_east      = 0.0
             
         return True
 

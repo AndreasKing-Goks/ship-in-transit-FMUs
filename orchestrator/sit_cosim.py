@@ -90,19 +90,22 @@ class ShipInTransitCoSimulation(CoSimInstance):
 
         # =========================
         # Containers and Relevant Parameters for Termination Flags
-        # =========================
-        # Relevant parameters
-        self._navwarn_active        = False
-        self._navrecover_printed    = False
-        self._nav_warn_time_counter = 0.0
-        self._navfail_printed       = False
-        
+        # =========================        
         # Containers
         self.stop_info = {}
         
         for ship_config in ship_configs:
             ship_id = ship_config.get("id")
             
+            # Necessary internal variables for each ship ids
+            # Relevant parameters
+            setattr(self, f"_navwarn_active_{ship_id}", False)
+            setattr(self, f"_navrecover_printed_{ship_id}", False)
+            setattr(self, f"_navwarn_time_counter_{ship_id}", 0.0)
+            setattr(self, f"_navfail_printed_{ship_id}", False)
+            setattr(self, f"_{ship_id}_rew_printed", False)
+            
+            # Data
             data    = {
                 'colav_active'          : [],
                 'collision'             : {
@@ -123,8 +126,6 @@ class ShipInTransitCoSimulation(CoSimInstance):
         # =========================
         self.ship_with_IW_sampling  = []
         self.IW_sampling_animated   = IW_sampling_animated
-        self.segment_idx            = 1
-        self.idx_in_segment         = 1
 
         if self.IW_sampling_animated:
             self.IW_sampling_anim_data  = {}
@@ -141,7 +142,7 @@ class ShipInTransitCoSimulation(CoSimInstance):
 
             if isinstance(IW_sampling_cfg, dict):
                 has_IW_sampling = True
-                animate_ship_IW = IW_sampling_cfg.get("active", False)
+                animate_ship_IW = IW_sampling_cfg.get("animated", False)
 
             # Skip ships without IW sampling
             if not has_IW_sampling:
@@ -156,15 +157,15 @@ class ShipInTransitCoSimulation(CoSimInstance):
             any_IW_sampling_animated = True
 
             data = {
-                "active_path": {
-                    "north": ship_config.get("north"),
-                    "east": ship_config.get("east"),
-                },
+                "active_path":  list(zip(ship_config["route"].get("north"), ship_config["route"].get("east"))),
                 "sampled_inter_wps": [],
-                "sampled_proj_points": [],
+                "sampled_inter_wp_projs": [],
             }
-
-            self.IW_sampling_anim_data[ship_id] = {self.time: data}
+            
+            frame = int(self.time / self.stepSize)
+            setattr(self, f"current_frame_{ship_id}", frame)
+            self.IW_sampling_anim_data[ship_id] = {getattr(self, f"current_frame_{ship_id}") : data}
+            print(self.IW_sampling_anim_data)
 
         # Turn off animation if no ship actually uses it
         if self.IW_sampling_animated and not any_IW_sampling_animated:
@@ -783,96 +784,6 @@ class ShipInTransitCoSimulation(CoSimInstance):
     def update_collision_status(self, ship_id):
         return self.GetLastValue(slaveName=self.ship_slave(ship_id, "COLAV"), 
                                  slaveVar="ship_collision")
-        
-
-    # def PostSolverFunctionCall(self):
-    #     """
-    #         Function to handle:
-    #             - Simulation termination assesment and handling
-    #             - Reward Function for reward signal (RL only)
-    #     """
-    #     ## Get the reach end point and collision flag for all assets
-    #     rew_flags       = {ship_config["id"]: False for ship_config in self.ship_configs}
-    #     collision_flags = {ship_config["id"]: False for ship_config in self.ship_configs}
-        
-    #     for ship_config in self.ship_configs:
-    #         ship_id = ship_config.get("id")
-    #         spawn   = ship_config["spawn"] if "spawn" in list(ship_config.keys()) else None
-            
-    #         ## Update ship active status
-    #         if spawn is not None:
-    #             self.update_ship_delayed_status(ship_id, spawn)
-            
-    #         ## Update reach end point status
-    #         rew_flag  = self.update_ship_reach_end_point_status(ship_id)
-    #         rew_flags[ship_id] = rew_flag
-            
-    #         if ship_config.get("enable_colav"):
-    #             ## Update colav active flag
-    #             colav_active    = self.update_colav_active_flag(ship_id)
-                
-    #             ## Update collision status
-    #             collision_flag  = self.update_collision_status(ship_id)
-    #             collision_flags[ship_id] = collision_flag
-                
-    #             ## Update message
-    #             if colav_active and (not collision_flag) and (not self.print_col_msg):
-    #                 print(f"{ship_id}_COLAV is active!")
-    #                 self.print_col_msg = True
-    #             elif (not colav_active) and self.print_col_msg:
-    #                 print(f"{ship_id}_COLAV is deactivated!")
-    #                 self.print_col_msg = False
-    #             elif collision_flag:
-    #                 print(f"{ship_id} collides!")
-        
-    #     own_ship_reaches_end_waypoint   = rew_flags[self.ship_configs[0]["id"]]
-    #     all_ship_reaches_end_waypoint   = np.all([rew_flags[ship_id] for ship_id in list(rew_flags.keys())])
-    #     any_ship_collides               = np.any([collision_flags[ship_id] for ship_id in list(collision_flags.keys())])
-        
-    #     ## Conclude the stop flag
-    #     self.stop = own_ship_reaches_end_waypoint or (all_ship_reaches_end_waypoint or any_ship_collides)
-        
-    #     # ==================================
-    #     # Gather IW sampling animation data
-    #     # ==================================
-    #     if self.IW_sampling_animated:
-    #         # Pre-load the animation data
-    #         for ship_config in self.ship_configs:
-    #             ship_id = ship_config["id"]
-                
-    #             IW_sampling_animated = ship_config.get("IW_sampling_animated", False)
-    #             if not IW_sampling_animated:
-    #                 continue
-                    
-    #             inter_wp_north_base = self.GetLastValue(
-    #                 slaveName=self.ship_slave(prefix=ship_id, block="MISSION_MANAGER"),
-    #                 slaveVar="prev_wp_north"
-    #             )
-    #             inter_wp_east_base = self.GetLastValue(
-    #                 slaveName=self.ship_slave(prefix=ship_id, block="MISSION_MANAGER"),
-    #                 slaveVar="prev_wp_east"
-    #             )
-    #             inter_wp_north_head = self.GetLastValue(
-    #                 slaveName=self.ship_slave(prefix=ship_id, block="MISSION_MANAGER"),
-    #                 slaveVar="next_wp_north"
-    #             )
-    #             inter_wp_east_head = self.GetLastValue(
-    #                 slaveName=self.ship_slave(prefix=ship_id, block="MISSION_MANAGER"),
-    #                 slaveVar="next_wp_east"
-    #             )
-                
-    #             # Initial animation data
-    #             data = {
-    #                 "active_path": { 
-    #                     "north"     : [inter_wp_north_base, inter_wp_north_head], 
-    #                     "east"      : [inter_wp_east_base,  inter_wp_east_head]
-    #                 },
-    #                 "sampled_inter_wps"   : [],
-    #                 "sampled_proj_points" : [],
-    #             }
-                
-    #             # Update per-ship container
-    #             self.IW_sampling_anim_data[ship_id][self.time]    = data
     
     
     def PostSolverFunctionCall(self):
@@ -922,6 +833,76 @@ class ShipInTransitCoSimulation(CoSimInstance):
                      or all_ship_reaches_end_waypoint 
                      or any_ship_collides)
         
+        # ==================================
+        # Gather IW sampling animation data
+        # ==================================
+        if self.IW_sampling_animated:
+            # Pre-load the animation data
+            for ship_config in self.ship_configs:
+                ship_id = ship_config["id"]
+                
+                IW_sampling_animated = ship_config["IW_sampling"].get("animated", False)
+                if not IW_sampling_animated:
+                    continue
+                
+                # Get the insert wp flag
+                insert_wp_now = self.GetLastValue(
+                    slaveName=self.ship_slave(prefix=ship_id, block="MISSION_MANAGER"),
+                    slaveVar="insert_wp_now"
+                )
+                
+                if insert_wp_now:
+                    # Get index
+                    idx           = int(self.GetLastValue(
+                        slaveName=self.ship_slave(prefix=ship_id, block="MISSION_MANAGER"),
+                        slaveVar="idx"
+                    ) + 1)
+                    
+                    # Get the next waypoint
+                    next_wp_north = self.GetLastValue(
+                        slaveName=self.ship_slave(prefix=ship_id, block="MISSION_MANAGER"),
+                        slaveVar="next_wp_north"
+                    )
+                    next_wp_east = self.GetLastValue(
+                        slaveName=self.ship_slave(prefix=ship_id, block="MISSION_MANAGER"),
+                        slaveVar="next_wp_east"
+                    )
+                    next_wp_proj_north = self.GetLastValue(
+                        slaveName=self.ship_slave(prefix=ship_id, block="MISSION_MANAGER"),
+                        slaveVar="next_wp_proj_north"
+                    )
+                    next_wp_proj_east = self.GetLastValue(
+                        slaveName=self.ship_slave(prefix=ship_id, block="MISSION_MANAGER"),
+                        slaveVar="next_wp_proj_east"
+                    )
+                    
+                    # Insert the intermediate waypoint
+                    # Get the prev frame
+                    prev_frame          = getattr(self, f"current_frame_{ship_id}")
+                    
+                    # Altered the previous active path
+                    prev_active_path    = self.IW_sampling_anim_data[ship_id][prev_frame]["active_path"].copy()
+                    prev_active_path.insert(idx, (next_wp_north, next_wp_east))
+                    
+                    # Altered the intermediate waypoints list
+                    prev_inter_wps      = self.IW_sampling_anim_data[ship_id][prev_frame]["sampled_inter_wps"].copy()
+                    prev_inter_wps.append((next_wp_north, next_wp_east))
+                    
+                    # Altered the intermediate waypoint projection list
+                    prev_inter_wp_projs = self.IW_sampling_anim_data[ship_id][prev_frame]["sampled_inter_wp_projs"].copy()
+                    prev_inter_wp_projs.append((next_wp_proj_north, next_wp_proj_east))
+                    
+                    data = {
+                        "active_path": prev_active_path,
+                        "sampled_inter_wps": prev_inter_wps,
+                        "sampled_inter_wp_projs": prev_inter_wp_projs,
+                    }
+                    
+                    frame = int(self.time / self.stepSize)
+                    setattr(self, f"current_frame_{ship_id}", frame)
+                    self.IW_sampling_anim_data[ship_id][frame]= data
+                    
+        
     def evaluate_ship_condition(self, ship_id:str, ship_config:dict):
         """
             [UNTESTED]
@@ -932,13 +913,13 @@ class ShipInTransitCoSimulation(CoSimInstance):
         # Helpers
         # ==================================
         def push_flag(ship_id:str, flag_name:str, value:bool, detail=None):
-            # Update stop info
-            if detail is None:
-                self.stop_info[ship_id][flag_name].append(value)
             # Specific for collision related
-            else:
+            if flag_name == 'collision':
                 self.stop_info[ship_id][flag_name]['status'].append(value)
                 self.stop_info[ship_id][flag_name]['colliders'] = detail
+            # Update stop info
+            elif detail is None:
+                self.stop_info[ship_id][flag_name].append(value)
                 
         # ==================================
         # Related Variables
@@ -995,7 +976,7 @@ class ShipInTransitCoSimulation(CoSimInstance):
         # First compute the navigation failure warning
         nav_warn_now    = check_condition.is_ship_navigation_warning(
             e_ct    = e_ct,
-            e_tol   = 150
+            e_tol   = 500
         )
         
         # If no potential navigation failure recovery happens before the threshold time, turn this as True
@@ -1004,36 +985,39 @@ class ShipInTransitCoSimulation(CoSimInstance):
         # If entering warning phase
         if nav_warn_now:
             # Warning just started
-            if not getattr(self, '_navwarn_active', False):
-                self._navwarn_active        = True
-                self._navrecover_printed    = False
-                self._nav_warn_time_counter = 0.0
-                self._navfail_printed       = False
+            if not getattr(self, f'_navwarn_active_{ship_id}', False):
+                setattr(self, f"_navwarn_active_{ship_id}", True)
+                setattr(self, f"_navrecover_printed_{ship_id}", False)
+                setattr(self, f"_navwarn_time_counter_{ship_id}", 0.0)
+                setattr(self, f"_navfail_printed_{ship_id}", False)
                 print(f"{ship_id} prones to have navigational failure")
             
             # Increment the warning time counter
-            self._nav_warn_time_counter += self.stepSizeSec
+            setattr(
+                self,
+                f"_navwarn_time_counter_{ship_id}",
+                getattr(self, f"_navwarn_time_counter_{ship_id}") + self.stepSizeSec
+            )
             
             # Condition 1: Ships being in th ewarning zone longer than the time limit
-            condition_1 = self._nav_warn_time_counter > 600
+            condition_1 = getattr(self, f'_navwarn_time_counter_{ship_id}') > 600
             
             # Promote to failure if limit exceeded
             if condition_1:
-                print(self._nav_warn_time_counter)
                 navigational_failure = True
                 nav_warn_now         = False # Once failed, no longer "warning"
-                if not getattr(self, '_navfail_printed', False):
+                if not getattr(self, f'_navfail_printed_{ship_id}', False):
                     print(f"{ship_id} experiences navigational failure")
-                    self._navfail_printed   = True
+                    setattr(self, f"_navfail_printed_{ship_id}", True)
         
         # If manages to recover
         else:
-            if getattr(self, '_navwarn_active', False):
+            if getattr(self, f'_navwarn_active_{ship_id}', False):
                 print(f"{ship_id} recovers form navigational failure warning")
-                self._navrecover_printed    = True
-            self._navwarn_active        = False
-            self._nav_warn_time_counter = 0.0
-            self._navfail_printed       = False
+                setattr(self, f"_navrecover_printed_{ship_id}", True)
+            setattr(self, f"_navwarn_active_{ship_id}", False)
+            setattr(self, f"_navwarn_time_counter_{ship_id}", 0.0)
+            setattr(self, f"_navfail_printed_{ship_id}", False)
             
         # Record
         self.stop_info[ship_id]['nav_fail_warning'].append(nav_warn_now)
@@ -1044,8 +1028,9 @@ class ShipInTransitCoSimulation(CoSimInstance):
         # ==================================
         reaches_end_waypoint = self.update_ship_reach_end_point_status(ship_id)
         push_flag(ship_id=ship_id, flag_name="reaches_end_waypoint", value=reaches_end_waypoint)
-        if reaches_end_waypoint:
+        if reaches_end_waypoint and not getattr(self, f'_{ship_id}_rew_printed', False):
             print(f"{ship_id} reaches its final trajectory's waypoint")
+            setattr(self, f'_{ship_id}_rew_printed', True)
         
         # ==================================
         # Collisions
@@ -1064,11 +1049,11 @@ class ShipInTransitCoSimulation(CoSimInstance):
                 
                 # Ship Position
                 test_north = self.GetLastValue(
-                    slaveName=self.ship_slave(prefix=ship_id, block="SHIP_MODEL"),
+                    slaveName=self.ship_slave(prefix=test_sid, block="SHIP_MODEL"),
                     slaveVar="north"
                 )
                 test_east = self.GetLastValue(
-                    slaveName=self.ship_slave(prefix=ship_id, block="SHIP_MODEL"),
+                    slaveName=self.ship_slave(prefix=test_sid, block="SHIP_MODEL"),
                     slaveVar="east"
                 )
                 test_pos = [test_north, test_east]
@@ -1081,8 +1066,9 @@ class ShipInTransitCoSimulation(CoSimInstance):
                 ):
                     colliders.append(test_sid)
             
+            
             collision = bool(colliders)
-            push_flag(ship_id=ship_id, flag_name="collision", value=collision, detail=(collision if colliders else None))
+            push_flag(ship_id=ship_id, flag_name="collision", value=collision, detail=(colliders if colliders else None))
             
             colav_active    = self.update_colav_active_flag(ship_id)
             self.stop_info[ship_id]['colav_active'].append(colav_active)
@@ -1946,8 +1932,7 @@ class ShipInTransitCoSimulation(CoSimInstance):
                 "label": {},
                 "status_text": None,
                 "inter_wp": {},
-                "inter_wp_proj": {},
-                "inter_wp_proj_line": {},
+                "new_trajectory": {},
                 "dynamic_list": []
             }
         else:
@@ -1993,6 +1978,24 @@ class ShipInTransitCoSimulation(CoSimInstance):
                 )
                 artists["label"][sid] = txt
                 artists["dynamic_list"].append(txt)
+            
+            if self.IW_sampling_animated:
+                # Intermediate waypoints
+                inter_wp, = ax_map.scatter([], [], 
+                            s=style["waypoint_s"],
+                            edgecolors="white",
+                            color=color,
+                            zorder=3)
+                artists["inter_wp"][sid] = inter_wp 
+                artists["dynamic_list"].append(inter_wp) 
+                
+                # New trajectory
+                new_trajectory, = ax_map.plot([], [],
+                                            lw=style["own_lw"], 
+                                            alpha=0.9, 
+                                            color=color)
+                artists["new_trajectory"][sid] = new_trajectory
+                artists["dynamic_list"].append(new_trajectory)
 
         status_txt = ax_status.text(
             0.01, 0.5, "",

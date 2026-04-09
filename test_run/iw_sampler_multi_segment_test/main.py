@@ -44,7 +44,7 @@ spawn_requests = {
 # Instantiate Co-simulation Wrapper
 # =========================
 # Instantiate
-instance = ShipInTransitCoSimulation(config=config, ROOT=ROOT, spawn_requests=spawn_requests)
+instance = ShipInTransitCoSimulation(config=config, ROOT=ROOT, spawn_requests=spawn_requests, IW_sampling_animated=True)
 
 # =========================
 # Simulate
@@ -97,19 +97,19 @@ while instance.time <= instance.stopTime:
     prev_wp_east    = instance.GetLastValue("OS0__MISSION_MANAGER", "prev_wp_east")
     next_wp_north   = instance.GetLastValue("OS0__MISSION_MANAGER", "next_wp_north")
     next_wp_east    = instance.GetLastValue("OS0__MISSION_MANAGER", "next_wp_east")
-    _idx            = instance.GetLastValue("OS0__MISSION_MANAGER", "_idx")
+    idx             = instance.GetLastValue("OS0__MISSION_MANAGER", "idx")
     msg             = str(instance.GetLastValue("OS0__MISSION_MANAGER", "messages"))
     
     # Only print if something changed
-    if _idx != last_idx or msg != last_msg:
-        print("traj_index_", _idx)
+    if idx != last_idx or msg != last_msg:
+        print("traj_index_", idx)
         print(f"msg : {msg}")
         print(f"prev: ({prev_wp_north:.1f}, {prev_wp_east:.1f})")
         print(f"next: ({next_wp_north:.1f}, {next_wp_east:.1f})")
         print("####")
 
         # Update stored values
-        last_idx = _idx
+        last_idx = idx
         last_msg = msg
         last_prev = (prev_wp_north, prev_wp_east)
         last_next = (next_wp_north, next_wp_east)
@@ -119,77 +119,84 @@ while instance.time <= instance.stopTime:
     else:
         break
 
-# =========================
-# Animation and Plot
-# =========================
-# Available formats:
-# - .mp4
-# - .gif
-# - .avi
-# - .mov
+for key in instance.IW_sampling_anim_data["OS0"].keys():
+    print(f"===== frame:{key}")
+    print(instance.IW_sampling_anim_data["OS0"][key]["active_path"])
+    print(instance.IW_sampling_anim_data["OS0"][key]["sampled_inter_wps"])
+    print(instance.IW_sampling_anim_data["OS0"][key]["sampled_inter_wp_projs"])
+    print("=====")
 
-# Animate Simulation
-instance.AnimateFleetTrajectory(
-        ship_ids=None,
-        show=True,
-        block=True,
-        mode="quick",
-        fig_width=10.0,
-        margin_frac=0.08,
-        equal_aspect=True,
-        interval_ms=20,
-        frame_step=2,
-        trail_len=50,
-        plot_routes=True,
-        plot_waypoints=True,
-        plot_roa=True,
-        plot_start_end=True,
-        with_labels=True,
-        precompute_ship_outlines=True,
-        # save_path=save_path,
-        writer_fps=20,
-        palette=None,
-        blit=True,
-        ship_scale=1.0
-    )
+# # =========================
+# # Animation and Plot
+# # =========================
+# # Available formats:
+# # - .mp4
+# # - .gif
+# # - .avi
+# # - .mov
 
-# Plot Trajectory
-instance.PlotFleetTrajectory(mode="quick", ship_scale=1.0)
+# # Animate Simulation
+# instance.AnimateFleetTrajectory(
+#         ship_ids=None,
+#         show=True,
+#         block=True,
+#         mode="quick",
+#         fig_width=10.0,
+#         margin_frac=0.08,
+#         equal_aspect=True,
+#         interval_ms=20,
+#         frame_step=2,
+#         trail_len=50,
+#         plot_routes=True,
+#         plot_waypoints=True,
+#         plot_roa=True,
+#         plot_start_end=True,
+#         with_labels=True,
+#         precompute_ship_outlines=True,
+#         # save_path=save_path,
+#         writer_fps=20,
+#         palette=None,
+#         blit=True,
+#         ship_scale=1.0
+#     )
 
-# Plot Simulation Results
-key_group_list = [
-    ## Own Ship
-    # Base results
-    # ["OS0.north"],
-    # ["OS0.east"],
-    # ["OS0.forward_speed", "OS0.next_wp_speed", "OS0.total_ship_speed"],
-    # ["OS0.yaw_angle_rad", "OS0.yaw_angle_ref_rad"],
-    # ["OS0.rudder_angle_deg"],
-    # ["OS0.e_ct"],
-    
-    # Waypoints
-    ["OS0.prev_wp_north"],
-    ["OS0.prev_wp_east"],
-    ["OS0.next_wp_north"],
-    ["OS0.next_wp_east"],
-    
-    # # For non-single ship simulation only
-    # ["OS0.new_throttle_cmd"],
-    # ["OS0.new_rudder_angle_deg"],
-    # ["OS0.colav_rud_ang_increment"],
-    # ["OS0.beta_own_to_tar_1"],
-    # ["OS0.tcpa_own_to_tar_1"],
-    # ["OS0.dcpa_own_to_tar_1"],
-    # ["OS0.dist_own_to_tar_1"],
-    # ["OS0.rr_own_to_tar_1"],
-    
-    # # For environment load-enabled simulation only
-    # ["OS0.current_speed"],
-    # ["OS0.current_direction_deg"],
-    # ["OS0.wind_speed"],
-    # ["OS0.wind_direction_deg"],
-    
-]
+# # Plot Trajectory
+# instance.PlotFleetTrajectory(mode="quick", ship_scale=1.0)
 
-# Plot Time Series
-instance.JoinPlotTimeSeries(list(reversed(key_group_list)),  create_title= False, legend= True, show_instance_name=False, show=True)
+# # Plot Simulation Results
+# key_group_list = [
+#     ## Own Ship
+#     # Base results
+#     # ["OS0.north"],
+#     # ["OS0.east"],
+#     # ["OS0.forward_speed", "OS0.next_wp_speed", "OS0.total_ship_speed"],
+#     # ["OS0.yaw_angle_rad", "OS0.yaw_angle_ref_rad"],
+#     # ["OS0.rudder_angle_deg"],
+#     # ["OS0.e_ct"],
+    
+#     # Waypoints
+#     ["OS0.prev_wp_north"],
+#     ["OS0.prev_wp_east"],
+#     ["OS0.next_wp_north"],
+#     ["OS0.next_wp_east"],
+    
+#     # # For non-single ship simulation only
+#     # ["OS0.new_throttle_cmd"],
+#     # ["OS0.new_rudder_angle_deg"],
+#     # ["OS0.colav_rud_ang_increment"],
+#     # ["OS0.beta_own_to_tar_1"],
+#     # ["OS0.tcpa_own_to_tar_1"],
+#     # ["OS0.dcpa_own_to_tar_1"],
+#     # ["OS0.dist_own_to_tar_1"],
+#     # ["OS0.rr_own_to_tar_1"],
+    
+#     # # For environment load-enabled simulation only
+#     # ["OS0.current_speed"],
+#     # ["OS0.current_direction_deg"],
+#     # ["OS0.wind_speed"],
+#     # ["OS0.wind_direction_deg"],
+    
+# ]
+
+# # Plot Time Series
+# instance.JoinPlotTimeSeries(list(reversed(key_group_list)),  create_title= False, legend= True, show_instance_name=False, show=True)
