@@ -21,9 +21,9 @@ sys.path.insert(0, str(ROOT))
 from orchestrator.sit_cosim import ShipInTransitCoSimulation
 
 
-CONFIG_PATH = Path(__file__).with_name("single_target_ship_ho.yaml")
+CONFIG_PATH = Path(__file__).with_name("two_target_ship_ho.yaml")
 SAVE_DIR = ROOT / "saved_animation"
-BEST_ANIM_PATH = SAVE_DIR / "open_sea_one_ts_best_ax.mp4"
+BEST_ANIM_PATH = SAVE_DIR / "open_sea_two_ts_best_ax.mp4"
 RESULTS_PATH = Path(__file__).with_name("ax_results.json")
 
 
