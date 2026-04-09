@@ -2089,13 +2089,18 @@ class ShipInTransitCoSimulation(CoSimInstance):
             sampled_inter_wp_projs
         )
         artists["inter_wp_proj"][sid].set_data(x_proj, y_proj)
-
+        
         if plot_inter_wp_roa:
             color = artists["color"][sid]
+            
+            # Exclude the zeroeth IW from RoA drawing
+            sampled_inter_wps_for_roa = sampled_inter_wps[1:] if len(sampled_inter_wps) > 1 else []
+
+            
             new_circles = self.update_inter_wp_roa_artists(
                 sid=sid,
                 artists=artists,
-                sampled_inter_wps=sampled_inter_wps,
+                sampled_inter_wps=sampled_inter_wps_for_roa,
                 color=color,
                 mode=mode
             )
