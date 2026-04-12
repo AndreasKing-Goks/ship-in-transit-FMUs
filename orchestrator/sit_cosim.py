@@ -841,7 +841,11 @@ class ShipInTransitCoSimulation(CoSimInstance):
             for ship_config in self.ship_configs:
                 ship_id = ship_config["id"]
                 
-                IW_sampling_animated = ship_config["IW_sampling"].get("animated", False)
+                IW_sampling          = ship_config.get("IW_sampling", False)
+                if not IW_sampling:
+                    continue
+                
+                IW_sampling_animated = IW_sampling.get("animated", False)
                 if not IW_sampling_animated:
                     continue
                 

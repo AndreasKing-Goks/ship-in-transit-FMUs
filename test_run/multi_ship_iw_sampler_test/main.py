@@ -68,7 +68,7 @@ spawn_requests = {
 # Instantiate Co-simulation Wrapper
 # =========================
 # Instantiate
-instance = ShipInTransitCoSimulation(config=config, ROOT=ROOT, spawn_requests=spawn_requests)
+instance = ShipInTransitCoSimulation(config=config, ROOT=ROOT, spawn_requests=spawn_requests, IW_sampling_animated=True)
 
 
 # =========================
@@ -92,6 +92,9 @@ scope_angles_deg = {
 ship_ids = [key for key in scope_angles_deg.keys()]
 
 while instance.time <= instance.stopTime:
+    
+    # Step the simulator
+    instance.step() 
     
     # Own Ship Position and trigger zone radius
     north = instance.GetLastValue(
@@ -143,6 +146,16 @@ while instance.time <= instance.stopTime:
             slaveName=instance.ship_slave(prefix=sid, block="MISSION_MANAGER"),
             slaveVar="request_scope_angle"
         )
+        
+        messages = instance.GetLastValue(
+            slaveName=instance.ship_slave(prefix=sid, block="MISSION_MANAGER"),
+            slaveVar="messages"
+        )
+        
+        is_inside = instance.GetLastValue(
+            slaveName=instance.ship_slave(prefix=sid, block="MISSION_MANAGER"),
+            slaveVar="inside_trigger_zone"
+        )
 
         if request_scope_angle:
             idx = scope_angles_deg[sid]["idx"]
@@ -165,10 +178,8 @@ while instance.time <= instance.stopTime:
             print(f"  inside_zone   = {dist_os_to_ts_2 < trigger_zone_rad_2}")
             print(f"  request_scope = {request_scope_angle}")
             print(f"  idx           = {scope_angles_deg[sid]['idx']}")
+            print(f"  messages      = {messages}")
             print("----")
-    
-    # Step the simulator
-    instance.step() 
     
     # Determined the termination flag
     if not instance.stop:
@@ -201,6 +212,7 @@ instance.AnimateFleetTrajectory(
         plot_waypoints=True,
         plot_roa=True,
         plot_start_end=True,
+        plot_inter_wp_roa=True,
         with_labels=True,
         precompute_ship_outlines=True,
         # save_path=save_path,

@@ -1,6 +1,6 @@
 simulation:
   instanceName: Ship-Path Following Test
-  stopTime: 10000
+  stopTime: 10000.0
   stepSize: 5.0
 
 ships:
@@ -343,7 +343,7 @@ ships:
         ra: 300
         max_sampled_inter_wp: 5
         scope_angle_max_deg: 45
-        scope_length: 100
+        scope_length: 750
 
       AUTOPILOT:
         r: 1000
@@ -514,7 +514,7 @@ ships:
         ra: 300
         max_sampled_inter_wp: 5
         scope_angle_max_deg: 45
-        scope_length: 100
+        scope_length: 750
 
       AUTOPILOT:
         r: 1000
@@ -685,7 +685,7 @@ ships:
         ra: 300
         max_sampled_inter_wp: 5
         scope_angle_max_deg: 45
-        scope_length: 100
+        scope_length: 750
 
       AUTOPILOT:
         r: 1000
