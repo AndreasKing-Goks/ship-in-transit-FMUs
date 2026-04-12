@@ -76,15 +76,15 @@ instance = ShipInTransitCoSimulation(config=config, ROOT=ROOT, spawn_requests=sp
 # =========================
 scope_angles_deg = {
     "TS1": {
-        "sa"  : [5, 0, -10, -15, 0],
+        "sa"  : [5, 5, 10, 5, 0],
         "idx" : 0
         },
     "TS2": {
-        "sa"  : [-15, 0, 5, 10, 0],
+        "sa"  : [-5, -10, -15, 0, 0],
         "idx" : 0
         },
     "TS3": {
-        "sa"  : [10, 0, -15, 5, 0],
+        "sa"  : [-10, -10, -5, 5, 0],
         "idx" : 0
         },
 }
@@ -212,7 +212,8 @@ instance.AnimateFleetTrajectory(
         plot_waypoints=True,
         plot_roa=True,
         plot_start_end=True,
-        plot_inter_wp_roa=True,
+        plot_inter_wp_roa=False,
+        plot_inter_wp_proj=False,
         with_labels=True,
         precompute_ship_outlines=True,
         # save_path=save_path,

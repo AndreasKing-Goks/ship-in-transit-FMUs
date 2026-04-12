@@ -2055,7 +2055,7 @@ class ShipInTransitCoSimulation(CoSimInstance):
         return new_circles
     
     
-    def update_iw_dynamic_artists(self, i, sid, artists, mode="quick", plot_inter_wp_roa=True):
+    def update_iw_dynamic_artists(self, i, sid, artists, mode="quick", plot_inter_wp_roa=True, plot_inter_wp_proj=True):
         """
         Update IW-related artists for a given ship and frame.
         Returns any newly created artists that must also be redrawn.
@@ -2088,11 +2088,14 @@ class ShipInTransitCoSimulation(CoSimInstance):
         offsets = self.points_to_offsets(sampled_inter_wps)
         artists["inter_wp"][sid].set_offsets(offsets)
 
-        x_proj, y_proj = self.iw_pairs_to_segment_xy(
-            sampled_inter_wps,
-            sampled_inter_wp_projs
-        )
-        artists["inter_wp_proj"][sid].set_data(x_proj, y_proj)
+        if plot_inter_wp_proj:
+            x_proj, y_proj = self.iw_pairs_to_segment_xy(
+                sampled_inter_wps,
+                sampled_inter_wp_projs
+            )
+            artists["inter_wp_proj"][sid].set_data(x_proj, y_proj)
+        else:
+            artists["inter_wp_proj"][sid].set_data([], [])
         
         if plot_inter_wp_roa:
             color = artists["color"][sid]
@@ -2247,7 +2250,8 @@ class ShipInTransitCoSimulation(CoSimInstance):
         trail_len=None,
         ship_scale=1.0,
         mode="quick",
-        plot_inter_wp_roa=True
+        plot_inter_wp_roa=True,
+        plot_inter_wp_proj=True
     ):
         artists["status_text"].set_text(f"time = {i * self.stepSize / 1e9:.2f} s   |   frame = {i}")
 
@@ -2280,7 +2284,8 @@ class ShipInTransitCoSimulation(CoSimInstance):
                     sid=sid,
                     artists=artists,
                     mode=mode,
-                    plot_inter_wp_roa=plot_inter_wp_roa
+                    plot_inter_wp_roa=plot_inter_wp_roa,
+                    plot_inter_wp_proj=plot_inter_wp_proj
                 )
                 returned_artists.extend(extra_artists)
 
@@ -2304,6 +2309,7 @@ class ShipInTransitCoSimulation(CoSimInstance):
         plot_roa=True,
         plot_start_end=True,
         plot_inter_wp_roa=True,
+        plot_inter_wp_proj=True,
         with_labels=True,
         precompute_ship_outlines=True,
         save_path=None,
@@ -2477,7 +2483,8 @@ class ShipInTransitCoSimulation(CoSimInstance):
                 trail_len=trail_len,
                 ship_scale=ship_scale,
                 mode=mode,
-                plot_inter_wp_roa=plot_inter_wp_roa
+                plot_inter_wp_roa=plot_inter_wp_roa,
+                plot_inter_wp_proj=plot_inter_wp_proj
             )
 
         self.ani = FuncAnimation(

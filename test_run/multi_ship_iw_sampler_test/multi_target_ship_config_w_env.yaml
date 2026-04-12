@@ -189,7 +189,7 @@ ships:
       COLAV:
         throttle_scale_factor: 0.5
         rud_ang_increment_deg: 0.2
-        danger_zone_radius: 926.0
+        danger_zone_radius: 5000 #926.0
         collision_zone_radius: 100.0
         max_target_ship_count: 3
         hold_time: 900.0
