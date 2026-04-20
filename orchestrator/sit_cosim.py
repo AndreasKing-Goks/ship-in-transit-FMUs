@@ -166,7 +166,6 @@ class ShipInTransitCoSimulation(CoSimInstance):
             frame = int(self.time / self.stepSize)
             setattr(self, f"current_frame_{ship_id}", frame)
             self.IW_sampling_anim_data[ship_id] = {getattr(self, f"current_frame_{ship_id}") : data}
-            print(self.IW_sampling_anim_data)
 
         # Turn off animation if no ship actually uses it
         if self.IW_sampling_animated and not any_IW_sampling_animated:
