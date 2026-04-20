@@ -160,7 +160,7 @@ class MissionManagerAST(Fmi2Slave):
         self._inter_wp_proj_list                = []
         self._accepted_sampled_inter_wp         = 0
         self._segment_idx                       = 1
-        self._max_segment_idx                   = len(traj)
+        self._max_segment_idx                   = len(traj) - 1
         self._zeroeth_iw_inserted               = False
         self._wait_first_captain_intent         = False
         self._do_segment_switch                 = False
@@ -395,12 +395,9 @@ class MissionManagerAST(Fmi2Slave):
             self.insert_wp_now  = False
             
             # ======================================================================================
-            # First Condition: Handle the segment switching
+            # First Condition: Handle the segment switching when entering the segment joint
             # ======================================================================================
             if entering_ra and self._do_segment_switch:
-                self._advance_traj()
-                self._get_prev_and_next_waypoint()
-                
                 # Advance the base route segment index and reset
                 if self._segment_idx < self._max_segment_idx:
                     self._segment_idx              += 1
@@ -433,9 +430,6 @@ class MissionManagerAST(Fmi2Slave):
                 status                              = self._evaluate_segment_switch(untraversed_segment_length=self._temp_untraversed_segment_length, 
                                                                                     scope_length=self.scope_length)
                 
-                # Update the untraversed segment length
-                self._temp_untraversed_segment_length = untraversed_segment_length
-                
                 if self._request_in_segment_joint:
                     self._save_intermediate_waypoint(inter_wp, inter_wp_proj)
                     self._get_prev_and_next_waypoint()
@@ -446,7 +440,8 @@ class MissionManagerAST(Fmi2Slave):
                     messages                        = f"Captain intent using scope angle of {self.scope_angle_deg:.1f} degrees and scope length of {self.scope_length}"
                     self.messages                   = messages
                     
-                    return True
+                    # Update the temporary untraversed segment length variable
+                    self._temp_untraversed_segment_length = untraversed_segment_length
                 
                 # Advance the trajectory, not saving the waypoint and temporarily pend 
                 # the captain intent request while awaiting for the next waypoint RoA visit
@@ -476,6 +471,9 @@ class MissionManagerAST(Fmi2Slave):
                         sub_messages  = f"Captain intent {self._accepted_sampled_inter_wp + 1} using scope angle of {self.scope_angle_deg:.1f} degrees and scope length of {self.scope_length}"
                     else:
                         sub_messages  = f"Captain intent {self._accepted_sampled_inter_wp + 1} using scope angle of {self.scope_angle_deg:.1f} degrees and scope length of {self.scope_length}"
+                        
+                    # Update the temporary untraversed segment length variable
+                    self._temp_untraversed_segment_length = untraversed_segment_length
                     
                 # Then turn off the captain intent request after receiving it
                 self.request_captain_intent        = False

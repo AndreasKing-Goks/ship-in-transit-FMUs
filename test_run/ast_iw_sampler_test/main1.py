@@ -50,12 +50,12 @@ instance = ShipInTransitCoSimulation(config=config, ROOT=ROOT, spawn_requests=sp
 # Simulate
 # =========================
 # # Start timer
-# start_time = time.perf_counter()
+# start_time = time.perf_counter()git 
 
 # scope_angles_deg = [30, 0, -45, 0, 10]
 # scope_length     = [2500, 2500, 4500, 3000, 4000]
-scope_angles_deg = [30, 0, -45, 15]
-scope_length     = [2500, 2500, 4500, 3000]
+scope_angles_deg = [30  , 0   , -45 , 15]
+scope_length     = [2500, 2500, 4500, 1500]
 i = 0
 
 # Initialize outside your timestep loop
@@ -72,7 +72,7 @@ while instance.time <= instance.stopTime:
         slaveVar="request_captain_intent"
     )
     
-    if request_captain_intent:
+    if request_captain_intent and i < len(scope_angles_deg):
         if i < len(scope_angles_deg) and i < len(scope_length):
             instance.SingleVariableManipulation(
                 slaveName="OS0__MISSION_MANAGER",
@@ -87,8 +87,8 @@ while instance.time <= instance.stopTime:
             
             insert_wp_now = instance.GetLastValue("OS0__MISSION_MANAGER", "insert_wp_now")
             
-            if insert_wp_now:
-                i += 1
+
+            i += 1
         else:
             print(f"WARNING: captain intent requested but input list is exhausted at i={i}")
             # Do NOT break. Just stop feeding new captain intents.
