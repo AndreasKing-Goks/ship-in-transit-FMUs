@@ -1183,6 +1183,18 @@ class ShipInTransitCoSimulation(CoSimInstance):
 
             dx = max(1e-9, x_max - x_min)
             dy = max(1e-9, y_max - y_min)
+
+            min_span = 0.3 * max(dx, dy)  # ensure shorter axis is at least 30% of the longer
+            if dx < min_span:
+                cx = 0.5 * (x_min + x_max)
+                x_min = cx - 0.5 * min_span
+                x_max = cx + 0.5 * min_span
+                dx = min_span
+            if dy < min_span:
+                cy = 0.5 * (y_min + y_max)
+                y_min = cy - 0.5 * min_span
+                y_max = cy + 0.5 * min_span
+                dy = min_span
             
             ax.set_xlim(x_min - margin_frac * dx, x_max + margin_frac * dx)
             ax.set_ylim(y_min - margin_frac * dy, y_max + margin_frac * dy)
@@ -1381,16 +1393,17 @@ class ShipInTransitCoSimulation(CoSimInstance):
                 dx = x_max - x_min
                 dy = y_max - y_min
 
-                min_span = 1.0
+                min_span = 0.3 * max(dx, dy)  # ensure shorter axis is at least 30% of the longer
                 if dx < min_span:
                     cx = 0.5 * (x_min + x_max)
-                    x_min, x_max = cx - 0.5 * min_span, cx + 0.5 * min_span
-                    dx = x_max - x_min
-
+                    x_min = cx - 0.5 * min_span
+                    x_max = cx + 0.5 * min_span
+                    dx = min_span
                 if dy < min_span:
                     cy = 0.5 * (y_min + y_max)
-                    y_min, y_max = cy - 0.5 * min_span, cy + 0.5 * min_span
-                    dy = y_max - y_min
+                    y_min = cy - 0.5 * min_span
+                    y_max = cy + 0.5 * min_span
+                    dy = min_span
 
                 ax_map.set_xlim(x_min - margin_frac * dx, x_max + margin_frac * dx)
                 ax_map.set_ylim(y_min - margin_frac * dy, y_max + margin_frac * dy)
