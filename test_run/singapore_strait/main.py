@@ -56,7 +56,13 @@ spawn_requests = {
 # Instantiate Co-simulation Wrapper
 # =========================
 # Instantiate
-instance = ShipInTransitCoSimulation(config=config, ROOT=ROOT, spawn_requests=spawn_requests)
+instance = ShipInTransitCoSimulation(config=config, ROOT=ROOT, 
+                                     spawn_requests=spawn_requests,
+                                     skip_map_evaluation=True)
+# WARNING!
+# Setting "skip_map_evaluation" to False enables grounding and inside_map_horizon checking, 
+# however this will increase the runtime by A LOT. As default, the value is set to True. 
+# Set the value to False when you need it: you WILL know it when you really need it!
 
 # =========================
 # Simulate

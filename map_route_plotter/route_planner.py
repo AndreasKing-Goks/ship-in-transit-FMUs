@@ -15,7 +15,7 @@ from map_route_plotter.prepare_map_route import get_gdf_from_gpkg
 # =================================================================
 # USER KNOBS
 # =================================================================
-ROUTE_FILENAME = "of_route.txt"
+ROUTE_FILENAME = "ss_grounding_route.txt"
 PRINT_INIT_MSG = True
 POINT_MARKER_SIZE = 20
 LABEL_FONTSIZE = 7.5
@@ -33,7 +33,7 @@ SHOW_TSS          = False
 SHOW_DOCKS        = False
 
 # GPKG layers
-GPKG_PATH           = get_map_path(ROOT, "oslo_fjord.gpkg")
+GPKG_PATH           = get_map_path(ROOT, "singapore_strait.gpkg")
 FRAME_LAYER         = "frame_3857"
 OCEAN_LAYER         = "ocean_3857"
 LAND_LAYER          = "land_3857"

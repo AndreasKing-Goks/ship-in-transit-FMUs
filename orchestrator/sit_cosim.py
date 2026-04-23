@@ -34,6 +34,7 @@ class ShipInTransitCoSimulation(CoSimInstance):
                  ROOT                   : Path,
                  spawn_requests         : dict=None,
                  IW_sampling_animated   : bool=False,
+                 skip_map_evaluation    : bool=True
                  ):
         # =========================
         # Instantiate the Parent Class
@@ -77,18 +78,30 @@ class ShipInTransitCoSimulation(CoSimInstance):
         # Set up the FMUs for all ship assets
         self.AddAllShips(ship_configs=ship_configs, ROOT=ROOT)
         
+        # All ship ids
+        self.ship_idxs           = [ship_config["id"] for ship_config in ship_configs]
+        
+        
         # =========================
         # Set the Map (if given)
         # =========================
         # Get the map filename if exists, else None
-        self.map            = simu_config.get("map", None)
-        self.is_map_exists  = True if self.map is not None else False
+        self.map                    = simu_config.get("map", None)
+        self.is_map_exists          = True if self.map is not None else False
+        self.skip_map_evaluation    = True
         
         # Add the Map
-        self.land_poly      = None
+        self.land_poly              = None
+        self.land_poly              = None
+        
         if self.is_map_exists:
-            self.map_name  = self.map.get("name")
-            self.land_poly = self.AddMap(ROOT=ROOT, map_filename=self.map.get("filename"))
+            self.map_name               = self.map.get("name")
+            self.AddMap(ROOT=ROOT, map_filename=self.map.get("filename"))
+            
+            self.land_poly              = self.map_obj[0]
+            self.frame_poly             = self.map_obj[1]
+            
+            self.skip_map_evaluation    = skip_map_evaluation
 
         # =========================
         # Containers and Relevant Parameters for Termination Flags
@@ -109,10 +122,13 @@ class ShipInTransitCoSimulation(CoSimInstance):
             
             # Data
             data    = {
-                'colav_active'          : [],
+                'colav_active'          : {
+                        'status'        : [],
+                        'candidates'    : [],
+                    },
                 'collision'             : {
                         'status'        : [],
-                        'colliders'     : None
+                        'colliders'     : []
                     },
                 'grounding'             : [],
                 'nav_fail_warning'      : [],
@@ -222,7 +238,8 @@ class ShipInTransitCoSimulation(CoSimInstance):
         # Merge land geometries into a single Shapely polygon
         # (useful for spatial checks such as grounding detection)
         land_poly       = get_polygon_from_gdf(self.land_gdf) 
-        self.map_obj    = [PolygonObstacle(land_poly), self.frame_gdf]
+        frame_poly      = get_polygon_from_gdf(self.frame_gdf) 
+        self.map_obj    = [PolygonObstacle(land_poly), PolygonObstacle(frame_poly)]
     
     
     def set_map_static_aspect(self, frame_gdf, aspect: float=None):
@@ -777,8 +794,10 @@ class ShipInTransitCoSimulation(CoSimInstance):
             
 
     def update_colav_active_flag(self, ship_id):
-        return self.GetLastValue(slaveName=self.ship_slave(ship_id, "COLAV"), 
-                                 slaveVar="colav_active")
+        status          = self.GetLastValue(slaveName=self.ship_slave(ship_id, "COLAV"), slaveVar="colav_active")
+        candidate_idx   = self.GetLastValue(slaveName=self.ship_slave(ship_id, "COLAV"), slaveVar="ship_priority_idx")
+        
+        return status, candidate_idx
         
     
     def update_collision_status(self, ship_id):
@@ -911,7 +930,6 @@ class ShipInTransitCoSimulation(CoSimInstance):
         
     def evaluate_ship_condition(self, ship_id:str, ship_config:dict):
         """
-            [UNTESTED]
             Evaluate ship condition and conclude the possible termination flags.
             Record all the flags for every time steps
         """
@@ -922,7 +940,7 @@ class ShipInTransitCoSimulation(CoSimInstance):
             # Specific for collision related
             if flag_name == 'collision':
                 self.stop_info[ship_id][flag_name]['status'].append(value)
-                self.stop_info[ship_id][flag_name]['colliders'] = detail
+                self.stop_info[ship_id][flag_name]['colliders'].append(detail)
             # Update stop info
             elif detail is None:
                 self.stop_info[ship_id][flag_name].append(value)
@@ -953,28 +971,34 @@ class ShipInTransitCoSimulation(CoSimInstance):
         # ==================================
         # Map Related Checks
         # ==================================
-        grounded = False
-        outside  = False
-        if self.land_poly is not None:
-            # Grounding
-            grounded = check_condition.is_grounding(
-                land_poly   = self.map_obj,
-                pos         = pos,
-                ship_length = ship_length,
-            )
-            push_flag(ship_id=ship_id, flag_name="grounding", value=grounded)
-            if grounded:
-                print(f"{ship_id} experiences grounding")
+        if not self.skip_map_evaluation:
+            grounded = False
+            outside  = False
+            if self.land_poly is not None:
+                # Grounding
+                grounded = check_condition.is_grounding(
+                    land_poly   = self.land_poly,
+                    pos         = pos,
+                    ship_length = ship_length,
+                )
                 
-            # Outside Horizon
-            outside = check_condition.is_point_outside_horizon(
-                land_poly   = self.map_obj,
-                pos         = pos,
-                ship_length = ship_length
-            )
-            push_flag(ship_id=ship_id, flag_name="outside_horizon", value=outside)
-            if outside:
-                print(f"{ship_id} goes outside the map horizon")
+                push_flag(ship_id=ship_id, flag_name="grounding", value=grounded)
+                if grounded:
+                    print(f"{ship_id} experiences grounding")
+                    
+                # Outside Horizon
+                outside = check_condition.is_ship_outside_horizon(
+                    frame_poly   = self.frame_poly,
+                    pos         = pos,
+                    ship_length = ship_length
+                )
+                push_flag(ship_id=ship_id, flag_name="outside_horizon", value=outside)
+                if outside:
+                    print(f"{ship_id} goes outside the map horizon")
+        
+        else:
+            grounded    = False
+            outside     = False
         
         # ==================================
         # Navigation Failures
@@ -996,7 +1020,6 @@ class ShipInTransitCoSimulation(CoSimInstance):
                 setattr(self, f"_navrecover_printed_{ship_id}", False)
                 setattr(self, f"_navwarn_time_counter_{ship_id}", 0.0)
                 setattr(self, f"_navfail_printed_{ship_id}", False)
-                print(f"{ship_id} prones to have navigational failure")
             
             # Increment the warning time counter
             setattr(
@@ -1019,7 +1042,6 @@ class ShipInTransitCoSimulation(CoSimInstance):
         # If manages to recover
         else:
             if getattr(self, f'_navwarn_active_{ship_id}', False):
-                print(f"{ship_id} recovers form navigational failure warning")
                 setattr(self, f"_navrecover_printed_{ship_id}", True)
             setattr(self, f"_navwarn_active_{ship_id}", False)
             setattr(self, f"_navwarn_time_counter_{ship_id}", 0.0)
@@ -1049,6 +1071,9 @@ class ShipInTransitCoSimulation(CoSimInstance):
             for test_ship_config in self.ship_configs:
                 test_sid = test_ship_config["id"]
                 
+                # Get the list of collider candidates
+                candidate_list = [ship_id for ship_id in self.ship_idxs if ship_id != test_sid]
+                
                 # If evaluating on the same ship, skip
                 if test_sid == ship_id:
                     continue
@@ -1072,28 +1097,23 @@ class ShipInTransitCoSimulation(CoSimInstance):
                 ):
                     colliders.append(test_sid)
             
-            
             collision = bool(colliders)
             push_flag(ship_id=ship_id, flag_name="collision", value=collision, detail=(colliders if colliders else None))
+            if collision:
+                print(f"{ship_id} collides with {", ".join(colliders)}")
             
-            colav_active    = self.update_colav_active_flag(ship_id)
-            self.stop_info[ship_id]['colav_active'].append(colav_active)
-            
-            # Update message
-            if colav_active and (not collision) and (not self.print_col_msg):
-                print(f"{ship_id}__COLAV is active!")
-                self.print_col_msg = True
-            elif (not colav_active) and self.print_col_msg:
-                print(f"{ship_id}__COLAV is deactivated!")
-                self.print_col_msg = False
-            elif collision:
-                print(f"{ship_id} collides with {', '.join(colliders)}")
+            # Get the colav active sign
+            colav_active, candidate_idx = self.update_colav_active_flag(ship_id)
+            self.stop_info[ship_id]['colav_active']['status'].append(colav_active)
+            candidate = candidate_list[candidate_idx]
+            self.stop_info[ship_id]['colav_active']['candidates'].append(candidate)
         
         # If the COLAV is not enabled
         else:
-            self.stop_info[ship_id]['colav_active'].append(False)
+            self.stop_info[ship_id]['colav_active']['status'].append(False)
+            self.stop_info[ship_id]['colav_active']['candidates'].append(None)
             self.stop_info[ship_id]['collision']['status'].append(False)
-            self.stop_info[ship_id]['collision']['colliders'] = None
+            self.stop_info[ship_id]['collision']['colliders'].append(None)
         
         return grounded, outside, navigational_failure, reaches_end_waypoint, collision
                 
@@ -1702,114 +1722,7 @@ class ShipInTransitCoSimulation(CoSimInstance):
             outlines[sid] = xy_frames
 
         return outlines
-
-
-    def init_anim_figures(
-        self,
-        fig_width,
-        dpi,
-        equal_aspect,
-        margin_frac,
-        bounds=None,
-        mode="quick",
-    ):
-        """
-        Create animation figure that works both with map and without map.
-        If map exists, use map bounds and resize figure height to map aspect.
-        """
-        style = self.get_plot_style(mode)
-
-        ## If map exists
-        if self.is_map_exists:
-            # Temporary fig/ax just to obtain frame extent/aspect from your map helpers
-            tmp_fig, tmp_ax = plt.subplots(figsize=(fig_width, fig_width), dpi=dpi)
-            frame_gdf, _, _, _, _, _, _, _, _, _, _ = self.set_map_static_artist(ax=tmp_ax)
-            aspect, minx, miny, maxx, maxy = self.set_map_static_aspect(frame_gdf)
-            plt.close(tmp_fig)
-
-            # Consider the status box height
-            map_height = fig_width / aspect
-            status_height = 0.10 * fig_width
-            total_height = map_height + status_height
-
-            fig = plt.figure(figsize=(fig_width, total_height), dpi=dpi, constrained_layout=True)
-            gs = fig.add_gridspec(
-                nrows=2,
-                ncols=1,
-                height_ratios=[map_height, status_height],
-                hspace=0.0
-            )
-            ax_map = fig.add_subplot(gs[0, 0])
-            ax_status = fig.add_subplot(gs[1, 0])
-            ax_status.set_axis_off()
-
-            # Draw map again on real axes
-            self.set_map_static_artist(ax=ax_map)
-
-            ax_map.set_xlim(minx, maxx)
-            ax_map.set_ylim(miny, maxy)
-
-        ## If no map included
-        else:
-            base_map_height = 0.90 * fig_width
-            status_height = 0.10 * fig_width
-            total_height = base_map_height + status_height
-
-            fig = plt.figure(figsize=(fig_width, total_height), dpi=dpi, constrained_layout=True)
-            gs = fig.add_gridspec(
-                nrows=2,
-                ncols=1,
-                height_ratios=[base_map_height, status_height],
-                hspace=0.0
-            )
-            ax_map = fig.add_subplot(gs[0, 0])
-            ax_status = fig.add_subplot(gs[1, 0])
-            ax_status.set_axis_off()
-
-            if bounds is not None:
-                x_min, x_max, y_min, y_max = bounds
-                dx = x_max - x_min
-                dy = y_max - y_min
-
-                min_span = 1.0
-                if dx < min_span:
-                    cx = 0.5 * (x_min + x_max)
-                    x_min, x_max = cx - 0.5 * min_span, cx + 0.5 * min_span
-                    dx = x_max - x_min
-
-                if dy < min_span:
-                    cy = 0.5 * (y_min + y_max)
-                    y_min, y_max = cy - 0.5 * min_span, cy + 0.5 * min_span
-                    dy = y_max - y_min
-
-                ax_map.set_xlim(x_min - margin_frac * dx, x_max + margin_frac * dx)
-                ax_map.set_ylim(y_min - margin_frac * dy, y_max + margin_frac * dy)
-        
-        # Add scalebar on map
-        self.add_scalebar(ax=ax_map, length_m=None, label_fs=style["label_fs"])
-
-        ## Common styling
-        title = f"Fleet trajectories on {self.map_name}" if self.is_map_exists else "Fleet trajectories"
-        ax_map.set_title(title, fontsize=style["title_fs"], pad=4)
-        ax_map.set_xlabel("East position (m)", fontsize=style["label_fs"])
-        ax_map.set_ylabel("North position (m)", fontsize=style["label_fs"])
-
-        ax_map.tick_params(axis="both", which="major", labelsize=style["tick_fs"], length=3)
-        ax_map.grid(True, color="0.82", linestyle="--", linewidth=0.5, alpha=style["grid_alpha"])
-
-        ax_map.ticklabel_format(style="sci", axis="both", scilimits=(0, 0))
-        ax_map.xaxis.get_offset_text().set_fontsize(style["tick_fs"] - 1)
-        ax_map.yaxis.get_offset_text().set_fontsize(style["tick_fs"] - 1)
-
-        for spine in ax_map.spines.values():
-            spine.set_linewidth(0.8)
-            spine.set_color("0.35")
-
-        if equal_aspect:
-            ax_map.set_aspect("equal", adjustable="box")
-
-        return fig, ax_map, ax_status
-
+    
 
     def draw_static(
         self,
@@ -1922,7 +1835,520 @@ class ShipInTransitCoSimulation(CoSimInstance):
         return static_artists
     
     
-    ### ADAPTER FUNCTION FOR INTERMEDIATE WAPYOINT DATA HANDLING
+    def init_anim_figures(
+        self,
+        fig_width,
+        dpi,
+        equal_aspect,
+        margin_frac,
+        bounds=None,
+        mode="quick",
+    ):
+        """
+        Create animation figure that works both with map and without map.
+        If map exists, use map bounds and resize figure height to map aspect.
+        """
+        style = self.get_plot_style(mode)
+
+        ## If map exists
+        if self.is_map_exists:
+            # Temporary fig/ax just to obtain frame extent/aspect from your map helpers
+            tmp_fig, tmp_ax = plt.subplots(figsize=(fig_width, fig_width), dpi=dpi)
+            frame_gdf, _, _, _, _, _, _, _, _, _, _ = self.set_map_static_artist(ax=tmp_ax)
+            aspect, minx, miny, maxx, maxy = self.set_map_static_aspect(frame_gdf)
+            plt.close(tmp_fig)
+
+            # Consider the status box height
+            map_height = fig_width / aspect
+            status_height = 0.10 * fig_width
+            total_height = map_height + status_height
+
+            fig = plt.figure(figsize=(fig_width, total_height), dpi=dpi, constrained_layout=True)
+            gs = fig.add_gridspec(
+                nrows=2,
+                ncols=1,
+                height_ratios=[map_height, status_height],
+                hspace=0.0
+            )
+            ax_map = fig.add_subplot(gs[0, 0])
+            ax_status = fig.add_subplot(gs[1, 0])
+            ax_status.set_axis_off()
+
+            # Draw map again on real axes
+            self.set_map_static_artist(ax=ax_map)
+
+            ax_map.set_xlim(minx, maxx)
+            ax_map.set_ylim(miny, maxy)
+
+        ## If no map included
+        else:
+            base_map_height = 0.90 * fig_width
+            status_height = 0.10 * fig_width
+            total_height = base_map_height + status_height
+
+            fig = plt.figure(figsize=(fig_width, total_height), dpi=dpi, constrained_layout=True)
+            gs = fig.add_gridspec(
+                nrows=2,
+                ncols=1,
+                height_ratios=[base_map_height, status_height],
+                hspace=0.0
+            )
+            ax_map = fig.add_subplot(gs[0, 0])
+            ax_status = fig.add_subplot(gs[1, 0])
+            ax_status.set_axis_off()
+
+            if bounds is not None:
+                x_min, x_max, y_min, y_max = bounds
+                dx = x_max - x_min
+                dy = y_max - y_min
+
+                min_span = 1.0
+                if dx < min_span:
+                    cx = 0.5 * (x_min + x_max)
+                    x_min, x_max = cx - 0.5 * min_span, cx + 0.5 * min_span
+                    dx = x_max - x_min
+
+                if dy < min_span:
+                    cy = 0.5 * (y_min + y_max)
+                    y_min, y_max = cy - 0.5 * min_span, cy + 0.5 * min_span
+                    dy = y_max - y_min
+
+                ax_map.set_xlim(x_min - margin_frac * dx, x_max + margin_frac * dx)
+                ax_map.set_ylim(y_min - margin_frac * dy, y_max + margin_frac * dy)
+        
+        # Add scalebar on map
+        self.add_scalebar(ax=ax_map, length_m=None, label_fs=style["label_fs"])
+
+        ## Common styling
+        title = f"Fleet trajectories on {self.map_name}" if self.is_map_exists else "Fleet trajectories"
+        ax_map.set_title(title, fontsize=style["title_fs"], pad=4)
+        ax_map.set_xlabel("East position (m)", fontsize=style["label_fs"])
+        ax_map.set_ylabel("North position (m)", fontsize=style["label_fs"])
+
+        ax_map.tick_params(axis="both", which="major", labelsize=style["tick_fs"], length=3)
+        ax_map.grid(True, color="0.82", linestyle="--", linewidth=0.5, alpha=style["grid_alpha"])
+
+        ax_map.ticklabel_format(style="sci", axis="both", scilimits=(0, 0))
+        ax_map.xaxis.get_offset_text().set_fontsize(style["tick_fs"] - 1)
+        ax_map.yaxis.get_offset_text().set_fontsize(style["tick_fs"] - 1)
+
+        for spine in ax_map.spines.values():
+            spine.set_linewidth(0.8)
+            spine.set_color("0.35")
+
+        if equal_aspect:
+            ax_map.set_aspect("equal", adjustable="box")
+
+        return fig, ax_map, ax_status
+    
+    
+    ### HELPER FUNCTION FOR STATUS PANEL
+    def safe_frame_value(self, seq, i, default=None):
+        """
+            Safely get value at frame i from a sequence-like object.
+            If unavailable, return default.
+        """
+        if seq is None:
+            return default
+        if len(seq) == 0:
+            return default
+        if i < 0:
+            return default
+        if i >= len(seq):
+            return seq[-1]
+        return seq[i]
+    
+    
+    def get_stop_info_state_at_frame(self, ship_id, i):
+        """
+            Return a dictionary of stop/status information for a ship at frame i.
+            Intended for OS0.
+        """
+        stop_info = getattr(self, "stop_info", {}).get(ship_id, None)
+        if not stop_info:
+            return None
+
+        colav_status = self.safe_frame_value(stop_info.get("colav_active", {}).get("status", []), i, False)
+        colav_candidates = self.safe_frame_value(stop_info.get("colav_active", {}).get("candidates", []), i, "NONE")
+
+        collision_status = self.safe_frame_value(stop_info.get("collision", {}).get("status", []), i, False)
+        collision_colliders = self.safe_frame_value(stop_info.get("collision", {}).get("colliders", []), i, "NONE")
+
+        grounding = self.safe_frame_value(stop_info.get("grounding", []), i, False)
+        nav_warn = self.safe_frame_value(stop_info.get("nav_fail_warning", []), i, False)
+        nav_fail = self.safe_frame_value(stop_info.get("navigation_failure", []), i, False)
+
+        return {
+            "colav_active": colav_status,
+            "colav_candidates": colav_candidates,
+            "collision": collision_status,
+            "collision_colliders": collision_colliders,
+            "grounding": grounding,
+            "nav_warn": nav_warn,
+            "nav_fail": nav_fail,
+        }
+        
+        
+    def format_status_detail(self, value, default="NONE"):
+        """
+            Convert stop-info detail field to a compact display string.
+        """
+        if value is None:
+            return default
+
+        if isinstance(value, str):
+            v = value.strip()
+            return v if v else default
+
+        if isinstance(value, (list, tuple, set)):
+            vals = [str(x).strip() for x in value if str(x).strip()]
+            return ", ".join(vals) if vals else default
+
+        v = str(value).strip()
+        return v if v else default
+    
+    
+    def init_status_panel_artists(self, ax_status, mode="quick"):
+        """
+            Create persistent status box artists for own ship:
+            1. COLAV      (top + bottom)
+            2. COLLISION  (top + bottom)
+            3. NAVIGATION (single tall box)
+            4. GROUNDING  (single tall box)
+        """
+        style = self.get_plot_style(mode)
+
+        # Optional: tune these based on mode
+        title_fs = max(7, style["label_fs"])
+        detail_fs = max(6, style["tick_fs"])
+
+        # Colors
+        C_GREEN = "#7bd389"
+        C_YELLOW = "#f4d35e"
+        C_RED = "#ee6055"
+        C_NEUTRAL = "#d9d9d9"
+        C_EDGE = "0.35"
+
+        # Layout in ax_status axes coordinates
+        # Leave left margin for time/frame text
+        x0 = 0.18
+        gap = 0.02
+        total_w = 0.80
+        col_w = (total_w - 3 * gap) / 4.0
+
+        y_bot = 0.12
+        y_mid = 0.52
+        h_small = 0.32
+        h_tall = 0.72
+
+        artists = {
+            "time_patch": None,
+            "time_text": None,
+            "frame_patch": None,
+            "frame_text": None,
+            "colav_top_patch": None,
+            "colav_top_text": None,
+            "colav_bot_patch": None,
+            "colav_bot_text": None,
+            "collision_top_patch": None,
+            "collision_top_text": None,
+            "collision_bot_patch": None,
+            "collision_bot_text": None,
+            "nav_patch": None,
+            "nav_text": None,
+            "ground_patch": None,
+            "ground_text": None,
+            "dynamic_list": []
+        }
+
+        # ------------------------------------------------------------------
+        # Time + frame stacked boxes at left
+        # ------------------------------------------------------------------
+        time_frame_x = 0.02
+        time_frame_w = 0.14
+        time_box_h = 0.32
+        frame_box_h = 0.32
+
+        # Time box
+        time_patch = patches.Rectangle(
+            (time_frame_x, y_mid), time_frame_w, time_box_h,
+            transform=ax_status.transAxes,
+            facecolor="white",
+            edgecolor=C_EDGE,
+            linewidth=1.0
+        )
+        ax_status.add_patch(time_patch)
+
+        time_txt = ax_status.text(
+            time_frame_x + time_frame_w / 2,
+            y_mid + time_box_h / 2,
+            "",
+            transform=ax_status.transAxes,
+            ha="center",
+            va="center",
+            fontsize=style["status_fs"]*0.8,
+            weight="bold"
+        )
+
+        # Frame box
+        frame_patch = patches.Rectangle(
+            (time_frame_x, y_bot), time_frame_w, frame_box_h,
+            transform=ax_status.transAxes,
+            facecolor="white",
+            edgecolor=C_EDGE,
+            linewidth=1.0
+        )
+        ax_status.add_patch(frame_patch)
+
+        frame_txt = ax_status.text(
+            time_frame_x + time_frame_w / 2,
+            y_bot + frame_box_h / 2,
+            "",
+            transform=ax_status.transAxes,
+            ha="center",
+            va="center",
+            fontsize=style["status_fs"]*0.8,
+            weight="bold"
+        )
+
+        artists["time_patch"] = time_patch
+        artists["time_text"] = time_txt
+        artists["frame_patch"] = frame_patch
+        artists["frame_text"] = frame_txt
+        artists["dynamic_list"].extend([time_patch, time_txt, frame_patch, frame_txt])
+
+        # Column x positions
+        x_colav = x0
+        x_collision = x_colav + col_w + gap
+        x_nav = x_collision + col_w + gap
+        x_ground = x_nav + col_w + gap
+
+        # ------------------------------------------------------------------
+        # COLAV
+        # ------------------------------------------------------------------
+        colav_top = patches.Rectangle(
+            (x_colav, y_mid), col_w, h_small,
+            transform=ax_status.transAxes,
+            facecolor=C_NEUTRAL, edgecolor=C_EDGE, linewidth=1.0
+        )
+        ax_status.add_patch(colav_top)
+
+        colav_top_txt = ax_status.text(
+            x_colav + col_w/2, y_mid + h_small/2,
+            "OWN SHIP COLAV\nINACTIVE",
+            transform=ax_status.transAxes,
+            ha="center", va="center",
+            fontsize=title_fs, weight="bold"
+        )
+
+        colav_bot = patches.Rectangle(
+            (x_colav, y_bot), col_w, h_small,
+            transform=ax_status.transAxes,
+            facecolor="white", edgecolor=C_EDGE, linewidth=1.0
+        )
+        ax_status.add_patch(colav_bot)
+
+        colav_bot_txt = ax_status.text(
+            x_colav + col_w/2, y_bot + h_small/2,
+            "NONE",
+            transform=ax_status.transAxes,
+            ha="center", va="center",
+            fontsize=detail_fs
+        )
+
+        artists["colav_top_patch"] = colav_top
+        artists["colav_top_text"] = colav_top_txt
+        artists["colav_bot_patch"] = colav_bot
+        artists["colav_bot_text"] = colav_bot_txt
+        artists["dynamic_list"].extend([colav_top, colav_top_txt, colav_bot, colav_bot_txt])
+
+        # ------------------------------------------------------------------
+        # COLLISION
+        # ------------------------------------------------------------------
+        collision_top = patches.Rectangle(
+            (x_collision, y_mid), col_w, h_small,
+            transform=ax_status.transAxes,
+            facecolor=C_NEUTRAL, edgecolor=C_EDGE, linewidth=1.0
+        )
+        ax_status.add_patch(collision_top)
+
+        collision_top_txt = ax_status.text(
+            x_collision + col_w/2, y_mid + h_small/2,
+            "OWN SHIP COLLISION\nNO",
+            transform=ax_status.transAxes,
+            ha="center", va="center",
+            fontsize=title_fs, weight="bold"
+        )
+
+        collision_bot = patches.Rectangle(
+            (x_collision, y_bot), col_w, h_small,
+            transform=ax_status.transAxes,
+            facecolor="white", edgecolor=C_EDGE, linewidth=1.0
+        )
+        ax_status.add_patch(collision_bot)
+
+        collision_bot_txt = ax_status.text(
+            x_collision + col_w/2, y_bot + h_small/2,
+            "NONE",
+            transform=ax_status.transAxes,
+            ha="center", va="center",
+            fontsize=detail_fs
+        )
+
+        artists["collision_top_patch"] = collision_top
+        artists["collision_top_text"] = collision_top_txt
+        artists["collision_bot_patch"] = collision_bot
+        artists["collision_bot_text"] = collision_bot_txt
+        artists["dynamic_list"].extend([collision_top, collision_top_txt, collision_bot, collision_bot_txt])
+
+        # ------------------------------------------------------------------
+        # NAVIGATION (single tall box)
+        # ------------------------------------------------------------------
+        nav_patch = patches.Rectangle(
+            (x_nav, y_bot), col_w, h_tall,
+            transform=ax_status.transAxes,
+            facecolor=C_NEUTRAL, edgecolor=C_EDGE, linewidth=1.0
+        )
+        ax_status.add_patch(nav_patch)
+
+        nav_txt = ax_status.text(
+            x_nav + col_w/2, y_bot + h_tall/2,
+            "OWN SHIP NAVIGATION\nSAFE",
+            transform=ax_status.transAxes,
+            ha="center", va="center",
+            fontsize=title_fs, weight="bold"
+        )
+
+        artists["nav_patch"] = nav_patch
+        artists["nav_text"] = nav_txt
+        artists["dynamic_list"].extend([nav_patch, nav_txt])
+
+        # ------------------------------------------------------------------
+        # GROUNDING (single tall box)
+        # ------------------------------------------------------------------
+        ground_patch = patches.Rectangle(
+            (x_ground, y_bot), col_w, h_tall,
+            transform=ax_status.transAxes,
+            facecolor=C_NEUTRAL, edgecolor=C_EDGE, linewidth=1.0
+        )
+        ax_status.add_patch(ground_patch)
+
+        ground_txt = ax_status.text(
+            x_ground + col_w/2, y_bot + h_tall/2,
+            "OWN SHIP GROUNDING\nNO",
+            transform=ax_status.transAxes,
+            ha="center", va="center",
+            fontsize=title_fs, weight="bold"
+        )
+
+        artists["ground_patch"] = ground_patch
+        artists["ground_text"] = ground_txt
+        artists["dynamic_list"].extend([ground_patch, ground_txt])
+
+        return artists
+    
+    
+    def update_status_panel(self, i, artists, mode="quick", own_ship_id="OS0"):
+        """
+            Update the persistent status panel artists for own ship.
+        """
+        state = self.get_stop_info_state_at_frame(own_ship_id, i)
+
+        # Colors
+        C_GREEN = "#7bd389"
+        C_YELLOW = "#f4d35e"
+        C_RED = "#ee6055"
+        C_NEUTRAL = "#d9d9d9"
+
+        # Always update time text
+        t_sec = i * self.stepSize / 1e9
+        artists["time_text"].set_text(f"TIME\n{int(round(t_sec))} s")
+        artists["frame_text"].set_text(f"FRAME\n{i}")
+
+        if state is None:
+            # fallback/default display
+            artists["colav_top_patch"].set_facecolor(C_NEUTRAL)
+            artists["colav_top_text"].set_text("OWN SHIP COLAV\nUNKNOWN")
+            artists["colav_bot_text"].set_text("NONE")
+
+            artists["collision_top_patch"].set_facecolor(C_NEUTRAL)
+            artists["collision_top_text"].set_text("OWN SHIP COLLISION\nUNKNOWN")
+            artists["collision_bot_text"].set_text("NONE")
+
+            artists["nav_patch"].set_facecolor(C_NEUTRAL)
+            artists["nav_text"].set_text("OWN SHIP NAVIGATION\nUNKNOWN")
+
+            artists["ground_patch"].set_facecolor(C_NEUTRAL)
+            artists["ground_text"].set_text("OWN SHIP GROUNDING\nUNKNOWN")
+            return
+
+        # ------------------------------------------------------------------
+        # COLAV
+        # ------------------------------------------------------------------
+        colav_active = bool(state["colav_active"])
+        colav_candidates = self.format_status_detail(
+            state["colav_candidates"],
+            default="NONE"
+        )
+
+        if colav_active:
+            artists["colav_top_patch"].set_facecolor(C_YELLOW)
+            artists["colav_top_text"].set_text("OWN SHIP COLAV\nACTIVE")
+            artists["colav_bot_text"].set_text(colav_candidates)
+        else:
+            artists["colav_top_patch"].set_facecolor(C_GREEN)
+            artists["colav_top_text"].set_text("OWN SHIP COLAV\nINACTIVE")
+            artists["colav_bot_text"].set_text("NONE")
+
+        # ------------------------------------------------------------------
+        # COLLISION
+        # ------------------------------------------------------------------
+        collision = bool(state["collision"])
+        collision_colliders = self.format_status_detail(
+            state["collision_colliders"],
+            default="NONE"
+        )
+
+        if collision:
+            artists["collision_top_patch"].set_facecolor(C_RED)
+            artists["collision_top_text"].set_text("OWN SHIP COLLISION\nYES")
+            artists["collision_bot_text"].set_text(collision_colliders)
+        else:
+            artists["collision_top_patch"].set_facecolor(C_GREEN)
+            artists["collision_top_text"].set_text("OWN SHIP COLLISION\nNO")
+            artists["collision_bot_text"].set_text("NONE")
+
+        # ------------------------------------------------------------------
+        # NAVIGATION
+        # priority: failure > warning > safe
+        # ------------------------------------------------------------------
+        nav_fail = bool(state["nav_fail"])
+        nav_warn = bool(state["nav_warn"])
+
+        if nav_fail:
+            artists["nav_patch"].set_facecolor(C_RED)
+            artists["nav_text"].set_text("OWN SHIP NAVIGATION\nFAILURE")
+        elif nav_warn:
+            artists["nav_patch"].set_facecolor(C_YELLOW)
+            artists["nav_text"].set_text("OWN SHIP NAVIGATION\nWARNING")
+        else:
+            artists["nav_patch"].set_facecolor(C_GREEN)
+            artists["nav_text"].set_text("OWN SHIP NAVIGATION\nSAFE")
+
+        # ------------------------------------------------------------------
+        # GROUNDING
+        # ------------------------------------------------------------------
+        grounding = bool(state["grounding"])
+
+        if grounding:
+            artists["ground_patch"].set_facecolor(C_RED)
+            artists["ground_text"].set_text("OWN SHIP GROUNDING\nYES")
+        else:
+            artists["ground_patch"].set_facecolor(C_GREEN)
+            artists["ground_text"].set_text("OWN SHIP GROUNDING\nNO")
+    
+    
+    ### HELPER FUNCTION FOR INTERMEDIATE WAPYOINT DATA HANDLING
     def points_to_xy(self, points):
         """
             Convert a list of points stored as [(north, east), ...]
@@ -2135,11 +2561,11 @@ class ShipInTransitCoSimulation(CoSimInstance):
                 "trail": {},
                 "outline": {},
                 "label": {},
-                "status_text": None,
                 "active_path": {},
                 "inter_wp": {},
                 "inter_wp_proj": {},
                 "inter_wp_roa": {},
+                "status_panel": None,
                 "dynamic_list": [],
                 "color": {}
             }
@@ -2148,7 +2574,7 @@ class ShipInTransitCoSimulation(CoSimInstance):
                 "trail": {},
                 "outline": {},
                 "label": {},
-                "status_text": None,
+                "status_panel": None,
                 "dynamic_list": [],
                 "color": {}
             }
@@ -2229,15 +2655,9 @@ class ShipInTransitCoSimulation(CoSimInstance):
                 # Colort
                 artists["color"][sid] = color
 
-        status_txt = ax_status.text(
-            0.01, 0.5, "",
-            transform=ax_status.transAxes,
-            va="center",
-            ha="left",
-            fontsize=style["status_fs"]
-        )
-        artists["status_text"] = status_txt
-        artists["dynamic_list"].append(status_txt)
+        status_panel = self.init_status_panel_artists(ax_status=ax_status, mode=mode)
+        artists["status_panel"] = status_panel
+        artists["dynamic_list"].extend(status_panel["dynamic_list"])
 
         return artists
     
@@ -2255,9 +2675,15 @@ class ShipInTransitCoSimulation(CoSimInstance):
         plot_inter_wp_roa=True,
         plot_inter_wp_proj=True
     ):
-        artists["status_text"].set_text(f"time = {i * self.stepSize / 1e9:.2f} s   |   frame = {i}")
-
         returned_artists = list(artists["dynamic_list"])
+        
+        if artists.get("status_panel", None) is not None:
+            self.update_status_panel(
+                i=i,
+                artists=artists["status_panel"],
+                mode=mode,
+                own_ship_id="OS0"
+            )
 
         for sid in ship_ids:
             east  = data[sid]["east"]

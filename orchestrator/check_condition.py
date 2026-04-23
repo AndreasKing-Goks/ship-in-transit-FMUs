@@ -15,7 +15,7 @@ def is_reaches_endpoint(route_end, pos, arrival_radius=200):
     
     return is_reached
 
-def is_ship_outside_horizon(map_obj : PolygonObstacle, 
+def is_ship_outside_horizon(frame_poly : PolygonObstacle, 
                             pos, 
                             ship_length):
     ''' 
@@ -27,10 +27,10 @@ def is_ship_outside_horizon(map_obj : PolygonObstacle,
     n_pos, e_pos = pos
         
     # Get the map boundaries
-    min_north = map_obj.min_north
-    min_east = map_obj.min_east
-    max_north = map_obj.max_north
-    max_east = map_obj.max_east
+    min_north = frame_poly.min_north
+    min_east = frame_poly.min_east
+    max_north = frame_poly.max_north
+    max_east = frame_poly.max_east
         
     # Get the obstacle margin due to all assets ship length
     margin = ship_length/2
@@ -47,7 +47,7 @@ def is_ship_outside_horizon(map_obj : PolygonObstacle,
         
     return is_outside
     
-def is_grounding(map_obj : PolygonObstacle,
+def is_grounding(land_poly : PolygonObstacle,
                  pos, 
                  ship_length):
     ''' 
@@ -72,12 +72,12 @@ def is_grounding(map_obj : PolygonObstacle,
     is_inside = False
         
     for hard_point in hard_points:
-        if map_obj.if_pos_inside_obstacles(hard_point[0], hard_point[1]):
+        if land_poly.if_pos_inside_obstacles(hard_point[0], hard_point[1]):
             is_inside =  True
     
     return is_inside
     
-def is_point_outside_horizon(map_obj : PolygonObstacle,
+def is_point_outside_horizon(land_poly : PolygonObstacle,
                              point):
     ''' 
         Checks if the sampled route are outside the map horizon. 
@@ -89,10 +89,10 @@ def is_point_outside_horizon(map_obj : PolygonObstacle,
     n_route, e_route = point
         
     # Get the map boundaries
-    min_north = map_obj.min_north
-    min_east = map_obj.min_east
-    max_north = map_obj.max_north
-    max_east = map_obj.max_east
+    min_north = land_poly.min_north
+    min_east = land_poly.min_east
+    max_north = land_poly.max_north
+    max_east = land_poly.max_east
             
     # min_bound and max_bound
     n_route_bound = [min_north , max_north]
@@ -106,14 +106,14 @@ def is_point_outside_horizon(map_obj : PolygonObstacle,
         
     return is_outside
     
-def is_point_inside_obstacles(map_obj : PolygonObstacle,
+def is_point_inside_obstacles(land_poly : PolygonObstacle,
                               point):
     ''' 
         Checks if the tagged position is inside any obstacle
     '''
     is_inside = False
         
-    if map_obj.if_pos_inside_obstacles(point[0], point[1]):
+    if land_poly.if_pos_inside_obstacles(point[0], point[1]):
         is_inside =  True
       
     return is_inside

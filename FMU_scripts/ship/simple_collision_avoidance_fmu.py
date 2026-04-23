@@ -49,6 +49,7 @@ class SimpleCollisionAvoidance(Fmi2Slave):
         self.colav_rud_ang_increment = 0.0 # OUTPUT
         self.colav_active            = False
         self.ship_collision          = False
+        self.ship_priority_idx       = -1
         
         for i in range (1,4):
             setattr(self, f"beta_own_to_tar_{i}", 0.0)
@@ -92,6 +93,7 @@ class SimpleCollisionAvoidance(Fmi2Slave):
         self.register_variable(Real("new_throttle_cmd", causality=Fmi2Causality.output))
         self.register_variable(Real("new_rudder_angle_deg", causality=Fmi2Causality.output))
         self.register_variable(Real("colav_rud_ang_increment", causality=Fmi2Causality.output))
+        self.register_variable(Integer("ship_priority_idx", causality=Fmi2Causality.output))
         self.register_variable(Boolean("colav_active", causality=Fmi2Causality.output))
         self.register_variable(Boolean("ship_collision", causality=Fmi2Causality.output))
         
@@ -272,6 +274,9 @@ class SimpleCollisionAvoidance(Fmi2Slave):
                 # If prioritize one target use held_target_idx, else use idx
                 use_idx = self.held_target_idx if self.prioritize_one_target else idx
                 
+                # Outputs prioritized target ship index
+                self.ship_priority_idx  = use_idx
+                
                 # Accrue the rudder angle increment
                 self.colav_rud_ang_increment += self.colav_rudder_sign * self.rud_ang_increment_deg # OUTPUT
                 
@@ -290,6 +295,9 @@ class SimpleCollisionAvoidance(Fmi2Slave):
                 self.new_throttle_cmd        = float(np.clip(self.throttle_cmd, 0.0, 1.0))   # OUTPUT, clamp after scaling
                 self.new_rudder_angle_deg    = self.rudder_angle_deg     # OUTPUT
                 self.colav_rud_ang_increment = 0.0 # OUTPUT
+                
+                # No target ship is prioritized
+                self.ship_priority_idx       = -1
             
         except Exception as e:
             # IMPORTANT: do not crash host
