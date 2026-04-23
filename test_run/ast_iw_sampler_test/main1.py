@@ -22,7 +22,7 @@ import yaml
 config_path = ROOT / "test_run" / "ast_iw_sampler_test" / "ast_iw_sampler_single_ship_test_config.yaml"
 
 ## Get the save path for animation
-save_path = ROOT / "saved_animation" / "ast_iw_sampler_single_ship_test.gif"
+save_path = ROOT / "saved_animation" / "ast_iw_sampler_single_ship_test.gif"   
 
 with config_path.open("r", encoding="utf-8") as f:
     config = yaml.safe_load(f)
@@ -32,8 +32,8 @@ with config_path.open("r", encoding="utf-8") as f:
 # =========================
 own_ship = {
     "start_time"        : 0.0,
-    "north_route"       : [0, 10000, 0],
-    "east_route"        : [0, 10000, 20000],
+    "north_route"       : [0, 10000],
+    "east_route"        : [0, 10000],
     "speed_setpoints"   : 4.0,
 }
 spawn_requests = {
@@ -49,59 +49,120 @@ instance = ShipInTransitCoSimulation(config=config, ROOT=ROOT, spawn_requests=sp
 # =========================
 # Simulate
 # =========================
-# # Start timer
-# start_time = time.perf_counter()git 
 
-scope_angles_deg = [30, 0, -45, 0, 10]
-scope_length     = [2500, 2500, 4500, 3000, 4000]
-# scope_angles_deg = [30  , 0   , -45 , 15]
-# scope_length     = [2500, 2500, 4500, 1500]
-i = 0
+import math
+import random
+
+def generate_angle_deg(mu_deg=0.0, kappa=6.0, min_deg=-45.0, max_deg=45.0):
+    """
+    Generate an angle in degrees using a von Mises distribution,
+    truncated to the interval [min_deg, max_deg].
+
+    Parameters
+    ----------
+    mu_deg : float
+        Mean direction in degrees.
+    kappa : float
+        Concentration parameter for von Mises.
+        Higher values cluster more tightly around mu_deg.
+    min_deg : float
+        Minimum allowed angle in degrees.
+    max_deg : float
+        Maximum allowed angle in degrees.
+
+    Returns
+    -------
+    float
+        Random angle in degrees within [min_deg, max_deg].
+    """
+    mu_rad = math.radians(mu_deg)
+
+    while True:
+        angle_rad = random.vonmisesvariate(mu_rad, kappa)
+        angle_deg = math.degrees(angle_rad)
+
+        # Normalize to [-180, 180] for safety
+        angle_deg = ((angle_deg + 180) % 360) - 180
+
+        if min_deg <= angle_deg <= max_deg:
+            return angle_deg
+
+
+def generate_length(min_len=1500, max_len=4000, target_mean=2500, sigma=0.23):
+    """
+    Generate a length using a truncated log-normal distribution,
+    bounded to [min_len, max_len].
+
+    This is non-Gaussian and slightly favors medium-to-long values.
+
+    Parameters
+    ----------
+    min_len : int or float
+        Minimum allowed length.
+    max_len : int or float
+        Maximum allowed length.
+    target_mean : float
+        Approximate mean before truncation tuning.
+    sigma : float
+        Spread in log-space. Larger values create more right skew.
+
+    Returns
+    -------
+    int
+        Random length within [min_len, max_len].
+    """
+    # For a lognormal, mean = exp(mu + sigma^2 / 2)
+    mu = math.log(target_mean) - (sigma ** 2) / 2
+
+    while True:
+        value = random.lognormvariate(mu, sigma)
+        if min_len <= value <= max_len:
+            return int(round(value))
 
 # Initialize outside your timestep loop
 last_idx = None
 last_msg = None
 last_prev = None
 last_next = None
+last_request_captain_intent = False
 
 while instance.time <= instance.stopTime:
 
-    # Read outputs from the previous completed step
     request_captain_intent = instance.GetLastValue(
         slaveName="OS0__MISSION_MANAGER",
         slaveVar="request_captain_intent"
     )
-    
-    if request_captain_intent:
-        if i < len(scope_angles_deg)-1:
-            instance.SingleVariableManipulation(
-                slaveName="OS0__MISSION_MANAGER",
-                slaveVar="scope_angle_deg",
-                value=scope_angles_deg[i]
-            )
-            instance.SingleVariableManipulation(
-                slaveName="OS0__MISSION_MANAGER",
-                slaveVar="scope_length",
-                value=scope_length[i]
-            )
-            
-            insert_wp_now = instance.GetLastValue("OS0__MISSION_MANAGER", "insert_wp_now")
-            
-            i += 1
-        else:
-            print(f"WARNING: captain intent requested but input list is exhausted at i={i}")
-            # Do NOT break. Just stop feeding new captain intents.
+
+    new_request = request_captain_intent and not last_request_captain_intent
+
+    if new_request:
+        angle = generate_angle_deg()
+        length = generate_length()
+
+        print(f"NEW SAMPLE -> angle={angle:.2f}, length={length}")
+
+        instance.SingleVariableManipulation(
+            slaveName="OS0__MISSION_MANAGER",
+            slaveVar="scope_angle_deg",
+            value=angle
+        )
+        instance.SingleVariableManipulation(
+            slaveName="OS0__MISSION_MANAGER",
+            slaveVar="scope_length",
+            value=length
+        )
+
+    last_request_captain_intent = request_captain_intent
 
     instance.step()
-    
-    prev_wp_north   = instance.GetLastValue("OS0__MISSION_MANAGER", "prev_wp_north")
-    prev_wp_east    = instance.GetLastValue("OS0__MISSION_MANAGER", "prev_wp_east")
-    next_wp_north   = instance.GetLastValue("OS0__MISSION_MANAGER", "next_wp_north")
-    next_wp_east    = instance.GetLastValue("OS0__MISSION_MANAGER", "next_wp_east")
-    idx             = instance.GetLastValue("OS0__MISSION_MANAGER", "idx")
-    msg             = str(instance.GetLastValue("OS0__MISSION_MANAGER", "messages"))
-    
-    # Only print if something changed
+
+    prev_wp_north = instance.GetLastValue("OS0__MISSION_MANAGER", "prev_wp_north")
+    prev_wp_east  = instance.GetLastValue("OS0__MISSION_MANAGER", "prev_wp_east")
+    next_wp_north = instance.GetLastValue("OS0__MISSION_MANAGER", "next_wp_north")
+    next_wp_east  = instance.GetLastValue("OS0__MISSION_MANAGER", "next_wp_east")
+    idx           = instance.GetLastValue("OS0__MISSION_MANAGER", "idx")
+    msg           = str(instance.GetLastValue("OS0__MISSION_MANAGER", "messages"))
+
     if idx != last_idx or msg != last_msg:
         print("traj_index_", idx)
         print(f"msg : {msg}")
@@ -109,12 +170,11 @@ while instance.time <= instance.stopTime:
         print(f"next: ({next_wp_north:.1f}, {next_wp_east:.1f})")
         print("####")
 
-        # Update stored values
         last_idx = idx
         last_msg = msg
         last_prev = (prev_wp_north, prev_wp_east)
         last_next = (next_wp_north, next_wp_east)
-    
+
     if not instance.stop:
         instance.time += instance.stepSize
     else:
@@ -146,7 +206,7 @@ instance.AnimateFleetTrajectory(
         margin_frac=0.08,
         equal_aspect=True,
         interval_ms=20,
-        frame_step=2,
+        frame_step=10,
         trail_len=50,
         plot_routes=True,
         plot_waypoints=True,

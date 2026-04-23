@@ -47,9 +47,9 @@ target_ship_1 = {
 }
 target_ship_2 = {
     "start_time"        : 0.0, 
-    "north_route"       : [10000, 2000 , 0 ],
-    "east_route"        : [5000, 5000 , 5000 ],
-    "speed_setpoints"   : [0, 4, 2.5]    
+    "north_route"       : [10000, 0 ],
+    "east_route"        : [5000, 5000 ],
+    "speed_setpoints"   : 4.0 
 }
 target_ship_3 = {
     "start_time"        : 0.0, 
@@ -74,118 +74,142 @@ instance = ShipInTransitCoSimulation(config=config, ROOT=ROOT, spawn_requests=sp
 # =========================
 # Simulate
 # =========================
-scope_angles_deg = {
-    "TS1": {
-        "sa"  : [5, 5, 10, 5, 0],
-        "idx" : 0
-        },
-    "TS2": {
-        "sa"  : [-5, -10, -15, 0, 0],
-        "idx" : 0
-        },
-    "TS3": {
-        "sa"  : [-10, -10, -5, 5, 0],
-        "idx" : 0
-        },
-}
+import math
+import random
 
-ship_ids = [key for key in scope_angles_deg.keys()]
+def generate_angle_deg(mu_deg=0.0, kappa=6.0, min_deg=-45.0, max_deg=45.0):
+    """
+    Generate an angle in degrees using a von Mises distribution,
+    truncated to the interval [min_deg, max_deg].
+
+    Parameters
+    ----------
+    mu_deg : float
+        Mean direction in degrees.
+    kappa : float
+        Concentration parameter for von Mises.
+        Higher values cluster more tightly around mu_deg.
+    min_deg : float
+        Minimum allowed angle in degrees.
+    max_deg : float
+        Maximum allowed angle in degrees.
+
+    Returns
+    -------
+    float
+        Random angle in degrees within [min_deg, max_deg].
+    """
+    mu_rad = math.radians(mu_deg)
+
+    while True:
+        angle_rad = random.vonmisesvariate(mu_rad, kappa)
+        angle_deg = math.degrees(angle_rad)
+
+        # Normalize to [-180, 180] for safety
+        angle_deg = ((angle_deg + 180) % 360) - 180
+
+        if min_deg <= angle_deg <= max_deg:
+            return angle_deg
+
+
+def generate_length(min_len=1500, max_len=4000, target_mean=2500, sigma=0.23):
+    """
+    Generate a length using a truncated log-normal distribution,
+    bounded to [min_len, max_len].
+
+    This is non-Gaussian and slightly favors medium-to-long values.
+
+    Parameters
+    ----------
+    min_len : int or float
+        Minimum allowed length.
+    max_len : int or float
+        Maximum allowed length.
+    target_mean : float
+        Approximate mean before truncation tuning.
+    sigma : float
+        Spread in log-space. Larger values create more right skew.
+
+    Returns
+    -------
+    int
+        Random length within [min_len, max_len].
+    """
+    # For a lognormal, mean = exp(mu + sigma^2 / 2)
+    mu = math.log(target_mean) - (sigma ** 2) / 2
+
+    while True:
+        value = random.lognormvariate(mu, sigma)
+        if min_len <= value <= max_len:
+            return int(round(value))
+
+# Initialize outside your timestep loop
+last_idx = None
+last_msg = None
+last_prev = None
+last_next = None
+last_request_captain_intent = False
 
 while instance.time <= instance.stopTime:
-    
-    # Step the simulator
-    instance.step() 
-    
-    # Own Ship Position and trigger zone radius
-    north = instance.GetLastValue(
-        slaveName=instance.ship_slave(prefix="OS0", block="SHIP_MODEL"),
-        slaveVar="north"
+
+    request_captain_intent = instance.GetLastValue(
+        slaveName="TS2__MISSION_MANAGER",
+        slaveVar="request_captain_intent"
     )
-    east = instance.GetLastValue(
-        slaveName=instance.ship_slave(prefix="OS0", block="SHIP_MODEL"),
-        slaveVar="east"
-    )
-    pos = [north, east]
-    
-    os0_config = next(sc for sc in instance.ship_configs if sc.get("id") == "OS0")
-    trigger_zone_rad_2 = os0_config["fmu_params"]["COLAV"]["danger_zone_radius"] ** 2
-    
-    for ship_config in instance.ship_configs:
-        sid = ship_config.get("id")
 
-        if sid not in ship_ids:
-            continue
+    new_request = request_captain_intent and not last_request_captain_intent
 
-        # Target Ship Position
-        test_north = instance.GetLastValue(
-            slaveName=instance.ship_slave(prefix=sid, block="SHIP_MODEL"),
-            slaveVar="north"
+    if new_request:
+        angle = generate_angle_deg()
+        length = generate_length()
+
+        print(f"NEW SAMPLE -> angle={angle:.2f}, length={length}")
+
+        instance.SingleVariableManipulation(
+            slaveName="TS2__MISSION_MANAGER",
+            slaveVar="scope_angle_deg",
+            value=angle
         )
-        test_east = instance.GetLastValue(
-            slaveName=instance.ship_slave(prefix=sid, block="SHIP_MODEL"),
-            slaveVar="east"
-        )
-        test_pos = [test_north, test_east]
-
-        dist_os_to_ts_2 = (pos[0] - test_pos[0])**2 + (pos[1] - test_pos[1])**2
-
-        if dist_os_to_ts_2 < trigger_zone_rad_2:
-            instance.SingleVariableManipulation(
-                slaveName=instance.ship_slave(prefix=sid, block="MISSION_MANAGER"),
-                slaveVar="inside_trigger_zone",
-                value=True
-            )
-        else:
-            instance.SingleVariableManipulation(
-                slaveName=instance.ship_slave(prefix=sid, block="MISSION_MANAGER"),
-                slaveVar="inside_trigger_zone",
-                value=False
-            )
-
-        request_scope_angle = instance.GetLastValue(
-            slaveName=instance.ship_slave(prefix=sid, block="MISSION_MANAGER"),
-            slaveVar="request_scope_angle"
-        )
-        
-        messages = instance.GetLastValue(
-            slaveName=instance.ship_slave(prefix=sid, block="MISSION_MANAGER"),
-            slaveVar="messages"
-        )
-        
-        is_inside = instance.GetLastValue(
-            slaveName=instance.ship_slave(prefix=sid, block="MISSION_MANAGER"),
-            slaveVar="inside_trigger_zone"
+        instance.SingleVariableManipulation(
+            slaveName="TS2__MISSION_MANAGER",
+            slaveVar="scope_length",
+            value=length
         )
 
-        if request_scope_angle:
-            idx = scope_angles_deg[sid]["idx"]
-            sa_list = scope_angles_deg[sid]["sa"]
+    last_request_captain_intent = request_captain_intent
 
-            if idx < len(sa_list):
-                instance.SingleVariableManipulation(
-                    slaveName=instance.ship_slave(prefix=sid, block="MISSION_MANAGER"),
-                    slaveVar="scope_angle_deg",
-                    value=sa_list[idx]
-                )
+    instance.step()
 
-                scope_angles_deg[sid]["idx"] += 1
-        
-            print(f"time={instance.time:.2f}, sid={sid}")
-            print(f"  OS pos        = {pos}")
-            print(f"  TS pos        = {test_pos}")
-            print(f"  dist2         = {dist_os_to_ts_2:.2f}")
-            print(f"  trigger2      = {trigger_zone_rad_2:.2f}")
-            print(f"  inside_zone   = {dist_os_to_ts_2 < trigger_zone_rad_2}")
-            print(f"  request_scope = {request_scope_angle}")
-            print(f"  idx           = {scope_angles_deg[sid]['idx']}")
-            print(f"  messages      = {messages}")
-            print("----")
-    
-    # Determined the termination flag
+    prev_wp_north = instance.GetLastValue("TS2__MISSION_MANAGER", "prev_wp_north")
+    prev_wp_east  = instance.GetLastValue("TS2__MISSION_MANAGER", "prev_wp_east")
+    next_wp_north = instance.GetLastValue("TS2__MISSION_MANAGER", "next_wp_north")
+    next_wp_east  = instance.GetLastValue("TS2__MISSION_MANAGER", "next_wp_east")
+    idx           = instance.GetLastValue("TS2__MISSION_MANAGER", "idx")
+    msg           = str(instance.GetLastValue("TS2__MISSION_MANAGER", "messages"))
+
+    if idx != last_idx or msg != last_msg:
+        print("traj_index_", idx)
+        print(f"msg : {msg}")
+        print(f"prev: ({prev_wp_north:.1f}, {prev_wp_east:.1f})")
+        print(f"next: ({next_wp_north:.1f}, {next_wp_east:.1f})")
+        print("####")
+
+        last_idx = idx
+        last_msg = msg
+        last_prev = (prev_wp_north, prev_wp_east)
+        last_next = (next_wp_north, next_wp_east)
+
     if not instance.stop:
         instance.time += instance.stepSize
     else:
         break
+
+for key in instance.IW_sampling_anim_data["TS2"].keys():
+    print(f"===== frame:{key}")
+    print("active_path            :", instance.IW_sampling_anim_data["TS2"][key]["active_path"])
+    print("sampled_inter_wps      :", instance.IW_sampling_anim_data["TS2"][key]["sampled_inter_wps"])
+    print("sampled_inter_wp_projs :", instance.IW_sampling_anim_data["TS2"][key]["sampled_inter_wp_projs"])
+    print("=====")
 
 # =========================
 # Animation and Plot

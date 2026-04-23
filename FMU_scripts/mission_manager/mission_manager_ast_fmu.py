@@ -3,7 +3,8 @@ Mission Manager FMU for EB.ASTv2.
 This FMU manages waypoint progression using previous and next setpoints, 
 supports zeroeth and sampled intermediate waypoint insertion during time activation, 
 and requests external scope-angle inputs to generate new intermediate waypoints 
-during runtime. Can only holds 8 intermediate waypoints at max.
+during runtime. This module needs start and end waypoints. Can only holds 8 
+intermediate waypoints at max.
 
 Authors : Andreas R.G. Sitorus
 Date    : April 2026
@@ -16,14 +17,14 @@ import traceback
 
 class MissionManagerAST(Fmi2Slave):
     author = "Andreas R.G. Sitorus"
-    description = "Mission Manager for single-segment trajectory-intermediate waypoint sampling"
+    description = "Mission Manager for EB-ASTv2"
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
         # Parameters
         self.ra                                 = 300.0
-        self.time_to_start_iw_sampler           = 0.0
+        self.time_to_start_iw_sampler           = 100.0     # Starting time > 0.0
         self.max_inner_wp                       = 8
         self.max_sampled_inter_wp               = 8
         self.scope_angle_max_deg                = 45
@@ -32,11 +33,6 @@ class MissionManagerAST(Fmi2Slave):
         self.wp_start_north                     = 0.0
         self.wp_start_east                      = 0.0
         self.wp_start_speed                     = 0.0
-
-        for i in range(1, 9):
-            setattr(self, f"wp_{i}_north", 0.0)
-            setattr(self, f"wp_{i}_east",  0.0)
-            setattr(self, f"wp_{i}_speed", 0.0)
 
         self.wp_end_north                       = 0.0
         self.wp_end_east                        = 0.0
@@ -100,11 +96,6 @@ class MissionManagerAST(Fmi2Slave):
         self.register_variable(Real("wp_start_east",  causality=Fmi2Causality.parameter, variability=Fmi2Variability.fixed))
         self.register_variable(Real("wp_start_speed", causality=Fmi2Causality.parameter, variability=Fmi2Variability.fixed))
 
-        for i in range(1, 9):
-            self.register_variable(Real(f"wp_{i}_north", causality=Fmi2Causality.parameter, variability=Fmi2Variability.fixed))
-            self.register_variable(Real(f"wp_{i}_east",  causality=Fmi2Causality.parameter, variability=Fmi2Variability.fixed))
-            self.register_variable(Real(f"wp_{i}_speed", causality=Fmi2Causality.parameter, variability=Fmi2Variability.fixed))
-
         self.register_variable(Real("wp_end_north", causality=Fmi2Causality.parameter, variability=Fmi2Variability.fixed))
         self.register_variable(Real("wp_end_east",  causality=Fmi2Causality.parameter, variability=Fmi2Variability.fixed))
         self.register_variable(Real("wp_end_speed", causality=Fmi2Causality.parameter, variability=Fmi2Variability.fixed))
@@ -123,7 +114,7 @@ class MissionManagerAST(Fmi2Slave):
         self.register_variable(Real("next_wp_proj_north", causality=Fmi2Causality.output))
         self.register_variable(Real("next_wp_proj_east", causality=Fmi2Causality.output))
         
-        # Debug
+        # Messages
         self.register_variable(String("messages", causality=Fmi2Causality.output))
 
     def _valid_triplet(self, n, e, s) -> bool:
@@ -135,16 +126,6 @@ class MissionManagerAST(Fmi2Slave):
         # Start
         if self._valid_triplet(self.wp_start_north, self.wp_start_east, self.wp_start_speed):
             traj.append((float(self.wp_start_north), float(self.wp_start_east), float(self.wp_start_speed)))
-
-        # Intermediate (1..max_inner_wp)
-        m = int(self.max_inner_wp)
-        m = max(0, min(m, 8))
-        for i in range(1, m + 1):
-            n = getattr(self, f"wp_{i}_north")
-            e = getattr(self, f"wp_{i}_east")
-            s = getattr(self, f"wp_{i}_speed")
-            if self._valid_triplet(n, e, s):
-                traj.append((float(n), float(e), float(s)))
 
         # End
         if self._valid_triplet(self.wp_end_north, self.wp_end_east, self.wp_end_speed):
@@ -240,7 +221,6 @@ class MissionManagerAST(Fmi2Slave):
         # Traversed segment Length
         traversed_segment_length    = base_inter_wp_length * np.cos(psi)
         segment_arm_length          = base_inter_wp_length * np.sin(psi)
-        # untraversed_segment_length  = segment_length - traversed_segment_length
         
         # Projection point coordinate to the segment route
         p_n                         = base_north + traversed_segment_length * np.cos(beta)
@@ -318,7 +298,7 @@ class MissionManagerAST(Fmi2Slave):
         _, untraversed_segment_length, _, inter_wp_proj = self._get_inter_wp_parameters(inter_wp, base_setpoint, head_setpoint, beta, segment_length)
         
         return inter_wp, inter_wp_proj, untraversed_segment_length
-    
+     
     def _save_intermediate_waypoint(self, inter_wp, inter_wp_proj):
         # Insert thewaypoint to and its projection to its respected lists
         self._inter_wp_list.append(inter_wp)
@@ -328,7 +308,7 @@ class MissionManagerAST(Fmi2Slave):
         # Store output
         self.next_wp_proj_north, self.next_wp_proj_east = self._inter_wp_proj_list[-1]
     
-    def _evaluate_segment_switch(self, untraversed_segment_length, scope_length):
+    def _evaluate_scope_length(self, untraversed_segment_length, scope_length):
         """
             Decide what to do with the proposed intermediate setpoint.
             If the scope length is shorter than the untraversed segment length, do segment switch
@@ -338,7 +318,7 @@ class MissionManagerAST(Fmi2Slave):
             return "valid_insertion"
         
         # Else return True
-        return "prepare_segment_switch"
+        return "invalid_insertion"
     
     def _advance_traj(self):
         self.idx += 1
@@ -395,71 +375,35 @@ class MissionManagerAST(Fmi2Slave):
             self.insert_wp_now  = False
             
             # ======================================================================================
-            # First Condition: Handle the segment switching when entering the segment joint
-            # ======================================================================================
-            if entering_ra and self._do_segment_switch:
-                # Advance the base route segment index and reset
-                if self._segment_idx < self._max_segment_idx:
-                    self._segment_idx              += 1
-                    self._idx_in_segment            = 1
-                    self.request_captain_intent     = True
-                    self._request_in_segment_joint  = True
-                    
-                    messages                       += f"Captain intent request at base waypoint ({self.next_wp_north:.1f},{self.next_wp_east:.1f}) -> "
-                    self.messages                   = messages
-                    
-                else:
-                    self.request_captain_intent     = False
-                    messages                       += f"Do not request captain intent on when reaching the last segment"
-                    self.messages                   = messages
-                
-                # Reset the handle pending IW request flag
-                self._do_segment_switch             = False
-            
-            # ======================================================================================
-            # Second Condition: Handle the captain intent request
+            # First Condition: Handle the captain intent request
             # ======================================================================================
             if self.request_captain_intent:
-                # Compute the intermediate waypoint
-                (inter_wp, 
-                 inter_wp_proj, 
-                 untraversed_segment_length)        = self._get_intermediate_waypoint(scope_angle_deg=self.scope_angle_deg, 
-                                                                                      scope_length=self.scope_length)
-                
                 # Evaluate status using previously save untraversed segment length
-                status                              = self._evaluate_segment_switch(untraversed_segment_length=self._temp_untraversed_segment_length, 
-                                                                                    scope_length=self.scope_length)
-                
-                if self._request_in_segment_joint:
-                    self._save_intermediate_waypoint(inter_wp, inter_wp_proj)
-                    self._get_prev_and_next_waypoint()
-                    
-                    self._request_in_segment_joint  = False
-                    
-                    # Messages
-                    messages                        = f"Captain intent using scope angle of {self.scope_angle_deg:.1f} degrees and scope length of {self.scope_length}"
-                    self.messages                   = messages
-                    
-                    # Update the temporary untraversed segment length variable
-                    self._temp_untraversed_segment_length = untraversed_segment_length
+                status                              = self._evaluate_scope_length(untraversed_segment_length=self._temp_untraversed_segment_length, 
+                                                                                  scope_length=self.scope_length)
                 
                 # Advance the trajectory, not saving the waypoint and temporarily pend 
                 # the captain intent request while awaiting for the next waypoint RoA visit
-                if status == "prepare_segment_switch":
+                if status == "invalid_insertion":
                     self._advance_traj()
                     self._get_prev_and_next_waypoint()
                     
-                    self._do_segment_switch         = True
                     self.request_captain_intent     = False
                     
                     # Messages
-                    messages                        = f"Segment switch from segment {self._segment_idx - 1} to segment {self._segment_idx}"
+                    messages                        = f"New intermediate waypoint is sampled beyond the end waypoint"
                     self.messages                   = messages
                     
                     return True
                 
                 # Condition when then ship first enter the trigger zone after getting the zeroeth intermediate waypoint
                 if status == "valid_insertion":    
+                    # Compute the intermediate waypoint
+                    (inter_wp, 
+                    inter_wp_proj, 
+                    untraversed_segment_length)        = self._get_intermediate_waypoint(scope_angle_deg=self.scope_angle_deg, 
+                                                                                        scope_length=self.scope_length)
+                    
                     # Advance the trajectory
                     self._save_intermediate_waypoint(inter_wp, inter_wp_proj)
                     self._advance_traj()
@@ -468,30 +412,30 @@ class MissionManagerAST(Fmi2Slave):
                     if self._wait_first_captain_intent:
                         # Finished waiting first captain intent
                         self._wait_first_captain_intent  = False
-                        sub_messages  = f"Captain intent {self._accepted_sampled_inter_wp + 1} using scope angle of {self.scope_angle_deg:.1f} degrees and scope length of {self.scope_length}"
-                    else:
-                        sub_messages  = f"Captain intent {self._accepted_sampled_inter_wp + 1} using scope angle of {self.scope_angle_deg:.1f} degrees and scope length of {self.scope_length}"
+                        
+                    # Update message
+                    sub_messages  = f"Captain intent {self._accepted_sampled_inter_wp + 1} using scope angle of {self.scope_angle_deg:.1f} degrees and scope length of {self.scope_length}"
                         
                     # Update the temporary untraversed segment length variable
                     self._temp_untraversed_segment_length = untraversed_segment_length
                     
                 # Then turn off the captain intent request after receiving it
-                self.request_captain_intent        = False
+                self.request_captain_intent               = False
                 
                 # Increment the sampling count after the sampling
-                self._accepted_sampled_inter_wp += 1
+                self._accepted_sampled_inter_wp          += 1
                 
                 # Set the internal function to insert the wp now for recording
                 self.insert_wp_now              = True
                 
                 # Debug
-                messages        += f"Captain intent request handling: {sub_messages}"
-                self.messages    = messages
+                messages                       += f"Captain intent request handling: {sub_messages}"
+                self.messages                   = messages
                 
                 return True
                     
             # ======================================================================================
-            # Third Condition: Zeroeth intermediate waypoint placement + request first captain intent
+            # Second Condition: Zeroeth intermediate waypoint placement + request first captain intent
             # ======================================================================================
             if place_zeroeth_inter_wp:
                 # Update the actual segment index. Inside WP trigger does not immediately triggers at the first waypoint
@@ -525,7 +469,7 @@ class MissionManagerAST(Fmi2Slave):
                 return True
             
             # ======================================================================================
-            # Fourth Condition: Request second and onwards captain intent
+            # Third Condition: Request second and onwards captain intent
             # ======================================================================================
             elif enable_inter_wp_sampling:
                 # Request the scope angle for the next step
@@ -538,7 +482,7 @@ class MissionManagerAST(Fmi2Slave):
                 return True
             
             # ======================================================================================
-            # Fifth Condition: End Condition
+            # Fourth Condition: End Condition
             # ======================================================================================
             if entering_ra and next_wp_is_end:
                 self.reach_wp_end           = True
@@ -552,7 +496,7 @@ class MissionManagerAST(Fmi2Slave):
                 return True
                 
             # ======================================================================================
-            # Sixth Condition: Normal Progression
+            # Fifth Condition: Normal Progression
             # ======================================================================================
             if entering_ra:
                 # Advance the trajectory
@@ -573,7 +517,7 @@ class MissionManagerAST(Fmi2Slave):
             
         except Exception as e:
             # Keep host alive; do not crash co-sim
-            print(f"[MissionManager] Exception t={current_time}, dt={step_size}: {type(e).__name__}: {e}")
+            print(f"[MissionManagerAST] Exception t={current_time}, dt={step_size}: {type(e).__name__}: {e}")
             print(traceback.format_exc())
 
             # Freeze dynamics safely (keep last state/outputs)

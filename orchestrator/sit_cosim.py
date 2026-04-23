@@ -38,6 +38,7 @@ class ShipInTransitCoSimulation(CoSimInstance):
         # =========================
         # Instantiate the Parent Class
         # =========================
+        
         # Upack the config file
         simu_config     = config["simulation"]
         ship_configs    = config["ships"]
@@ -783,7 +784,76 @@ class ShipInTransitCoSimulation(CoSimInstance):
     def update_collision_status(self, ship_id):
         return self.GetLastValue(slaveName=self.ship_slave(ship_id, "COLAV"), 
                                  slaveVar="ship_collision")
-    
+        
+    def get_IW_sampling_animation_data(self):
+        # Pre-load the animation data
+        for ship_config in self.ship_configs:
+            ship_id = ship_config["id"]
+            
+            IW_sampling          = ship_config.get("IW_sampling", False)
+            if not IW_sampling:
+                continue
+            
+            IW_sampling_animated = IW_sampling.get("animated", False)
+            if not IW_sampling_animated:
+                continue
+            
+            # Get the insert wp flag
+            insert_wp_now = self.GetLastValue(
+                slaveName=self.ship_slave(prefix=ship_id, block="MISSION_MANAGER"),
+                slaveVar="insert_wp_now"
+            )
+            
+            if insert_wp_now:
+                # Get index
+                idx           = int(self.GetLastValue(
+                    slaveName=self.ship_slave(prefix=ship_id, block="MISSION_MANAGER"),
+                    slaveVar="idx"
+                ) + 1)
+                
+                # Get the next waypoint
+                next_wp_north = self.GetLastValue(
+                    slaveName=self.ship_slave(prefix=ship_id, block="MISSION_MANAGER"),
+                    slaveVar="next_wp_north"
+                )
+                next_wp_east = self.GetLastValue(
+                    slaveName=self.ship_slave(prefix=ship_id, block="MISSION_MANAGER"),
+                    slaveVar="next_wp_east"
+                )
+                next_wp_proj_north = self.GetLastValue(
+                    slaveName=self.ship_slave(prefix=ship_id, block="MISSION_MANAGER"),
+                    slaveVar="next_wp_proj_north"
+                )
+                next_wp_proj_east = self.GetLastValue(
+                    slaveName=self.ship_slave(prefix=ship_id, block="MISSION_MANAGER"),
+                    slaveVar="next_wp_proj_east"
+                )
+                
+                # Insert the intermediate waypoint
+                # Get the prev frame
+                prev_frame          = getattr(self, f"current_frame_{ship_id}")
+                
+                # Altered the previous active path
+                prev_active_path    = self.IW_sampling_anim_data[ship_id][prev_frame]["active_path"].copy()
+                prev_active_path.insert(idx, (next_wp_north, next_wp_east))
+                
+                # Altered the intermediate waypoints list
+                prev_inter_wps      = self.IW_sampling_anim_data[ship_id][prev_frame]["sampled_inter_wps"].copy()
+                prev_inter_wps.append((next_wp_north, next_wp_east))
+                
+                # Altered the intermediate waypoint projection list
+                prev_inter_wp_projs = self.IW_sampling_anim_data[ship_id][prev_frame]["sampled_inter_wp_projs"].copy()
+                prev_inter_wp_projs.append((next_wp_proj_north, next_wp_proj_east))
+                
+                data = {
+                    "active_path": prev_active_path,
+                    "sampled_inter_wps": prev_inter_wps,
+                    "sampled_inter_wp_projs": prev_inter_wp_projs,
+                }
+                
+                frame = int(self.time / self.stepSize)
+                setattr(self, f"current_frame_{ship_id}", frame)
+                self.IW_sampling_anim_data[ship_id][frame]= data
     
     def PostSolverFunctionCall(self):
         """
@@ -835,75 +905,8 @@ class ShipInTransitCoSimulation(CoSimInstance):
         # ==================================
         # Gather IW sampling animation data
         # ==================================
-        if self.IW_sampling_animated:
-            # Pre-load the animation data
-            for ship_config in self.ship_configs:
-                ship_id = ship_config["id"]
-                
-                IW_sampling          = ship_config.get("IW_sampling", False)
-                if not IW_sampling:
-                    continue
-                
-                IW_sampling_animated = IW_sampling.get("animated", False)
-                if not IW_sampling_animated:
-                    continue
-                
-                # Get the insert wp flag
-                insert_wp_now = self.GetLastValue(
-                    slaveName=self.ship_slave(prefix=ship_id, block="MISSION_MANAGER"),
-                    slaveVar="insert_wp_now"
-                )
-                
-                if insert_wp_now:
-                    # Get index
-                    idx           = int(self.GetLastValue(
-                        slaveName=self.ship_slave(prefix=ship_id, block="MISSION_MANAGER"),
-                        slaveVar="idx"
-                    ) + 1)
-                    
-                    # Get the next waypoint
-                    next_wp_north = self.GetLastValue(
-                        slaveName=self.ship_slave(prefix=ship_id, block="MISSION_MANAGER"),
-                        slaveVar="next_wp_north"
-                    )
-                    next_wp_east = self.GetLastValue(
-                        slaveName=self.ship_slave(prefix=ship_id, block="MISSION_MANAGER"),
-                        slaveVar="next_wp_east"
-                    )
-                    next_wp_proj_north = self.GetLastValue(
-                        slaveName=self.ship_slave(prefix=ship_id, block="MISSION_MANAGER"),
-                        slaveVar="next_wp_proj_north"
-                    )
-                    next_wp_proj_east = self.GetLastValue(
-                        slaveName=self.ship_slave(prefix=ship_id, block="MISSION_MANAGER"),
-                        slaveVar="next_wp_proj_east"
-                    )
-                    
-                    # Insert the intermediate waypoint
-                    # Get the prev frame
-                    prev_frame          = getattr(self, f"current_frame_{ship_id}")
-                    
-                    # Altered the previous active path
-                    prev_active_path    = self.IW_sampling_anim_data[ship_id][prev_frame]["active_path"].copy()
-                    prev_active_path.insert(idx, (next_wp_north, next_wp_east))
-                    
-                    # Altered the intermediate waypoints list
-                    prev_inter_wps      = self.IW_sampling_anim_data[ship_id][prev_frame]["sampled_inter_wps"].copy()
-                    prev_inter_wps.append((next_wp_north, next_wp_east))
-                    
-                    # Altered the intermediate waypoint projection list
-                    prev_inter_wp_projs = self.IW_sampling_anim_data[ship_id][prev_frame]["sampled_inter_wp_projs"].copy()
-                    prev_inter_wp_projs.append((next_wp_proj_north, next_wp_proj_east))
-                    
-                    data = {
-                        "active_path": prev_active_path,
-                        "sampled_inter_wps": prev_inter_wps,
-                        "sampled_inter_wp_projs": prev_inter_wp_projs,
-                    }
-                    
-                    frame = int(self.time / self.stepSize)
-                    setattr(self, f"current_frame_{ship_id}", frame)
-                    self.IW_sampling_anim_data[ship_id][frame]= data
+        if getattr(self, "IW_sampling_animated", False):
+            self.get_IW_sampling_animation_data()
                     
         
     def evaluate_ship_condition(self, ship_id:str, ship_config:dict):

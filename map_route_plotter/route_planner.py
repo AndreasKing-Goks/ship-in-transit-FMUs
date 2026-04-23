@@ -3,21 +3,26 @@ import sys, os
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Button
-
-# ---------- PATH SETUP ----------
+# =================================================================
+# PATH SETUP
+# =================================================================
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from orchestrator.utils import get_ship_route_path, get_map_path
 from map_route_plotter.prepare_map_route import get_gdf_from_gpkg
 
-# ============ USER KNOBS ============
+# =================================================================
+# USER KNOBS
+# =================================================================
 ROUTE_FILENAME = "of_route.txt"
 PRINT_INIT_MSG = True
 POINT_MARKER_SIZE = 20
 LABEL_FONTSIZE = 7.5
 
-# -------- Map detail toggles --------
+# =================================================================
+# MAP DETAILS TOOGLES
+# =================================================================
 SHOW_COAST        = False
 SHOW_WATER        = False
 SHOW_WATERWAYS    = False
@@ -41,7 +46,6 @@ BRIDGES_LAYER       = "bridges_3857"
 TSS_LAYER           = "tss_3857"
 DOCKS_LAYER         = "docks_3857"
 
-
 def unique_save_path(base_path: Path) -> Path:
     """Return a unique path by adding _1, _2, ... if needed."""
     if not base_path.exists():
@@ -55,7 +59,6 @@ def unique_save_path(base_path: Path) -> Path:
         if not candidate.exists():
             return candidate
         i += 1
-
 
 class RoutePicker:
     def __init__(self, ax, save_path: Path):
@@ -255,7 +258,7 @@ def main():
     fig_height = fig_width / aspect
     fig, ax = plt.subplots(figsize=(fig_width, fig_height), dpi=180)
 
-    # ----- Basemap -----
+    # Basemap
     if not ocean_gdf.empty:
         ocean_gdf.plot(ax=ax, facecolor="#cfe8f7", edgecolor="none", zorder=0)
 
@@ -268,7 +271,7 @@ def main():
     if SHOW_COAST and not coast_gdf.empty:
         coast_gdf.plot(ax=ax, color="#4f6650", linewidth=0.45, zorder=3)
 
-    # ----- Optional overlays -----
+    # Optional overlays
     if SHOW_WATERWAYS and not waterways_gdf.empty:
         waterways_gdf.plot(ax=ax, color="#7fb6d6", linewidth=0.6, alpha=0.9, zorder=4)
 
@@ -287,7 +290,7 @@ def main():
     if SHOW_HARBOURS and not harbours_gdf.empty:
         harbours_gdf.plot(ax=ax, color="#c85a5a", markersize=14, alpha=0.85, zorder=7)
 
-    # ----- Axes -----
+    # Axes
     ax.set_xlim(minx, maxx)
     ax.set_ylim(miny, maxy)
     ax.set_aspect("equal")

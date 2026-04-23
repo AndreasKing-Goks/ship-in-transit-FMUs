@@ -3,9 +3,9 @@ import numpy as np
 from shapely.geometry import Polygon, MultiPolygon
 from pathlib import Path
 
-# -----------------------
-# 1) LOAD + PLOT THE MAP (same axes we'll reuse for the SIT overlays)
-# -----------------------
+# =================================================================
+# LOAD + PLOT THE MAP (same axes we'll reuse for the SIT overlays)
+# =================================================================
 def get_gdf_from_gpkg(
     gpkg_path,
     frame_layer,
@@ -60,9 +60,9 @@ def get_polygon_from_gdf(gdf):
     return polys
 
 
-# =============================================================================================================
+# =================================================================
 # Get Path
-# =============================================================================================================    
+# ================================================================= 
 def load_waypoints(route_path, print_init_msg=False):
     """Route file: two columns [north, east]. Accepts str or Path or array."""
     if print_init_msg:

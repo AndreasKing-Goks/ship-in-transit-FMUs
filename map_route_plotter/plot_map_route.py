@@ -104,9 +104,9 @@ def plot_route_map(
         Matplotlib figure and axes.
     """
 
-    # -----------------------
+    # =================================================================
     # Load route
-    # -----------------------
+    # =================================================================
     if route_filename == "*":
         route_files = get_ship_route_path_from_group(ROOT=ROOT, group=group, route_filename=route_filename, pattern=pattern)
         routes = [load_waypoints(file) for file in route_files]
@@ -114,9 +114,9 @@ def plot_route_map(
         route_file = get_ship_route_path_from_group(ROOT=ROOT, group=group, route_filename=route_filename)
         routes = [load_waypoints(route_file)]
 
-    # -----------------------
+    # =================================================================
     # Load map layers
-    # -----------------------
+    # =================================================================
     gpkg_path = get_map_path(ROOT, map_filename)
 
     frame_layer = "frame_3857"
@@ -149,9 +149,9 @@ def plot_route_map(
         docks_layer=docks_layer,
     )
 
-    # -----------------------
+    # =================================================================
     # Figure size from map aspect
-    # -----------------------
+    # =================================================================
     minx, miny, maxx, maxy = frame_gdf.total_bounds
     map_w = maxx - minx
     map_h = maxy - miny
@@ -160,9 +160,9 @@ def plot_route_map(
     fig_height = fig_width / aspect
     fig, ax = plt.subplots(figsize=(fig_width, fig_height), dpi=dpi)
 
-    # -----------------------
+    # =================================================================
     # Basemap
-    # -----------------------
+    # =================================================================
     if not ocean_gdf.empty:
         ocean_gdf.plot(ax=ax, facecolor="#cfe8f7", edgecolor="none", zorder=0)
 
@@ -175,9 +175,9 @@ def plot_route_map(
     if show_coast and not coast_gdf.empty:
         coast_gdf.plot(ax=ax, color="#4f6650", linewidth=0.45, zorder=3)
 
-    # -----------------------
+    # =================================================================
     # Optional overlays
-    # -----------------------
+    # =================================================================
     if show_waterways and not waterways_gdf.empty:
         waterways_gdf.plot(ax=ax, color="#7fb6d6", linewidth=0.6, alpha=0.9, zorder=4)
 
@@ -196,9 +196,9 @@ def plot_route_map(
     if show_harbours and not harbours_gdf.empty:
         harbours_gdf.plot(ax=ax, color="#c85a5a", markersize=14, alpha=0.85, zorder=7)
 
-    # -----------------------
+    # =================================================================
     # Routes
-    # -----------------------
+    # =================================================================
     palette = ["#0c3c78", "#d90808", "#2a9d8f", "#f4a261", "#6a4c93", "#264653"]
     route_handles = []
     for i, (north, east) in enumerate(routes):
@@ -224,9 +224,9 @@ def plot_route_map(
 
         route_handles.append(Line2D([0], [0], color=palette[i], lw=1.0, ls="--", label=f"Route {i+1}"))
 
-    # -----------------------
+    # =================================================================
     # Axes / grid / frame
-    # -----------------------
+    # =================================================================
     ax.set_xlim(minx, maxx)
     ax.set_ylim(miny, maxy)
     ax.set_aspect("equal")
@@ -246,14 +246,14 @@ def plot_route_map(
         spine.set_linewidth(0.8)
         spine.set_color("0.35")
 
-    # -----------------------
+    # =================================================================
     # Scalebar
-    # -----------------------
+    # =================================================================
     add_scalebar(ax, length_m=None)
 
-    # -----------------------
+    # =================================================================
     # Legend
-    # -----------------------
+    # =================================================================
     if len(route_handles) > 0:
         ax.legend(
             handles=route_handles,
@@ -264,9 +264,9 @@ def plot_route_map(
             prop={'size':LABEL_FONTSIZE}
         )
 
-    # -----------------------
+    # =================================================================
     # Title and spacing
-    # -----------------------
+    # =================================================================
     ax.set_title(title, fontsize=LABEL_FONTSIZE*1.5, pad=10)
 
     plt.subplots_adjust(left=0.08, right=0.99, bottom=0.08, top=0.93)
@@ -275,7 +275,6 @@ def plot_route_map(
         plt.show()
 
     return fig, ax
-
 
 def main():
     map = 2

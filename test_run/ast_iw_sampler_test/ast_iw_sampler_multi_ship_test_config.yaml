@@ -1,4 +1,4 @@
-zsimulation:
+simulation:
   instanceName: Ship-Path Following Test
   stopTime: 10000.0
   stepSize: 5.0
@@ -256,12 +256,9 @@ ships:
   ##########################################################
 
   - id: TS1
-    IW_sampling:
-        active: True
-        animated: True
 
     SHIP_BLOCKS:
-      - [MISSION_MANAGER, FMUs/simplified_ship/MissionManagerMultiSegmentIWSampler.fmu]
+      - [MISSION_MANAGER, FMUs/simplified_ship/MissionManager.fmu]
       - [AUTOPILOT, FMUs/simplified_ship/Autopilot.fmu]
       - [SPEED_CONTROLLER, FMUs/simplified_ship/SpeedController.fmu]
       - [RUDDER, FMUs/simplified_ship/Rudder.fmu]
@@ -341,9 +338,6 @@ ships:
     fmu_params:
       MISSION_MANAGER:
         ra: 300
-        max_sampled_inter_wp: 5
-        scope_angle_max_deg: 45
-        scope_length: 750
 
       AUTOPILOT:
         r: 1000
@@ -432,7 +426,7 @@ ships:
         animated: True
 
     SHIP_BLOCKS:
-      - [MISSION_MANAGER, FMUs/simplified_ship/MissionManagerMultiSegmentIWSampler.fmu]
+      - [MISSION_MANAGER, FMUs/simplified_ship/MissionManagerAST.fmu]
       - [AUTOPILOT, FMUs/simplified_ship/Autopilot.fmu]
       - [SPEED_CONTROLLER, FMUs/simplified_ship/SpeedController.fmu]
       - [RUDDER, FMUs/simplified_ship/Rudder.fmu]
@@ -512,9 +506,9 @@ ships:
     fmu_params:
       MISSION_MANAGER:
         ra: 300
-        max_sampled_inter_wp: 5
+        time_to_start_iw_sampler: 100
+        max_sampled_inter_wp: 3
         scope_angle_max_deg: 45
-        scope_length: 750
 
       AUTOPILOT:
         r: 1000
@@ -598,12 +592,9 @@ ships:
   ##########################################################
 
   - id: TS3
-    IW_sampling:
-      active: True
-      animated: True
 
     SHIP_BLOCKS:
-      - [MISSION_MANAGER, FMUs/simplified_ship/MissionManagerMultiSegmentIWSampler.fmu]
+      - [MISSION_MANAGER, FMUs/simplified_ship/MissionManager.fmu]
       - [AUTOPILOT, FMUs/simplified_ship/Autopilot.fmu]
       - [SPEED_CONTROLLER, FMUs/simplified_ship/SpeedController.fmu]
       - [RUDDER, FMUs/simplified_ship/Rudder.fmu]
@@ -683,9 +674,6 @@ ships:
     fmu_params:
       MISSION_MANAGER:
         ra: 300
-        max_sampled_inter_wp: 5
-        scope_angle_max_deg: 45
-        scope_length: 750
 
       AUTOPILOT:
         r: 1000

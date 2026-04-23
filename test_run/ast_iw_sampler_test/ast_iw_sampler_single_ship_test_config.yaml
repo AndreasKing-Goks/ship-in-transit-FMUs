@@ -78,7 +78,7 @@ ships:
     fmu_params:
       MISSION_MANAGER:
         ra: 300
-        time_to_start_iw_sampler: 1000
+        time_to_start_iw_sampler: 0
         max_sampled_inter_wp: 5
         scope_angle_max_deg: 45
 
