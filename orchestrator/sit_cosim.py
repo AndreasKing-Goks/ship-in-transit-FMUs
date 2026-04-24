@@ -941,6 +941,10 @@ class ShipInTransitCoSimulation(CoSimInstance):
             if flag_name == 'collision':
                 self.stop_info[ship_id][flag_name]['status'].append(value)
                 self.stop_info[ship_id][flag_name]['colliders'].append(detail)
+            # Specific for colav active status
+            elif flag_name == 'colav_active':
+                self.stop_info[ship_id][flag_name]['status'].append(value)
+                self.stop_info[ship_id][flag_name]['candidates'].append(detail)
             # Update stop info
             elif detail is None:
                 self.stop_info[ship_id][flag_name].append(value)
@@ -1104,9 +1108,8 @@ class ShipInTransitCoSimulation(CoSimInstance):
             
             # Get the colav active sign
             colav_active, candidate_idx = self.update_colav_active_flag(ship_id)
-            self.stop_info[ship_id]['colav_active']['status'].append(colav_active)
             candidate = candidate_list[candidate_idx]
-            self.stop_info[ship_id]['colav_active']['candidates'].append(candidate)
+            push_flag(ship_id=ship_id, flag_name="colav_active", value=colav_active, detail=(candidate if candidate else None))
         
         # If the COLAV is not enabled
         else:
@@ -1958,6 +1961,14 @@ class ShipInTransitCoSimulation(CoSimInstance):
             return seq[-1]
         return seq[i]
     
+    def get_frame_value(self, seq, i):
+        """
+            Return value at frame i.
+            If i exceeds length, return last available value.
+            Assumes seq is non-empty.
+        """
+        return seq[i] if i < len(seq) else seq[-1]
+    
     
     def get_stop_info_state_at_frame(self, ship_id, i):
         """
@@ -1967,16 +1978,20 @@ class ShipInTransitCoSimulation(CoSimInstance):
         stop_info = getattr(self, "stop_info", {}).get(ship_id, None)
         if not stop_info:
             return None
+        
+        colav_status = self.get_frame_value(stop_info["colav_active"]["status"], i)
+        colav_candidates = self.get_frame_value(stop_info["colav_active"]["candidates"], i)
 
-        colav_status = self.safe_frame_value(stop_info.get("colav_active", {}).get("status", []), i, False)
-        colav_candidates = self.safe_frame_value(stop_info.get("colav_active", {}).get("candidates", []), i, "NONE")
+        collision_status = self.get_frame_value(stop_info["collision"]["status"], i)
+        collision_colliders = self.get_frame_value(stop_info["collision"]["colliders"], i)
 
-        collision_status = self.safe_frame_value(stop_info.get("collision", {}).get("status", []), i, False)
-        collision_colliders = self.safe_frame_value(stop_info.get("collision", {}).get("colliders", []), i, "NONE")
-
-        grounding = self.safe_frame_value(stop_info.get("grounding", []), i, False)
-        nav_warn = self.safe_frame_value(stop_info.get("nav_fail_warning", []), i, False)
-        nav_fail = self.safe_frame_value(stop_info.get("navigation_failure", []), i, False)
+        nav_warn = self.get_frame_value(stop_info["nav_fail_warning"], i)
+        nav_fail = self.get_frame_value(stop_info["navigation_failure"], i)
+        
+        if self.skip_map_evaluation:
+            grounding = False   # No grounding evaluation when skip map evaluation. Hence always output False
+        else:
+            self.get_frame_value(stop_info["grounding"], i)
 
         return {
             "colav_active": colav_status,

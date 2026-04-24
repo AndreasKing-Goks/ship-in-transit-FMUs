@@ -236,7 +236,7 @@ instance.AnimateFleetTrajectory(
         plot_waypoints=True,
         plot_roa=True,
         plot_start_end=True,
-        plot_inter_wp_roa=False,
+        plot_inter_wp_roa=True,
         plot_inter_wp_proj=False,
         with_labels=True,
         precompute_ship_outlines=True,
