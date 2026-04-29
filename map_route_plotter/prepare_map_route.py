@@ -45,6 +45,23 @@ def get_gdf_from_gpkg(
         frame_gdf, ocean_gdf, land_gdf, coast_gdf, water_gdf,
         waterways_gdf, ferry_routes_gdf, harbours_gdf, bridges_gdf, tss_gdf, docks_gdf
     )
+    
+def get_map_origin_lat_lon(gpkg_path, frame_layer):
+    # Get the frame gdf
+    frame_gdf   = gpd.read_file(gpkg_path, layer=frame_layer)
+    
+    # Get the bounds
+    bounds      = frame_gdf.total_bounds
+    # bounds = [min_lon, min_lat, max_lon, max_lat]
+
+    # Unpack the bounds
+    min_lon, min_lat, max_lon, max_lat = bounds
+
+    # Compute the origin lat and lon
+    lat0 = (min_lat + max_lat) / 2
+    lon0 = (min_lon + max_lon) / 2
+    
+    return lat0, lon0
 
 # --- Build map_data from land polygons in the SAME CRS as your route ---
 def get_polygon_from_gdf(gdf):

@@ -68,7 +68,9 @@ spawn_requests = {
 # Instantiate Co-simulation Wrapper
 # =========================
 # Instantiate
-instance = ShipInTransitCoSimulation(config=config, ROOT=ROOT, spawn_requests=spawn_requests, IW_sampling_animated=True)
+instance = ShipInTransitCoSimulation(config=config, ROOT=ROOT, 
+                                     spawn_requests=spawn_requests, 
+                                     IW_sampling_animated=True)
 
 
 # =========================

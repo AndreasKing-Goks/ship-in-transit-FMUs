@@ -70,6 +70,12 @@ pip3 uninstall torch torchvision
 pip3 install torch torchvision --index-url https://download.pytorch.org/whl/cu126
 ```
 
+### Traffic Generator
+We also use `traffic generator` as a tool for generating a structured set of encounters for verifying automatic collision and grounding avoidance systems. This works is developed by DNV and, the original work can be found in *dnv-opensource* repo, [here](https://github.com/dnv-opensource/ship-traffic-generator.git). To install `traffic generator`, run this command in your terminal:
+```bash
+pip install trafficgen
+```
+
 ---
 
 ##  Ship in Transit Co-simulation

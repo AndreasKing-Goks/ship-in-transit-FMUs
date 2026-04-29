@@ -14,7 +14,7 @@ import numpy as np
 from orchestrator.cosim_instance import *
 from orchestrator.utils import ShipDraw, compile_ship_params, get_ship_route_path_from_group, get_map_path
 from orchestrator import check_condition
-from map_route_plotter.prepare_map_route import get_gdf_from_gpkg, get_polygon_from_gdf, load_waypoints
+from map_route_plotter.prepare_map_route import get_gdf_from_gpkg, get_map_origin_lat_lon, get_polygon_from_gdf, load_waypoints
 from map_route_plotter.polygon_obstacle import PolygonObstacle
 
 import time
@@ -85,6 +85,10 @@ class ShipInTransitCoSimulation(CoSimInstance):
         # =========================
         # Set the Map (if given)
         # =========================
+        # Original latitude and longitude (Based on Norway's location)
+        self.lat0                   = 58.763449
+        self.lon0                   = 10.490654
+        
         # Get the map filename if exists, else None
         self.map                    = simu_config.get("map", None)
         self.is_map_exists          = True if self.map is not None else False
@@ -234,7 +238,10 @@ class ShipInTransitCoSimulation(CoSimInstance):
             tss_layer=tss_layer,
             docks_layer=docks_layer,
         )
-            
+        
+        # Update latitude and longitude based on the map
+        self.lat0, self.lon0 = get_map_origin_lat_lon(gpkg_path=gpkg_path, frame_layer=frame_layer)
+        
         # Merge land geometries into a single Shapely polygon
         # (useful for spatial checks such as grounding detection)
         land_poly       = get_polygon_from_gdf(self.land_gdf) 
@@ -1397,7 +1404,31 @@ class ShipInTransitCoSimulation(CoSimInstance):
             bbox=dict(facecolor="white", edgecolor="none", alpha=0.8, pad=1.5),
             zorder=21,
         )
+        
+        
+    def compute_square_bounds_from_points(self, all_x, all_y, margin_frac=0.08, min_span=1.0):
+        """
+            Compute square x/y bounds from collected x=east and y=north arrays.
+        """
+        X = np.concatenate(all_x) if len(all_x) else np.array([0.0, 1.0])
+        Y = np.concatenate(all_y) if len(all_y) else np.array([0.0, 1.0])
 
+        x_min, x_max = float(np.min(X)), float(np.max(X))
+        y_min, y_max = float(np.min(Y)), float(np.max(Y))
+
+        cx = 0.5 * (x_min + x_max)
+        cy = 0.5 * (y_min + y_max)
+
+        dx = x_max - x_min
+        dy = y_max - y_min
+
+        span = max(dx, dy, min_span)
+        margin = margin_frac * span
+
+        half = 0.5 * span + margin
+
+        return cx - half, cx + half, cy - half, cy + half
+    
     
     def PlotFleetTrajectory(
         self,
@@ -1546,8 +1577,20 @@ class ShipInTransitCoSimulation(CoSimInstance):
                     rN = cfg["route"].get("north", [])
                     rE = cfg["route"].get("east", [])
                     if len(rN) and len(rE):
-                        ax.plot(rE, rN, lw=route_lw, ls="--", color=color, alpha=0.7,
-                                label=f"{sid} route")
+                        rN = np.asarray(rN, dtype=float)
+                        rE = np.asarray(rE, dtype=float)
+
+                        all_x.append(rE)
+                        all_y.append(rN)
+
+                        ax.plot(
+                            rE, rN,
+                            lw=route_lw,
+                            ls="--",
+                            color=color,
+                            alpha=0.7,
+                            label=f"{sid} route"
+                        )
                         if plot_waypoints:
                             ax.scatter(rE, rN,
                                     s=waypoint_s if mode == "quick" else 30,
@@ -1588,17 +1631,15 @@ class ShipInTransitCoSimulation(CoSimInstance):
             ax.set_ylim(miny, maxy)
 
         else:
-            X = np.concatenate(all_x) if len(all_x) else np.array([0.0, 1.0])
-            Y = np.concatenate(all_y) if len(all_y) else np.array([0.0, 1.0])
+            x_min, x_max, y_min, y_max = self.compute_square_bounds_from_points(
+                all_x=all_x,
+                all_y=all_y,
+                margin_frac=margin_frac,
+                min_span=1.0
+            )
 
-            x_min, x_max = float(np.min(X)), float(np.max(X))
-            y_min, y_max = float(np.min(Y)), float(np.max(Y))
-
-            dx = max(1e-9, x_max - x_min)
-            dy = max(1e-9, y_max - y_min)
-            
-            ax.set_xlim(x_min - margin_frac * dx, x_max + margin_frac * dx)
-            ax.set_ylim(y_min - margin_frac * dy, y_max + margin_frac * dy)
+            ax.set_xlim(x_min, x_max)
+            ax.set_ylim(y_min, y_max)
             
         # Add scalebar on map
         self.add_scalebar(ax=ax, length_m=None, label_fs=style["label_fs"])
@@ -1695,6 +1736,96 @@ class ShipInTransitCoSimulation(CoSimInstance):
         x_min, x_max = float(np.min(E)), float(np.max(E))
         y_min, y_max = float(np.min(N)), float(np.max(N))
         return x_min, x_max, y_min, y_max
+    
+    def compute_square_bounds_no_map(
+        self,
+        data,
+        ship_ids,
+        margin_frac=0.08,
+        include_routes=True,
+        include_roa=True,
+    ):
+        """
+        Compute square plotting bounds for no-map animation.
+
+        Uses:
+        - simulated ship trajectories
+        - configured route waypoints
+        - optional RoA radius margin
+
+        Returns
+        -------
+        bounds : tuple
+            (x_min, x_max, y_min, y_max)
+            where x = East and y = North.
+        """
+
+        all_e = []
+        all_n = []
+
+        # Trajectory data
+        for sid in ship_ids:
+            if sid in data:
+                all_e.append(np.asarray(data[sid]["east"], dtype=float))
+                all_n.append(np.asarray(data[sid]["north"], dtype=float))
+
+        # Route waypoint data
+        if include_routes:
+            for sid in ship_ids:
+                cfg = next((sc for sc in self.ship_configs if sc.get("id") == sid), None)
+                if cfg is None:
+                    continue
+
+                route = cfg.get("route", None)
+                if not route:
+                    continue
+
+                rN = route.get("north", [])
+                rE = route.get("east", [])
+
+                if len(rN) > 0 and len(rE) > 0:
+                    m = min(len(rN), len(rE))
+                    all_n.append(np.asarray(rN[:m], dtype=float))
+                    all_e.append(np.asarray(rE[:m], dtype=float))
+
+        # Fallback
+        if not all_e or not all_n:
+            return (-1.0, 1.0, -1.0, 1.0)
+
+        E = np.concatenate(all_e)
+        N = np.concatenate(all_n)
+
+        x_min, x_max = float(np.min(E)), float(np.max(E))
+        y_min, y_max = float(np.min(N)), float(np.max(N))
+
+        # Add RoA margin if requested
+        extra_margin = 0.0
+
+        if include_roa:
+            for sid in ship_ids:
+                ra = self.get_ship_roa(sid) if hasattr(self, "get_ship_roa") else None
+                if ra is not None and ra > 0:
+                    extra_margin = max(extra_margin, float(ra))
+
+        # Force square bounds
+        cx = 0.5 * (x_min + x_max)
+        cy = 0.5 * (y_min + y_max)
+
+        dx = x_max - x_min
+        dy = y_max - y_min
+
+        span = max(dx, dy, 1.0)
+
+        # Margin based on square span, plus physical extra margin like RoA
+        half_span = 0.5 * span
+        margin = margin_frac * span + extra_margin
+
+        x_min_new = cx - half_span - margin
+        x_max_new = cx + half_span + margin
+        y_min_new = cy - half_span - margin
+        y_max_new = cy + half_span + margin
+
+        return x_min_new, x_max_new, y_min_new, y_max_new
 
 
     def precompute_outlines(self, data, ship_ids, n_frames, ship_scale=1.0):
@@ -1902,22 +2033,8 @@ class ShipInTransitCoSimulation(CoSimInstance):
 
             if bounds is not None:
                 x_min, x_max, y_min, y_max = bounds
-                dx = x_max - x_min
-                dy = y_max - y_min
-
-                min_span = 1.0
-                if dx < min_span:
-                    cx = 0.5 * (x_min + x_max)
-                    x_min, x_max = cx - 0.5 * min_span, cx + 0.5 * min_span
-                    dx = x_max - x_min
-
-                if dy < min_span:
-                    cy = 0.5 * (y_min + y_max)
-                    y_min, y_max = cy - 0.5 * min_span, cy + 0.5 * min_span
-                    dy = y_max - y_min
-
-                ax_map.set_xlim(x_min - margin_frac * dx, x_max + margin_frac * dx)
-                ax_map.set_ylim(y_min - margin_frac * dy, y_max + margin_frac * dy)
+                ax_map.set_xlim(x_min, x_max)
+                ax_map.set_ylim(y_min, y_max)
         
         # Add scalebar on map
         self.add_scalebar(ax=ax_map, length_m=None, label_fs=style["label_fs"])
@@ -2867,7 +2984,16 @@ class ShipInTransitCoSimulation(CoSimInstance):
         data, n_frames = self.prepare_playback_data(ship_ids)
 
         # Only needed for non-map case
-        bounds = None if self.is_map_exists else self.compute_bounds_from_playback_data(data, ship_ids)
+        bounds = None
+
+        if not self.is_map_exists:
+            bounds = self.compute_square_bounds_no_map(
+                data=data,
+                ship_ids=ship_ids,
+                margin_frac=margin_frac,
+                include_routes=True,
+                include_roa=True,
+            )
 
         fig, ax_map, ax_status = self.init_anim_figures(
             fig_width=fig_width,

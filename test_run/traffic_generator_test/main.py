@@ -12,57 +12,82 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
 from orchestrator.sit_cosim import ShipInTransitCoSimulation
+from orchestrator.scenario_config import prepare_config_and_spawn_requests_with_traffic_gen
 
 # =========================
 # Load the Configuration
 # =========================
 import yaml
+import random
 
 ## Get the config path
-config_path = ROOT / "test_run" / "singapore_strait" / "singapore_strait.yaml"
+config_path = ROOT / "test_run" / "traffic_generator_test" / "traffic_gen.yaml"
 
-# Get the configs
-with config_path.open("r", encoding="utf-8") as f:
-    config = yaml.safe_load(f)
+## Get the save path for animation
+save_path = ROOT / "saved_animation" / "traffic_gen.gif"
+
+## Get the encounter settings path
+encounter_settings_path = ROOT / "test_run" / "traffic_generator_test" / "encounter_settings.json"
+
+# with config_path.open("r", encoding="utf-8") as f:
+#     config = yaml.safe_load(f)
 
 # =========================
-# Spawn Requests
+# Alter the Configuration with generated scenario
 # =========================
-# Spawn requests (Singapore Strait)  
-own_ship = {
-    "start_time"        : 0.0,
-    "speed_setpoints"   : [0, 6, 9, 9, 8, 8, 7, 7]
+own_ship_initial = {
+    "position": {
+        "north": 0.0,
+        "east": 0.0,
+    },
+    "sog": 10.0,
+    "cog": 0.0,
+    "heading": 1.0,
+    "navStatus": "Under way using engine",
 }
-target_ship_1 = {
-    "start_time"        : 250.0, # 0.0: Collides
-    "speed_setpoints"   : [0, 5, 5, 6, 9, 9, 4, 2]    
+
+availableEncounterTypes = ["head-on", 
+                        #    "overtaking-give-way",
+                        #    "overtaking-stand-on",
+                        #    "crossing-give-way",
+                           "crossing-stand-on"]
+
+random.seed(42)
+
+encounter_type_TS1 = random.choice(availableEncounterTypes)
+encounter_type_TS2 = random.choice(availableEncounterTypes)
+
+print(f"Target Ship 1 encounter type: {encounter_type_TS1}")
+print(f"Target Ship 2 encounter type: {encounter_type_TS2}")
+
+encounters = {
+    "TS1" : {
+        "desiredEncounterType": encounter_type_TS1,
+        "vectorTime": 25.0,
+        "beta": 2.0,
+        "relativeSpeed": 1.2,
+        },
+    "TS2" : {
+        "desiredEncounterType":  encounter_type_TS2,
+        "vectorTime": 25.0,
+        "beta": -3.0,
+        "relativeSpeed": 1.2,
+        },
 }
-target_ship_2 = {
-    "start_time"        : 2500.0,
-    "speed_setpoints"   : [0, 2, 5, 5, 8, 5, 1]    
-}
-target_ship_3 = {
-    "start_time"        : 3000.0,
-    "speed_setpoints"   : [0, 2, 5, 7, 9, 9, 5, 2]    
-}
-spawn_requests = {
-    "OS0": own_ship,
-    "TS1": target_ship_1,
-    "TS2": target_ship_2,
-    "TS3": target_ship_3,
-}
-    
+
+config, spawn_requests = prepare_config_and_spawn_requests_with_traffic_gen(own_ship_initial, 
+                                                                            encounters, 
+                                                                            config_path, 
+                                                                            encounter_settings_path)
+
 # =========================
 # Instantiate Co-simulation Wrapper
 # =========================
 # Instantiate
-instance = ShipInTransitCoSimulation(config=config, ROOT=ROOT, 
-                                     spawn_requests=spawn_requests,
-                                     skip_map_evaluation=True)
-# WARNING!
-# Setting "skip_map_evaluation" to False enables grounding and inside_map_horizon checking, 
-# however this will increase the runtime by A LOT. As default, the value is set to True. 
-# Set the value to False when you need it: you WILL know it when you really need it!
+instance = ShipInTransitCoSimulation(config=config, 
+                                     spawn_requests=spawn_requests, 
+                                     ROOT=ROOT)
+
 
 # =========================
 # Simulate
@@ -78,9 +103,6 @@ instance.Simulate()
 # - .avi
 # - .mov
 
-## Get the save path for animation
-save_path = ROOT / "saved_animation" / "singapore_strait.gif"
-
 # Animate Simulation
 instance.AnimateFleetTrajectory(
         ship_ids=None,
@@ -91,8 +113,8 @@ instance.AnimateFleetTrajectory(
         margin_frac=0.08,
         equal_aspect=True,
         interval_ms=20,
-        frame_step=5,
-        trail_len=300,
+        frame_step=2,
+        trail_len=50,
         plot_routes=True,
         plot_waypoints=True,
         plot_roa=True,
@@ -150,10 +172,4 @@ key_group_list = [
 ]
 
 # Plot Time Series
-instance.JoinPlotTimeSeries(list(reversed(key_group_list)),  
-                            create_title= False, 
-                            legend= True, 
-                            show_instance_name=False,
-                            show_separately=False,
-                            show=True,
-                            mode="quick")
+instance.JoinPlotTimeSeries(list(reversed(key_group_list)),  create_title= False, legend= True, show_instance_name=False, show=True)
