@@ -1098,12 +1098,12 @@ class ShipInTransitCoSimulation(CoSimInstance):
                     slaveName=self.ship_slave(prefix=test_sid, block="SHIP_MODEL"),
                     slaveVar="east"
                 )
-                test_pos = [test_north, test_east]
+                test_pos  = [test_north, test_east]
                 
                 # Check collision to the respected ship
                 if check_condition.is_ship_collision(
-                    own_pos     = pos,
-                    test_pos    = test_pos,
+                    own_pos = pos,
+                    tar_pos = test_pos,
                     minimum_ship_distance = ship_config["fmu_params"]["COLAV"].get("collision_zone_radius")
                 ):
                     colliders.append(test_sid)

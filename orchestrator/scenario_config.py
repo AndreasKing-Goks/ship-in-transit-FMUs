@@ -203,7 +203,7 @@ def get_own_ship_description(own_ship_config):
     width       = own_ship_config["fmu_params"]["SHIP_MODEL"]["width_of_ship"]
     height      = own_ship_config["fmu_params"]["SHIP_MODEL"]["front_above_water_height"]
     
-    sogMax      = own_ship_config.get("sogMax", 17.0)       # If not specified, assume max speed of ground is 17 m/s
+    sogMax      = own_ship_config.get("sogMax", 13.0)       # If not specified, assume max speed of ground is 13 m/s
     mmsi        = own_ship_config.get("mmsi", 100000001)    # If not specified, assume mmsi as 100000001
     name        = own_ship_config.get("id")
     shipType    = own_ship_config.get("shipType", "Cargo")  # If not specified, assume ship type as Cargo
@@ -215,7 +215,7 @@ def get_own_ship_description(own_ship_config):
                 "width":width,
                 "height":height,
             },
-        "sogMax":sogMax,
+        "sogMax":sogMax*1.94384449,   # Convert m/s to knot
         "mmsi":mmsi,
         "name":name,
         "shipType":shipType
@@ -226,12 +226,11 @@ def get_target_ships_description(target_ship_configs):
     target_ships_desc = []
     
     for ts_config in target_ship_configs:
-        ts_id       = ts_config["id"]
         length      = ts_config["fmu_params"]["SHIP_MODEL"]["length_of_ship"]
         width       = ts_config["fmu_params"]["SHIP_MODEL"]["width_of_ship"]
         height      = ts_config["fmu_params"]["SHIP_MODEL"]["front_above_water_height"]
         shipType    = ts_config.get("shipType", "Cargo")  # If not specified, assume ship type as Cargo
-        sogMax      = ts_config.get("sogMax", 17.0)       # If not specified, assume max speed of ground is 17 m/s
+        sogMax      = ts_config.get("sogMax", 13.0)       # If not specified, assume max speed over ground is 13 m/s
         
         data = {
             "dimensions":
@@ -240,7 +239,7 @@ def get_target_ships_description(target_ship_configs):
                     "width":width,
                     "height":height,
                 },
-            "sogMax":sogMax,
+            "sogMax":sogMax*1.94384449,   # Convert m/s to knot
             "shipType":shipType
             }
         
@@ -250,10 +249,11 @@ def get_target_ships_description(target_ship_configs):
 
 def convert_own_ship_initial_ned_to_llh(own_ship_initial_ned, origin_lat_deg=58.763449, origin_lon_deg=10.490654):
     """
-        Convert own ship initial (NED coordinates) to lat/lon radians.
+        Convert own ship initial (NED coordinates) to lat/lon radians and velocity unit from m/s to knot.
     """
-    north = float(own_ship_initial_ned["position"]["north"])
-    east = float(own_ship_initial_ned["position"]["east"])
+    north   = float(own_ship_initial_ned["position"]["north"])
+    east    = float(own_ship_initial_ned["position"]["east"])
+    sog     = float(own_ship_initial_ned["sog"])
 
     lat0_rad = math.radians(origin_lat_deg)
     lon0_rad = math.radians(origin_lon_deg)
@@ -271,6 +271,7 @@ def convert_own_ship_initial_ned_to_llh(own_ship_initial_ned, origin_lat_deg=58.
         "lat": math.degrees(lat_rad),
         "lon": math.degrees(lon_rad),
     }
+    own_ship_initial_llh["sog"] = sog * 1.94384449  # Convert m/s to knot
 
     return own_ship_initial_llh
 

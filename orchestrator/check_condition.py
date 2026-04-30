@@ -139,16 +139,16 @@ def is_collision_imminent(test_pos, obs_pos, safety_distance=3000):
     
     return is_near_collision
     
-def is_ship_collision(own_pos, test_pos, minimum_ship_distance=50):
+def is_ship_collision(own_pos, tar_pos, minimum_ship_distance=50):
     ''' 
         If test ship and obstacle ship distance is below some threshold, categorize it as collision
     '''
     # Unpack ship position
-    n_test, e_test = own_pos
-    n_obs, e_obs = test_pos
+    n_own, e_own = own_pos
+    n_tar, e_tar = tar_pos
     
     # Compute the ship distance
-    ship_distance =  (n_test - n_obs)**2 + (e_test - e_obs)**2
+    ship_distance =  (n_own - n_tar)**2 + (e_own - e_tar)**2
         
     # Collision logic
     is_collision = False

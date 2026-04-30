@@ -165,8 +165,7 @@ while instance.time <= instance.stopTime:
         break
 ```
 
-
-## 6. Visualize the Results
+## 7. Visualize the Results
 After the simulation completes, several visualization tools areavailable.
 
 ### Fleet Animation
@@ -206,7 +205,40 @@ The typical process for running the simulator:
 ---
 
 # Ship in Transit Co-simulation Features
-## 1. Importing Route and Map from Open Street Map
+## 1. Ship Condition Evaluation
+
+During simulation, ship conditions are continuously evaluated using the `evaluate_ship_condition()` method implemented in the `ShipInTransitCoSimulation` class. The`evaluate_ship_condition()` calls condition checking function `orchestrator/check_condition.py` to asses the condition, then outputs the boolean flag according to these assesments.
+
+These conditions are used to detect important events that occur during simulation runtime. Some of these conditions are classified as **termination conditions**, meaning that when triggered, the simulation will **stop**.
+
+
+### Condition Overview
+
+| Condition Name        | Description | Evaluation Function (Inputs) | Termination |
+|----------------------|------------|------------------------------|-------------|
+| `grounding` | When a circular region based on `ship_length` around the ship position intersects with any land polygon in the map | `check_condition.is_grounding(land_poly, pos, ship_length)` | `True` (all ships) |
+| `outside_horizon` | When a circular region based on `ship_length` around the ship position intersects with the map frame boundary | `check_condition.is_ship_outside_horizon(frame_poly, pos, ship_length)` | `True` (Own Ship), `False` (Target Ships) |
+| `navigational_failure` | Triggered when the ship remains in a `navigational_warning` state for a certain time. Warning occurs when *cross-track error* exceeds threshold. Timer resets if ship recovers | `check_condition.is_ship_navigation_warning(e_ct, e_tol)` | `True` (all ships) |
+| `reaches_end_waypoint` | When the ship enters the *Radius of Acceptance (RoA)* of the final waypoint | Implemented inside `MISSION_MANAGER` `FMU` | `True` (Own Ship), `False` (Target Ships) |
+| `colav_active` | Activated when another ship is within proximity of a ship equipped with COLAV | Implemented inside `COLAV` `FMU` | `False` (all ships) |
+| `collision` | When distance between two ships is smaller than the minimum allowed distance | `check_condition.is_ship_collision(own_pos, tar_pos, minimum_ship_distance)` | `True` (all ships) |
+
+> ⚠️ **MAP EVALUATION IS COMPUTATIONALLY HEAVY!**  
+>
+> Checking `grounding` and `outside_horizon` is computationally heavy because it involves geometric intersection checks with `Shapely` polygon data from map files. Disable this process by setting `skip_map_evaluation=True` when instantiating the simulation if you are confident that ship assets will not run aground. This is already the default behavior. **You will know it when you really need it!**
+
+### Example
+
+```python
+instance = ShipInTransitCoSimulation(
+    config=config,
+    ROOT=ROOT,
+    spawn_requests=spawn_requests,
+    skip_map_evaluation=True            # <- Set to False if you want to enable map evaluation process!
+)
+```
+
+## 2. Importing Route and Map from Open Street Map
 
 The repository provides utilities for importing and visualizing **real-world maps** from [OpenStreetMap (OSM)](https://www.openstreetmap.org/). These are primarily used to define simulation areas and plan ship routes within realistic maritime environments.
 
@@ -294,7 +326,7 @@ The **map import system** is designed to integrate OSM-based geographic data wit
    - **Docks**: Show dock
    - **Harbour**: Show harbour
 
-## 2. Delayed Start
+## 3. Delayed Start
 The **Delayed Start** mechanism allows a target ship to begin its simulation **at a time later than `t = 0`**. This is useful when modeling scenarios where vessels **enter the simulation domain after the simulation has already started**, such as:
 -   ships entering a traffic lane later
 -   encounter scenarios generated during optimization
@@ -343,6 +375,7 @@ Conceptually:
 |--------------------------------------------------------|------------------------------------------------|
 | ![non_delayed_start](0_docs/ani/non_delayed_start.gif) | ![delayed_start](0_docs/ani/delayed_start.gif) |
 
+
 ### Masking Behavior
 The masking typically enforces conditions such as:
 -   zero propulsion commands
@@ -362,5 +395,223 @@ This function determines the appropriate masked input values that should be appl
 Once the simulation time exceeds the delayed start threshold, the masking is removed and the FMUs begin receiving their normal inputs,
 allowing the ship to evolve dynamically within the simulation. 
 
-## 3. FMU Reset
-TBD
+## 4. Ship Traffic Generator
+
+**Ship Traffic Generator** (STG) is a tool developed by DNV to generate a structured set of encounter scenarios for verifying automatic collision and grounding avoidance systems. The original implementation can be found in https://github.com/dnv-opensource/ship-traffic-generator. The version implemented in this simulator is simplified to be compatible with the Ship in Transit Co-Simulation algorithm.
+
+![Animation](0_docs/ani/ship_traffic_generator.gif)
+
+Special thanks to **Melih Akdağ** (melih.akdag@dnv.com) for providing implementation examples.
+
+### How It Works
+
+Using the function:
+
+```python
+prepare_config_and_spawn_requests_with_traffic_gen()
+```
+
+located in:
+
+```text
+orchestrator/scenario_config.py
+```
+
+we generate two outputs:
+
+- `config`
+- `spawn_requests`
+
+These are the fundamental inputs required by `ShipInTransitCoSimulation`.
+
+#### Workflow Comparison
+
+**Before:**
+
+```text
+spawn_requests + config -> simulation
+```
+
+**Now:**
+
+```text
+STG -> spawn_requests (encounter scenario)
+spawn_requests + config -> simulation
+```
+
+This enables automatic generation of encounter scenarios instead of manually crafting `spawn_requests`.
+
+### Important Notes
+
+Because spawn requests are generated automatically, the config YAML does **not** need to include:
+
+- `route_filename`
+- `route`
+- `spawn`
+
+For the Own Ship, the following fields can optionally be specified:
+
+- `sogMax`
+- `mmsi`
+- `shipType`
+
+If these fields are not specified, default values will be used.
+
+Please consult [`config/README.md`](config/README.md) for more details on the required Ship Traffic Generator config YAML fields.
+
+### Function Inputs
+
+`prepare_config_and_spawn_requests_with_traffic_gen()` requires four inputs:
+
+a. `own_ship_initial`
+b. `encounters`
+c. `config_path`
+d. `encounter_settings_path`
+
+#### a. `own_ship_initial`
+
+`own_ship_initial` defines the initial condition of the Own Ship.
+
+In this simulator, the Own Ship is always the object of interest, or the system under stress, where the testing revolves around the Own Ship.
+
+```python
+own_ship_initial = {
+    "position": {
+        "north": 0.0,
+        "east": 0.0,
+    },
+    "sog": 10.0,    # m/s
+    "cog": 0.0,
+    "heading": 0.0,
+    "navStatus": "Under way using engine",
+}
+```
+
+##### Field Description
+
+| Field | Description |
+|---|---|
+| `position.north` | Initial north position of the Own Ship. |
+| `position.east` | Initial east position of the Own Ship. |
+| `sog` | Speed over ground in m/s. |
+| `cog` | Course over ground in degrees. |
+| `heading` | Ship heading in degrees. |
+| `navStatus` | Navigation status of the Own Ship. |
+
+##### Available `navStatus` Values
+
+- `"Under way using engine"`
+- `"At anchor"`
+- `"Not under command"`
+- `"Restricted maneuverability"`
+- `"Constrained by draft"`
+- `"Moored"`
+- `"Aground"`
+- `"Engaged in fishing"`
+- `"Under way sailing"`
+- `"Reserved for future use"`
+
+#### b. `encounters`
+
+`encounters` defines the type of encounter associated with each Target Ship.
+
+Example:
+
+```python
+encounters = {
+    "TS1": {
+        "desiredEncounterType": encounter_type_TS1,
+        "vectorTime": 25.0,
+        "beta": 2.0,
+        "relativeSpeed": 1.2,
+    },
+    "TS2": {
+        "desiredEncounterType": encounter_type_TS2,
+        "vectorTime": 25.0,
+        "beta": -3.0,
+        "relativeSpeed": 1.2,
+    },
+}
+```
+
+##### Available `desiredEncounterType` Values
+
+- `"head-on"`
+- `"overtaking-give-way"`
+- `"overtaking-stand-on"`
+- `"crossing-give-way"`
+- `"crossing-stand-on"`
+
+##### Encounter Parameter Description
+
+| Parameter | Description |
+|---|---|
+| `desiredEncounterType` | Type of encounter to generate for the Target Ship. |
+| `vectorTime` | Time in minutes for the situation to evolve. This is the time from the start of the situation until the Target Ship is within a specific range of the Own Ship. |
+| `beta` | Relative bearing between the Own Ship and the Target Ship, as seen from the Own Ship, in degrees. |
+| `relativeSpeed` | Relative speed between the Own Ship and the Target Ship, as seen from the Own Ship. A value of `1.2` means the Target Ship speed is 20% higher than the Own Ship speed. |
+
+#### c. `config_path`
+
+`config_path` is the path to the configuration YAML file.
+
+#### d. `encounter_settings_path`
+
+`encounter_settings_path` is the path to `encounter_settings.json`. A default value is already provided to simplify this process. The recommended content for `encounter_settings.json` is:
+
+```json
+{
+    "classification": {
+        "theta13Criteria": 67.5,
+        "theta14Criteria": 5.0,
+        "theta15Criteria": 5.0,
+        "theta15": [112.5, 247.5]
+    },
+    "relativeSpeed": {
+        "overtakingStandOn": [1.5, 2.0],
+        "overtakingGiveWay": [0.25, 0.75],
+        "headOn": [0.5, 1.5],
+        "crossingGiveWay": [0.5, 1.5],
+        "crossingStandOn": [0.5, 1.5]
+    },
+    "vectorRange": [10.0, 30.0],
+    "situationLength": 30.0,
+    "maxMeetingDistance": 2.0,
+    "commonVector": 5.0,
+    "situationDevelopTime": 2.0,
+    "disableLandCheck": true
+}
+```
+
+### Example Usage
+
+```python
+from orchestrator.scenario_config import prepare_config_and_spawn_requests_with_traffic_gen
+
+own_ship_initial = {
+    "position": {
+        "north": 0.0,
+        "east": 0.0,
+    },
+    "sog": 10.0,
+    "cog": 0.0,
+    "heading": 1.0,
+    "navStatus": "Under way using engine",
+}
+
+encounters = {
+    "TS1": {
+        "desiredEncounterType": "head-on",
+        "vectorTime": 25.0,
+        "beta": 2.0,
+        "relativeSpeed": 1.2,
+    }
+}
+
+config, spawn_requests = prepare_config_and_spawn_requests_with_traffic_gen(
+    own_ship_initial=own_ship_initial,
+    encounters=encounters,
+    config_path=config_path,
+    encounter_settings_path=encounter_settings_path,
+)
+```

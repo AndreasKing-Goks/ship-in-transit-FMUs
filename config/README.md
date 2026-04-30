@@ -31,6 +31,12 @@ An example structure is shown below:
         ├── ship_1 {dict}
         │   ├── id: str
         │   │
+        │   ├── sogMax: float                       # OPTIONAL
+        │   │
+        │   ├── mmsi: int                           # OPTIONAL
+        │   │
+        │   ├── shipType: str                       # OPTIONAL
+        │   │
         │   ├── route_filename: str                 # ATTENTION*
         │   │        
         │   ├── route {dict}                        # ATTENTION*
@@ -116,6 +122,45 @@ The `map` block is optional and is used for visualization and route integration.
   - `show_docks`
 
 These flags control which map layers are rendered.
+
+### Optional: Ship Traffic Generator
+
+These fields is optional and needed only when `Ship Traffic Generator` feature is enabled. But even if these values are not specified, the value will be automatically assigned with default values.
+
+- **sogMax (float)**  
+  Maximum ship speed over ground in m/s. *Default*: 13 m/s
+
+- **mmsi (int)**  
+  Maritime Mobile Service Identity (MMSI). *Default*: 100000001
+
+- **shipType (str)**  
+  General ship type based on Automatic Identification System (AIS).
+  
+  Available type:
+  - `Anti-pollution equipment`
+  - `Cargo` (*Default*)
+  - `Diving operations`
+  - `Dredging or underwater operations`
+  - `Fishing`
+  - `High speed craft`
+  - `Law enforcement`
+  - `Medical transport`
+  - `Military operation`
+  - `Noncombatant`
+  - `Passenger`
+  - `Pilot vessel`
+  - `Pleasure craft`
+  - `Port tender`
+  - `Sailing`
+  - `Search and rescue vessel`
+  - `Tanker`
+  - `Towing`
+  - `Towing large`
+  - `Tug`
+  - `Wing in ground`
+  - `Other`
+  - `Not available`
+
 
 ## 2. Ships Configuration
 

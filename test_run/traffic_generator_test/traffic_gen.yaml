@@ -5,21 +5,9 @@ simulation:
 
 ships:
   - id: OS0
-    sogMax: 17
+    sogMax: 13.0
     mmsi: 100000001
     shipType: Cargo
-
-    spawn:
-      start_time: 0.0
-      north: 0.0
-      east: 0.0
-      yaw_angle_deg: 45.0
-      forward_speed: 0.0
-
-    route:
-      north: [0, 8000 , 10000 ]
-      east:  [0, 8000 , 10000 ]
-      speed: [5, 3.5   ]          # Upon reaching the next waypoint
 
     SHIP_BLOCKS:
       - [MISSION_MANAGER, FMUs/ship/MissionManager.fmu]
