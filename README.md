@@ -403,6 +403,10 @@ allowing the ship to evolve dynamically within the simulation.
 
 Special thanks to **Melih Akdağ** (melih.akdag@dnv.com) for providing implementation examples.
 
+> ⚠️ **NOT THOROUGHLY TESTED!**  
+>
+> This feature is still unstable and needs more improvement. At the moment, only works with simulation cases without OSM map.
+
 ### How It Works
 
 Using the function:
