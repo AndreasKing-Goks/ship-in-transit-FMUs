@@ -166,7 +166,7 @@ while instance.time <= instance.stopTime:
 ```
 
 ## 7. Visualize the Results
-After the simulation completes, several visualization tools areavailable.
+After the simulation completes, several visualization tools are available.
 
 ### Fleet Animation
 To generate an animated playback of ship motion run 
