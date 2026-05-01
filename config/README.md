@@ -1,10 +1,6 @@
 ## Configuration File
 
-The simulation is configured using a **YAML configuration file
-(`.yaml`)** that defines the simulation parameters and the ships
-involved in the scenario.
-
-An example structure is shown below:
+The simulation is configured using a **YAML configuration file (`.yaml`)** that defines the simulation parameters and the ships involved in the scenario. An example structure is shown below:
 
     config.yaml
     ├── simulation {dict}
@@ -125,7 +121,7 @@ These flags control which map layers are rendered.
 
 ### Optional: Ship Traffic Generator
 
-These fields is optional and needed only when `Ship Traffic Generator` feature is enabled. But even if these values are not specified, the value will be automatically assigned with default values.
+These fields are optional and needed only when `Ship Traffic Generator` feature is enabled. But even if these values are not specified, the values will be automatically assigned to default values.
 
 - **sogMax (float)**  
   Maximum ship speed over ground in m/s. *Default*: 13 m/s
@@ -171,73 +167,37 @@ Each ship must define a minimal set of parameters to be simulated.
 #### a. id (str)
 Unique identifier of the ship. The first ship should only be named as `OS0` to enable orchestrator to recognize the ship as the own ship.
 
-#### b. Route Definition
+#### b. Spawn Configuration
 
-Each ship must define **either**:
-- `route_filename`, OR
-- `route` (manual definition)
-
-**route_filename**
-- Used when `map` is active.
-- The system will look for the route in:
-  `data/map/route/<group>/`
-
-**route**
-Manual definition:
-- `north`: list
-- `east`: list
-- `speed`: list | float
-
-If the `speed` is set to a single float value, the orchestrator will **automatically set up a list with all elements set to the assigned float value**, where the length matches the `north` and `east` list.
-
-#### c. Spawn Configuration
-
-Defines initial conditions of the ship.
+Defines initial conditions of the ship. Particularly `forward_speed` is needed to set the initial forward speed of the ship when the simulation first begin. Filled `start_time` fields with values bigger than zero to activate the **Delayed Start** feature.
 
 Fields:
 - `start_time` (float)
 - `north` (float, optional)
 - `east` (float, optional)
 - `yaw_angle_deg` (float, optional)
-- `speed_setpoints` (list | float)
+- `forward_speed` (float)
 
-##### Important Notes:
-- If `north`, `east`, or `yaw_angle_deg` are not provided:
-  - The ship will spawn at the first waypoint.
-  - Heading is automatically computed from waypoint 1 → waypoint 2.
-- If the `speed_setpoints` is set to a single float value, the orchestrator will **automatically set up a list with all elements set to the assigned float value**, where the length matches the `north` and `east` list.
-- `spawn` can be omitted from YAML entirely.
+#### c. Route Definition
 
-Instead, it can be defined dynamically via **spawn_requests** in the simulation script.
+Each ship must define **either**:
+- `route`, OR
+- `route_filename`
 
-### Example: Spawn Requests (Python)
+**route**
+Manual definition:
+- `north`: list
+- `east`: list
+- `speed`: list.
 
-```python
-own_ship = {
-    "start_time": 0.0,
-    "speed_setpoints": [0, 6, 9, 9, 8, 8, 7, 7]
-}
+**route_filename**
+- Used when `map` is active.
+- The system will look for the `north` and `east` lists of coordinates of the waypoint in:
+  `data/map/route/<group>/`
+- However the `speed` list still needs to be manually defined.
+- `ShipInTransitCosimulation` will then handle this route file and build a structure `route` structure. 
 
-target_ship_1 = {
-    "start_time": 250.0,
-    "speed_setpoints": [0, 5, 5, 6, 9, 9, 4, 2]
-}
-
-spawn_requests = {
-    "OS0": own_ship,
-    "TS1": target_ship_1,
-}
-```
-
-Simulation instantiation:
-```python
-instance = ShipInTransitCoSimulation(
-    config=config,
-    ROOT=ROOT,
-    spawn_requests=spawn_requests,
-    skip_map_evaluation=True
-)
-```
+`speed` dictates the desired speed of the ship until the ship visit the next waypoint. That means the `speed` list length is always one element shorter than `north` and `east` list.
 
 #### d. Intermediate Waypoint (IW) Sampling (Optional)
 
@@ -346,7 +306,6 @@ ships:
   - ship_2
   - ship_3
 ```
----
 ## Important Notes
 
 ### FMU validity

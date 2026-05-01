@@ -388,16 +388,97 @@ As a result, even though the FMUs are stepped, the ship **remains effectively in
 ### Implementation
 The masking protocol is implemented through the helper function:
 
-    get_masked_input_val_for_delayed_ship()
+```python
+get_masked_input_val_for_delayed_ship()
+```
 
-This function determines the appropriate masked input values that should be applied to each FMU input variable when the ship is still in its delayed start phase.
+This function determines the appropriate masked input values that should be applied to each FMU input variable when the ship is still in its delayed start phase. Once the simulation time exceeds the delayed start threshold, the masking is removed and the FMUs begin receiving their normal inputs, allowing the ship to evolve dynamically within the simulation. 
 
-Once the simulation time exceeds the delayed start threshold, the masking is removed and the FMUs begin receiving their normal inputs,
-allowing the ship to evolve dynamically within the simulation. 
+## 4. Spawn Requests
 
-## 4. Ship Traffic Generator
+In some scenarios, a static YAML configuration is too limiting, especially when using episodic optimization, reinforcement learning, or other dynamic initialization strategies. To address this, the **Spawn Requests** mechanism allows you to override ship initialization programmatically.
 
-**Ship Traffic Generator** (STG) is a tool developed by DNV to generate a structured set of encounter scenarios for verifying automatic collision and grounding avoidance systems. The original implementation can be found in https://github.com/dnv-opensource/ship-traffic-generator. The version implemented in this simulator is simplified to be compatible with the Ship in Transit Co-Simulation algorithm.
+### How It Works
+
+After the YAML configuration is parsed, the simulation configuration dictionary is **overwritten** using a `spawn_requests` dictionary. This removes the need to define spawn and route fields in YAML.
+
+Each ship is defined by a dictionary of parameters:
+
+```python
+spawn_requests = {
+    "OS0": {
+        "start_time": float,
+        "north": list[float],                       # optional
+        "east": list[float],                        # optional
+        "yaw_angle_deg": float,                     # optional
+        "speed_setpoints": list[float] or float
+    },
+    "TS1": {
+        ...
+    }
+}
+```
+
+These spawn requests are internally handled by `AddShipSpawn` and `GetShipSpawn` method within the `ShipInTransitCoSimulation` class.
+
+### Important Notes
+
+- **Missing position or heading**
+  - If `north`, `east`, or `yaw_angle_deg` are not provided:
+    - The ship will spawn at the *first waypoint*
+    - Heading is automatically computed from *waypoint 1 – waypoint 2*
+
+- **Initial speed behavior**
+  - The **first entry** in `speed_setpoints` is used as initial forward speed
+
+- **Single value speed input**
+  - If `speed_setpoints` is a single float:
+    - It is automatically expanded into a list matching `north` and `east` lists.
+    - The first value is forced to 0
+  - If you need a specific initial speed, provide a full list when setting the `speed_setpoints`
+
+### Example: Minimal Spawn Request Setup
+
+```python
+own_ship = {
+    "start_time": 0.0,
+    "speed_setpoints": [0, 6, 9, 9, 8, 8, 7, 7]
+}
+
+target_ship_1 = {
+    "start_time": 250.0,
+    "speed_setpoints": [0, 5, 5, 6, 9, 9, 4, 2]
+}
+
+spawn_requests = {
+    "OS0": own_ship,
+    "TS1": target_ship_1,
+}
+```
+
+### Simulation Instantiation
+
+```python	
+instance = ShipInTransitCoSimulation(
+    config=config,
+    ROOT=ROOT,
+    spawn_requests=spawn_requests,
+    skip_map_evaluation=True
+)
+```
+
+### When to Use Spawn Requests
+
+Use this approach when:
+
+- You need dynamic scenarios
+- Running batch simulations
+- Integrating with AI or algorithms
+- Avoiding rigid YAML
+
+## 5. Ship Traffic Generator
+
+**Ship Traffic Generator** (STG) is a tool developed by DNV to generate a structured set of encounter scenarios for verifying automatic collision and grounding avoidance systems. The original implementation can be found in https://github.com/dnv-opensource/ship-traffic-generator. The version implemented in this simulator is simplified to be compatible with the Ship in Transit Co-simulation algorithm.
 
 ![Animation](0_docs/ani/ship_traffic_generator.gif)
 
@@ -599,7 +680,7 @@ own_ship_initial = {
     },
     "sog": 10.0,
     "cog": 0.0,
-    "heading": 1.0,
+    "heading": 0.0,
     "navStatus": "Under way using engine",
 }
 
