@@ -12,6 +12,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
 from orchestrator.sit_cosim import ShipInTransitCoSimulation
+from orchestrator.scenario_config import load_base_config
 
 # =========================
 # Load the Configuration
@@ -24,10 +25,10 @@ import yaml
 config_path = ROOT / "test_run" / "ast_iw_sampler_test" / "ast_iw_sampler_multi_ship_test_config.yaml"
 
 ## Get the save path for animation
-save_path = ROOT / "saved_animation" / "ast_iw_sampler_multi_ship_test.gif"
+save_path   = ROOT / "saved_animation" / "ast_iw_sampler_multi_ship_test.gif"
 
-with config_path.open("r", encoding="utf-8") as f:
-    config = yaml.safe_load(f)
+## Get the configs
+config      = load_base_config(config_path)
     
 # =========================
 # Spawn Requests

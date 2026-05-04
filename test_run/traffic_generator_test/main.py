@@ -17,7 +17,6 @@ from orchestrator.scenario_config import prepare_config_and_spawn_requests_with_
 # =========================
 # Load the Configuration
 # =========================
-import yaml
 import random
 
 ## Get the config path

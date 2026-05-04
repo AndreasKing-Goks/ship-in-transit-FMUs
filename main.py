@@ -12,6 +12,7 @@ ROOT = Path(__file__).resolve().parents[0]
 sys.path.insert(0, str(ROOT))
 
 from orchestrator.sit_cosim import ShipInTransitCoSimulation
+from orchestrator.scenario_config import load_base_config
 
 # =========================
 # Load the Configuration
@@ -25,7 +26,7 @@ import yaml
 # config_path = ROOT / "config" / "non_ast" / "single_target_ship_config.yaml"
 # config_path = ROOT / "config" / "non_ast" / "single_target_ship_config_w_env.yaml"
 # config_path = ROOT / "config" / "non_ast" / "multi_target_ship_config.yaml"
-config_path = ROOT / "config" / "non_ast" / "multi_target_ship_config_w_env.yaml"
+config_path     = ROOT / "config" / "non_ast" / "multi_target_ship_config_w_env.yaml"
 
 ## Get the save path for animation
 
@@ -34,11 +35,10 @@ config_path = ROOT / "config" / "non_ast" / "multi_target_ship_config_w_env.yaml
 # save_path = ROOT / "saved_animation" / "single_target_ship.mp4"
 # save_path = ROOT / "saved_animation" / "single_target_ship_w_env.mp4"
 # save_path = ROOT / "saved_animation" / "multi_target_ship.mp4"
-save_path = ROOT / "saved_animation" / "multi_target_ship_w_env1.gif"
+save_path   = ROOT / "saved_animation" / "multi_target_ship_w_env1.gif"
 
-
-with config_path.open("r", encoding="utf-8") as f:
-    config = yaml.safe_load(f)
+## Get the configs
+config      = load_base_config(config_path)
     
 # =========================
 # Instantiate Co-simulation Wrapper

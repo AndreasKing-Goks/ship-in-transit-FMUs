@@ -12,6 +12,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
 from orchestrator.sit_cosim import ShipInTransitCoSimulation
+from orchestrator.scenario_config import load_base_config
 
 # =========================
 # Load the Configuration
@@ -21,9 +22,8 @@ import yaml
 ## Get the config path
 config_path = ROOT / "test_run" / "singapore_strait" / "singapore_strait.yaml"
 
-# Get the configs
-with config_path.open("r", encoding="utf-8") as f:
-    config = yaml.safe_load(f)
+## Get the configs
+config      = load_base_config(config_path)
 
 # =========================
 # Spawn Requests
