@@ -1,6 +1,6 @@
 """ 
-Bayesian Optimization for one target ship in open sea scenario, using direct parameter space construction and trial config preparation. 
-This is a simplified version of the two target ship case, focused on validating the BO workflow and infrastructure with a single target ship. 
+Bayesian Optimization for two target ships in open sea scenario, using direct parameter space construction and trial config preparation. 
+This is a simplified version of the two target ship case, focused on validating the BO workflow and infrastructure with two target ships. 
 The parameter space is built directly from the scenario config, and the trial evaluation runs a full simulation and metric computation for each set of parameters. 
 Results are saved and the best trial can be replayed with animation.
 
@@ -37,9 +37,9 @@ from orchestrator.scenario_config import (
 )
 
 # ─── Paths ───────────────────────────────────────────────────
-CONFIG_PATH = Path(__file__).with_name("single_target_ship_ho.yaml")
+CONFIG_PATH = Path(__file__).with_name("two_target_ship_ho.yaml")
 SAVE_DIR = ROOT / "saved_animation"
-BEST_ANIM_PATH = SAVE_DIR / "open_sea_one_ts_best_ax.mp4"
+BEST_ANIM_PATH = SAVE_DIR / "open_sea_two_ts_best_ax.mp4"
 RESULTS_PATH = Path(__file__).with_name("ax_results.json")
 
 
@@ -69,7 +69,7 @@ def main():
     )
 
     ax_client, best_parameters, history = run_ax_optimization(
-        experiment_name="open_sea_one_ts_ho_bo",
+        experiment_name="open_sea_two_ts_ho_bo",
         parameter_space=build_parameter_space_direct(target_ship_ids),
         evaluate_fn=lambda p: evaluate_trial(p, target_ship_ids),
         total_trials=total_trials,

@@ -1,0 +1,11 @@
+{
+    "dimensions": {
+        "length": 80,
+        "width": 16,
+        "height": 8
+    },
+    "sogMax": 17,
+    "mmsi": 100000001,
+    "name": "OS0",
+    "shipType": "Cargo"
+}

@@ -1,6 +1,6 @@
 simulation:
   instanceName: Ship-Path Following Test
-  stopTime: 10000
+  stopTime: 5000
   stepSize: 5.0
 
 ships:
@@ -131,6 +131,11 @@ ships:
       - [COLAV, dcpa_own_to_tar_1, "Distance [m]"]
       - [COLAV, dist_own_to_tar_1, "Distance [m]"]
       - [COLAV, rr_own_to_tar_1, "Range Rate [m/s]"]
+      - [COLAV, beta_own_to_tar_2, "Angle [rad]"]
+      - [COLAV, tcpa_own_to_tar_2, "Time [sec]"]
+      - [COLAV, dcpa_own_to_tar_2, "Distance [m]"]
+      - [COLAV, dist_own_to_tar_2, "Distance [m]"]
+      - [COLAV, rr_own_to_tar_2, "Range Rate [m/s]"]
 
     fmu_params:
       MISSION_MANAGER:
@@ -191,7 +196,7 @@ ships:
         rud_ang_increment_deg: 0.2
         danger_zone_radius: 926.0
         collision_zone_radius: 100.0
-        max_target_ship_count: 1
+        max_target_ship_count: 2
         hold_time: 450.0
         T_lookahead: 900.0
 
@@ -236,6 +241,141 @@ ships:
     route:
       north: [7500, 5000, 0]
       east:  [0, 0, 0]
+      speed: [5, 5]          # Upon reaching the next waypoint
+
+    SHIP_BLOCKS:
+      - [MISSION_MANAGER, FMUs/simplified_ship/MissionManager.fmu]
+      - [AUTOPILOT, FMUs/simplified_ship/Autopilot.fmu]
+      - [SPEED_CONTROLLER, FMUs/simplified_ship/SpeedController.fmu]
+      - [RUDDER, FMUs/simplified_ship/Rudder.fmu]
+      - [SHIP_MODEL, FMUs/simplified_ship/ShipModel.fmu]
+
+    SHIP_CONNECTIONS:
+      # Mission manager
+      - [MISSION_MANAGER, north, SHIP_MODEL, north]
+      - [MISSION_MANAGER, east,  SHIP_MODEL, east]
+
+      # Autopilot
+      - [AUTOPILOT, north,         SHIP_MODEL,      north]
+      - [AUTOPILOT, east,          SHIP_MODEL,      east]
+      - [AUTOPILOT, yaw_angle_rad, SHIP_MODEL,      yaw_angle_rad]
+      - [AUTOPILOT, prev_wp_north, MISSION_MANAGER, prev_wp_north]
+      - [AUTOPILOT, prev_wp_east,  MISSION_MANAGER, prev_wp_east]
+      - [AUTOPILOT, next_wp_north, MISSION_MANAGER, next_wp_north]
+      - [AUTOPILOT, next_wp_east,  MISSION_MANAGER, next_wp_east]
+
+      # Speed controller
+      - [SPEED_CONTROLLER, desired_ship_speed,  MISSION_MANAGER,  next_wp_speed]
+      - [SPEED_CONTROLLER, measured_ship_speed, SHIP_MODEL,       forward_speed]
+
+      # Rudder
+      - [RUDDER, rudder_angle_deg, AUTOPILOT,  rudder_angle_deg]
+      - [RUDDER, yaw_angle_rad,    SHIP_MODEL, yaw_angle_rad]
+      - [RUDDER, forward_speed,    SHIP_MODEL, forward_speed]
+
+      # Ship model
+      - [SHIP_MODEL, thrust_force,   SPEED_CONTROLLER, thrust_force]
+      - [SHIP_MODEL, rudder_force_v, RUDDER,           rudder_force_v]
+      - [SHIP_MODEL, rudder_force_r, RUDDER,           rudder_force_r]
+
+    SHIP_OBSERVERS:
+      - [MISSION_MANAGER, prev_wp_north, "Waypoint [m]"]
+      - [MISSION_MANAGER, prev_wp_east, "Waypoint [m]"]
+      - [MISSION_MANAGER, prev_wp_speed, "Speed [m/s]"]
+      - [MISSION_MANAGER, next_wp_north, "Waypoint [m]"]
+      - [MISSION_MANAGER, next_wp_east, "Waypoint [m]"]
+      - [MISSION_MANAGER, next_wp_speed, "Speed [m/s]"]
+
+      - [AUTOPILOT, yaw_angle_ref_rad, "Angle [rad]"]
+      - [AUTOPILOT, rudder_angle_deg, "Angle [deg]"]
+      - [AUTOPILOT, e_ct, "Error [m]"]
+
+      - [SPEED_CONTROLLER, thrust_force, "Force [kN]"]
+
+      - [RUDDER, rudder_force_v, "Force [kN]"]
+      - [RUDDER, rudder_force_r, "Moment [Nm]"]
+
+      - [SHIP_MODEL, north, "Position [m]"]
+      - [SHIP_MODEL, east, "Position [m]"]
+      - [SHIP_MODEL, yaw_angle_rad, "Angle [rad]"]
+      - [SHIP_MODEL, forward_speed, "Speed [m/s]"]
+      - [SHIP_MODEL, sideways_speed, "Speed [m/s]"]
+      - [SHIP_MODEL, yaw_rate, "Angular Speed [rad/s]"]
+      - [SHIP_MODEL, total_ship_speed, "Speed [m/s]"]
+      - [SHIP_MODEL, d_north, "Speed [m/s]"]
+      - [SHIP_MODEL, d_east, "Speed [m/s]"]
+      - [SHIP_MODEL, d_yaw_angle_rad, "Angular Speed [rad/s]"]
+      - [SHIP_MODEL, d_forward_speed, "Acceleration [m/s2]"]
+      - [SHIP_MODEL, d_sideways_speed, "Acceleration [m/s2]"]
+      - [SHIP_MODEL, d_yaw_rate, "Angular Acc. [rad/s2]"]
+
+    fmu_params:
+      MISSION_MANAGER:
+        ra: 300
+
+      AUTOPILOT:
+        r: 1000
+        ki_ct: 0.002
+        integrator_limit: 5000
+        kp: 1.5
+        ki: 0.00015
+        kd: 80.0
+        max_rudder_rate_deg_per_sec: 2.3
+        max_rudder_angle_deg: 30
+
+      SPEED_CONTROLLER:
+        kp: 150.0
+        ki: 350.0
+        kd: 200.0
+
+      RUDDER:
+        rudder_angle_to_sway_force_coefficient: 50000
+        rudder_angle_to_yaw_force_coefficient: 500000
+        max_rudder_angle_negative_deg: -30
+        max_rudder_angle_positive_deg: 30
+
+      SHIP_MODEL:
+        dead_weight_tonnage: 3850000
+        coefficient_of_deadweight_to_displacement: 0.7
+        bunkers: 200000
+        ballast: 200000
+        length_of_ship: 80
+        width_of_ship: 16
+        added_mass_coefficient_in_surge: 0.4
+        added_mass_coefficient_in_sway: 0.4
+        added_mass_coefficient_in_yaw: 0.4
+        mass_over_linear_friction_coefficient_in_surge: 130
+        mass_over_linear_friction_coefficient_in_sway: 18
+        mass_over_linear_friction_coefficient_in_yaw: 90
+        nonlinear_friction_coefficient_in_surge: 2400
+        nonlinear_friction_coefficient_in_sway: 4000
+        nonlinear_friction_coefficient_in_yaw: 400
+        rho_seawater: 1025
+        rho_air: 1.2
+        front_above_water_height: 8
+        side_above_water_height: 8
+        cx: 0.5
+        cy: 0.7
+        cn: 0.08
+        initial_forward_speed_m_per_s: 0.0
+        initial_sideways_speed_m_per_s: 0.0
+        initial_yaw_rate_rad_per_s: 0.0
+
+
+  ##########################################################
+
+  - id: TS2
+
+    spawn:
+      start_time: 0.0
+      north: 7000.0
+      east: 200
+      yaw_angle_deg: 180.0
+      forward_speed: 0
+
+    route:
+      north: [7000, 5000, 0]
+      east:  [200, 200, 200]
       speed: [5, 5]          # Upon reaching the next waypoint
 
     SHIP_BLOCKS:
