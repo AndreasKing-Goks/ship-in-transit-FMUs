@@ -12,7 +12,8 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
 from orchestrator.sit_cosim import ShipInTransitCoSimulation
-from orchestrator.scenario_config import prepare_config_and_spawn_requests_with_traffic_gen
+from orchestrator.scenario_config import (prepare_config_and_spawn_requests_with_traffic_gen,
+                                          sample_beta_and_rel_speed_given_encounter_settings)
 
 # =========================
 # Load the Configuration
@@ -56,12 +57,13 @@ own_ship_initial = {
         "east": 0.0,
     },
     "sog": 10.0,    # m/s
-    "cog": 180.0,
-    "heading": 180.0,
+    "cog": 0.0,
+    "heading": 0.0,
     "navStatus": "Under way using engine",
 }
 
-random.seed(43)
+# seed = 42
+# random.seed(seed)
 
 encounter_type_TS1 = random.choice(availableEncounterTypes)
 encounter_type_TS2 = random.choice(availableEncounterTypes)
@@ -69,18 +71,30 @@ encounter_type_TS2 = random.choice(availableEncounterTypes)
 print(f"Target Ship 1 encounter type: {encounter_type_TS1}")
 print(f"Target Ship 2 encounter type: {encounter_type_TS2}")
 
+# beta_ts1, rel_speed_ts1 = sample_beta_and_rel_speed_given_encounter_settings(encounter_type_TS1,
+#                                                                              encounter_settings_path,
+#                                                                              seed=seed+1)
+# beta_ts2, rel_speed_ts2 = sample_beta_and_rel_speed_given_encounter_settings(encounter_type_TS2,
+#                                                                              encounter_settings_path,
+#                                                                              seed=seed+2)
+
+beta_ts1, rel_speed_ts1 = sample_beta_and_rel_speed_given_encounter_settings(encounter_type_TS1,
+                                                                             encounter_settings_path)
+beta_ts2, rel_speed_ts2 = sample_beta_and_rel_speed_given_encounter_settings(encounter_type_TS2,
+                                                                             encounter_settings_path)
+
 encounters = {
     "TS1" : {
         "desiredEncounterType": encounter_type_TS1,
         "vectorTime": 10.0,
-        "beta": -5.0,
-        "relativeSpeed": 1.2,
+        "beta": beta_ts1,
+        "relativeSpeed": rel_speed_ts1,
         },
     "TS2" : {
         "desiredEncounterType": encounter_type_TS2,
         "vectorTime": 15.0,
-        "beta": -60.0,
-        "relativeSpeed": 1.2,
+        "beta": beta_ts2,
+        "relativeSpeed": rel_speed_ts2,
         },
 }
 

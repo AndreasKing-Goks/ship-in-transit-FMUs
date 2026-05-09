@@ -525,10 +525,7 @@ ships:
       RUDDER:
         rudder_angle_to_sway_force_coefficient: 50000
         rudder_angle_to_yaw_force_coefficient: 500000
-        max_rudder_angle_negative_deg: -30
-        max_rudder_angle_positive_deg: 30
-
-      SHIP_MODEL:
+        max_rudder_angle_negative_deg:   
         dead_weight_tonnage: 3850000
         coefficient_of_deadweight_to_displacement: 0.7
         bunkers: 200000

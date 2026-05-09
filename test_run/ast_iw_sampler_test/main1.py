@@ -118,7 +118,7 @@ def generate_length(min_len=1500, max_len=4000, target_mean=2500, sigma=0.23):
     while True:
         value = random.lognormvariate(mu, sigma)
         if min_len <= value <= max_len:
-            return int(round(value))
+            return int(round (value))
 
 # Initialize outside your timestep loop
 last_idx = None

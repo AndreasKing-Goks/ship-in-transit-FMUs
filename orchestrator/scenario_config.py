@@ -4,6 +4,7 @@ import copy
 import json
 import math
 import tempfile
+import random
 
 import yaml
 import numpy as np
@@ -32,6 +33,10 @@ def get_target_ship_ids(config):
     """Return the list of target ship IDs from the config (everything except OS*)."""
     return [s["id"] for s in config["ships"] if not s["id"].startswith("OS")]
 
+def load_encounter_settings(encounter_settings_path):
+    """Load a encounter settings json file."""
+    with Path(encounter_settings_path).open("r", encoding="utf-8") as f:
+        return json.load(f)
 
 # ═════════════════════════════════════════════════════════════
 # Direct-spawn approach
@@ -195,7 +200,10 @@ def generate_traffic_gen_situation(
                 f"/{num_encounters} target ships — retrying..."
             )
 
-    return situations
+    raise RuntimeError(
+        f"trafficgen failed after {max_retries} attempts. "
+        f"Could not generate {len(encounters)} target ships."
+    )
 
 def get_own_ship_description(own_ship_config):
     # Get the own ship descriptions
@@ -431,3 +439,62 @@ def prepare_config_and_spawn_requests_with_traffic_gen(
     spawn_requests      = apply_trial_parameters_trafficgen(situations_ned)
     
     return config, spawn_requests
+
+def sample_beta_and_rel_speed_given_encounter_settings(encounter_type, encounter_settings_path, margin=2.0, rng=None):
+    """
+        Sample relative bearing beta and realtive speed for the target ship 
+        encounter details given the desired enccounter_type
+    """
+    def uniform(low, high):
+        if rng is not None:
+            return rng.uniform(low, high)
+        return random.uniform(low, high)
+
+    def rand():
+        if rng is not None:
+            return rng.random()
+        return random.random()
+    
+    # Load encounters
+    encounter_settings = load_encounter_settings(encounter_settings_path)
+    
+    # Beta sampling
+    theta_params = encounter_settings.get("classification")
+    
+    theta13     = theta_params.get("theta13Criteria")
+    theta14     = theta_params.get("theta14Criteria")
+    theta15crit = theta_params.get("theta15Criteria")
+    theta15min  = theta_params.get("theta15")[0]
+    theta15max  = theta_params.get("theta15")[1]
+    
+    if encounter_type == "head-on":
+        beta = uniform(-theta14 + margin, theta14 - margin)
+
+    elif encounter_type == "overtaking-give-way":
+        beta = uniform(-theta13 + margin, theta13 - margin)
+
+    elif encounter_type == "overtaking-stand-on":
+        if rand() < 0.5:
+            beta = uniform(theta15min + margin, 180.0 - margin)
+        else:
+            beta = uniform(-180.0 + margin, -theta15min - margin)
+
+    else:
+        raise ValueError(f"Unknown encounter type: {encounter_type}")
+    
+    # Relative speed sampling
+    rel_speed_params    = encounter_settings.get("relativeSpeed")
+    
+    key_map = {
+        "head-on": "headOn",
+        "overtaking-give-way": "overtakingGiveWay",
+        "overtaking-stand-on": "overtakingStandOn",
+        "crossing-give-way": "crossingGiveWay",
+        "crossing-stand-on": "crossingStandOn",
+    }
+    
+    key = key_map[encounter_type]
+    low, high = rel_speed_params[key]
+    rel_speed = uniform(low, high)
+    
+    return beta, rel_speed
