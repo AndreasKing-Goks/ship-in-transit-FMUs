@@ -29,7 +29,11 @@ class EBASTv2Env(gym.Env):
     def __init__(self,
                  ROOT,
                  config_path,
-                 encounter_settings_path):
+                 encounter_settings_path,
+                 skip_map_evaluation    : bool=True):
+        # Map evaluation flag
+        self.skip_map_evaluation        = skip_map_evaluation
+        
         # Store necessary path
         self.ROOT                       = ROOT
         self.config_path                = config_path
@@ -476,7 +480,7 @@ class EBASTv2Env(gym.Env):
         own_ship_info                   = stop_info[self.os_id]
 
         own_ship_collision              = own_ship_info["collision"]["status"][-1]
-        own_ship_grounding              = own_ship_info["grounding"][-1]
+        own_ship_grounding              = own_ship_info["grounding"][-1] if not self.skip_map_evaluation else False
         own_ship_navigation_failure     = own_ship_info["navigation_failure"][-1]
         own_ship_reaches_end_waypoint   = own_ship_info["reaches_end_waypoint"][-1]
 
@@ -496,8 +500,9 @@ class EBASTv2Env(gym.Env):
             if tar_ship_collision and (self.os_id not in tar_ship_colliders):
                 tar_ships_collision = True
 
-            if ts_info["grounding"][-1]:
-                tar_ships_grounding = True
+            if not self.skip_map_evaluation:
+                if ts_info["grounding"][-1]:
+                    tar_ships_grounding = True
 
             if ts_info["navigation_failure"][-1]:
                 tar_ships_navigation_failure = True
@@ -766,7 +771,8 @@ class EBASTv2Env(gym.Env):
             self.instance = ShipInTransitCoSimulation(
                 config=config,
                 spawn_requests=spawn_requests,
-                ROOT=self.ROOT
+                ROOT=self.ROOT,
+                skip_map_evaluation=self.skip_map_evaluation
             )
             
             # List for recording one episode

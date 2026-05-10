@@ -37,6 +37,12 @@ env = EBASTv2Env(
 
 obs, info = env.reset()
 
+i = 0
+while i < 5:
+    action = env.action_space.sample()
+    env.step(action)
+    i += 1
+
 # =========================
 # Animation and Plot
 # =========================
