@@ -29,13 +29,11 @@ class EBASTv2Env(gym.Env):
     def __init__(self,
                  ROOT,
                  config_path,
-                 encounter_settings_path,
-                 anim_save_path):
+                 encounter_settings_path):
         # Store necessary path
         self.ROOT                       = ROOT
         self.config_path                = config_path
         self.encounter_settings_path    = encounter_settings_path
-        self.anim_save_path             = anim_save_path
         
         # Save the base configuration for the Ship in Transit Co-simulation
         config_base         = load_base_config(config_path)
@@ -67,7 +65,7 @@ class EBASTv2Env(gym.Env):
             if has_IW_sampling:
                 self.ts_iw_id.append(ship_config["id"])
                 self.ts_iw_idx.append(idx)
-                
+        
         self.n_ts_iw        = len(self.ts_iw_id)
         
         # Initialize action space

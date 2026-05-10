@@ -1,0 +1,72 @@
+from pathlib import Path
+import sys
+import os
+
+# Ensure libcosim DLL is found
+dll_dir = Path(sys.prefix) / "Lib" / "site-packages" / "libcosimpy" / "libcosimc"
+os.add_dll_directory(str(dll_dir))
+
+## PATH HELPER (OBLIGATORY)
+# project root = two levels up from this file
+ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT))
+
+from RL_env.env import EBASTv2Env
+
+# =========================
+# Load the Configuration
+# =========================
+# Get the config path
+config_path = ROOT / "test_run" / "ast_test" / "test_ast.yaml"
+
+# Get the save path for animation
+save_path = ROOT / "saved_animation" / "test_ast.gif"
+
+# Get the encounter settings path
+encounter_settings_path = ROOT / "test_run" / "ast_test" / "encounter_settings.json"
+
+# =========================
+# Load the Configuration
+# =========================
+# Instantiate the RL-environment wrapper class
+env = EBASTv2Env(
+    ROOT=ROOT,
+    config_path=config_path,
+    encounter_settings_path=encounter_settings_path
+    )
+
+obs, info = env.reset()
+
+# =========================
+# Animation and Plot
+# =========================
+# Available formats:
+# - .mp4
+# - .gif
+# - .avi
+# - .mov
+
+# Animate Simulation
+env.instance.AnimateFleetTrajectory(
+        ship_ids=None,
+        show=True,
+        block=True,
+        mode="quick",
+        fig_width=10.0,
+        margin_frac=0.08,
+        equal_aspect=True,
+        interval_ms=20,
+        frame_step=10,
+        trail_len=50,
+        plot_routes=True,
+        plot_waypoints=True,
+        plot_roa=True,
+        plot_start_end=True,
+        with_labels=True,
+        precompute_ship_outlines=True,
+        # save_path=save_path,
+        writer_fps=20,
+        palette=None,
+        blit=True,
+        ship_scale=1.0
+    )

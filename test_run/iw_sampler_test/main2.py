@@ -22,10 +22,10 @@ import yaml
 ## Get the config path
 
 ## Get the config path
-config_path = ROOT / "test_run" / "ast_iw_sampler_test" / "ast_iw_sampler_multi_ship_test_config.yaml"
+config_path = ROOT / "test_run" / "iw_sampler_test" / "iw_sampler_multi_ship_test_config.yaml"
 
 ## Get the save path for animation
-save_path   = ROOT / "saved_animation" / "ast_iw_sampler_multi_ship_test.gif"
+save_path   = ROOT / "saved_animation" / "iw_sampler_multi_ship_test.gif"
 
 ## Get the configs
 config      = load_base_config(config_path)

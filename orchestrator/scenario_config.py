@@ -140,7 +140,7 @@ def generate_traffic_gen_situation(
     own_ship_desc,
     target_ships_desc,
     encounter_settings_path,
-    max_retries=5,
+    max_retries=25,
 ):
     """Call trafficgen to produce a TrafficSituation from encounter parameters.
 
@@ -478,7 +478,19 @@ def sample_beta_and_rel_speed_given_encounter_settings(encounter_type, encounter
             beta = uniform(theta15min + margin, 180.0 - margin)
         else:
             beta = uniform(-180.0 + margin, -theta15min - margin)
-
+    elif encounter_type == "crossing-give-way": 
+        # Target on starboard side
+        if rng is not None: 
+            beta = uniform(theta15crit + margin, theta15min - margin) 
+        else: 
+            beta = uniform(theta15crit + margin, theta15min - margin) 
+    elif encounter_type == "crossing-stand-on": 
+        # Target on port side 
+        if rng is not None: 
+            beta = uniform(-theta15min + margin, -theta15crit - margin) 
+        else: 
+            beta = uniform(-theta15min + margin, -theta15crit - margin)
+    
     else:
         raise ValueError(f"Unknown encounter type: {encounter_type}")
     

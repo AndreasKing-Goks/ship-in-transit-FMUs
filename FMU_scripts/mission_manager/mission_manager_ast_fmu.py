@@ -57,7 +57,8 @@ class MissionManagerAST(Fmi2Slave):
         self.insert_wp_now                      = False
         self.idx                                = 0
         self.next_wp_proj_north                 = 0.0
-        self.next_wp_proj_east                  = 0.0
+        self.next_wp_proj_east                  = 0.
+        self.accepted_sampled_inter_wp          = 0
             
         # Debug
         self.messages                           = "-"
@@ -72,7 +73,6 @@ class MissionManagerAST(Fmi2Slave):
         self._idx_in_segment                    = 1
         self._inter_wp_list                     = []
         self._inter_wp_proj_list                = []
-        self._accepted_sampled_inter_wp         = 0
         self._segment_idx                       = 1
         self._zeroeth_iw_inserted               = False
         self._wait_first_captain_intent         = False
@@ -113,6 +113,7 @@ class MissionManagerAST(Fmi2Slave):
         self.register_variable(Integer("idx", causality=Fmi2Causality.output))
         self.register_variable(Real("next_wp_proj_north", causality=Fmi2Causality.output))
         self.register_variable(Real("next_wp_proj_east", causality=Fmi2Causality.output))
+        self.register_variable(Integer("accepted_sampled_inter_wp", causality=Fmi2Causality.output))
         
         # Messages
         self.register_variable(String("messages", causality=Fmi2Causality.output))
@@ -139,7 +140,7 @@ class MissionManagerAST(Fmi2Slave):
         self._idx_in_segment                    = 1
         self._inter_wp_list                     = []
         self._inter_wp_proj_list                = []
-        self._accepted_sampled_inter_wp         = 0
+        self.accepted_sampled_inter_wp         = 0
         self._segment_idx                       = 1
         self._max_segment_idx                   = len(traj) - 1
         self._zeroeth_iw_inserted               = False
@@ -358,7 +359,7 @@ class MissionManagerAST(Fmi2Slave):
             self.last_segment_active    = on_final_leg
             
             # List of triggers
-            within_sampling_max_count   = self._accepted_sampled_inter_wp < self.max_sampled_inter_wp
+            within_sampling_max_count   = self.accepted_sampled_inter_wp < self.max_sampled_inter_wp
             iw_sampler_active           = current_time >= self.time_to_start_iw_sampler
             place_zeroeth_inter_wp      = (within_sampling_max_count 
                                            and iw_sampler_active
@@ -414,7 +415,7 @@ class MissionManagerAST(Fmi2Slave):
                         self._wait_first_captain_intent  = False
                         
                     # Update message
-                    sub_messages  = f"Captain intent {self._accepted_sampled_inter_wp + 1} using scope angle of {self.scope_angle_deg:.1f} degrees and scope length of {self.scope_length}"
+                    sub_messages  = f"Captain intent {self.accepted_sampled_inter_wp + 1} using scope angle of {self.scope_angle_deg:.1f} degrees and scope length of {self.scope_length}"
                         
                     # Update the temporary untraversed segment length variable
                     self._temp_untraversed_segment_length = untraversed_segment_length
@@ -423,7 +424,7 @@ class MissionManagerAST(Fmi2Slave):
                 self.request_captain_intent               = False
                 
                 # Increment the sampling count after the sampling
-                self._accepted_sampled_inter_wp          += 1
+                self.accepted_sampled_inter_wp          += 1
                 
                 # Set the internal function to insert the wp now for recording
                 self.insert_wp_now              = True

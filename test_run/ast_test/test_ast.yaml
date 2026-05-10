@@ -424,9 +424,12 @@ ships:
   ##########################################################
 
   - id: TS2
+    IW_sampling:
+          active: True
+          animated: True
 
     SHIP_BLOCKS:
-      - [MISSION_MANAGER, FMUs/simplified_ship/MissionManager.fmu]
+      - [MISSION_MANAGER, FMUs/simplified_ship/MissionManagerAST.fmu]
       - [AUTOPILOT, FMUs/simplified_ship/Autopilot.fmu]
       - [SPEED_CONTROLLER, FMUs/simplified_ship/SpeedController.fmu]
       - [RUDDER, FMUs/simplified_ship/Rudder.fmu]
@@ -506,6 +509,9 @@ ships:
     fmu_params:
       MISSION_MANAGER:
         ra: 300
+        time_to_start_iw_sampler: 250
+        max_sampled_inter_wp: 5
+        scope_angle_max_deg: 30
 
       AUTOPILOT:
         r: 1000
