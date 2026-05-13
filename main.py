@@ -79,7 +79,7 @@ instance.AnimateFleetTrajectory(
         plot_start_end=True,
         with_labels=True,
         precompute_ship_outlines=True,
-        save_path=save_path,
+        # save_path=save_path,
         writer_fps=20,
         palette=None,
         blit=True,

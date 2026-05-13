@@ -268,8 +268,6 @@ class ShipInTransitCoSimulation(CoSimInstance):
         ## Compile route
         north_list   = raw_route[0]
         east_list    = raw_route[1]
-        print(type(speed_setpoints))
-        print(isinstance (speed_setpoints, list))
         if isinstance (speed_setpoints, list):
             if len(speed_setpoints) == len(north_list):
                 speed_list  = speed_setpoints
@@ -334,11 +332,17 @@ class ShipInTransitCoSimulation(CoSimInstance):
             
             # Get the ship's unprocessed route
             # If route is not belong to any group, access it from data/route/ directly
-            group = simu_config["map"].get("group", None)
-            ship_route_path = get_ship_route_path_from_group(ROOT=ROOT, 
-                                                             group=group,
-                                                             route_filename=ship_config["route_filename"])
-            raw_route = load_waypoints(ship_route_path)
+            map             = simu_config.get("map", None)
+            group           = None if map is None else map.get("group", None)
+            route_filename  = ship_config.get("route_filename")
+            
+            if route_filename is not None:
+                ship_route_path = get_ship_route_path_from_group(ROOT=ROOT, 
+                                                                group=group,
+                                                                route_filename=route_filename)
+                raw_route = load_waypoints(ship_route_path)
+            else:
+                raw_route = (spawn_request.get("north_route"), spawn_request.get("east_route"))
             
             # Prepare the route and spawn request
             route, spawn = self.GetShipSpawn(raw_route=raw_route,
