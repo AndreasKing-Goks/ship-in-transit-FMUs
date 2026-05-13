@@ -42,9 +42,9 @@ pip install gymnasium
 ```
 
 ### Stable-Baselines 3
-We also use `stable-baselines3`, which is a `pytorch`-compliant version for RL algorithms implementation. This package will be used as the core for our AST algorithm. Install this package by running:
+We also use `stable-baselines3`, which is a `pytorch`-compliant version for RL algorithms implementation. We will also use `sb3-contrib` for the Recurrect PPO implementation method. This package will be used as the core for our AST algorithm. Install this package by running:
 ```bash
-pip install stable-baselines3
+pip install stable-baselines3 sb3-contrib
 ```
 To view the training process, `stable-baselines3` uses `tensorboard` using the `events.out.tfevents.*` file stored inside `<log_path>\tb`, commonly `trained_model\AST-train*\tb`. If not installed, we first need to install `tensorboard` by running:
 ```bash

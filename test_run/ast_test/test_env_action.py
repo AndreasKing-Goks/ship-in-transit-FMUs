@@ -12,6 +12,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
 from RL_env.env import EBASTv2Env
+from RL_env.episode_logger import log_episode_recap
 
 # =========================
 # Load the Configuration
@@ -20,13 +21,16 @@ from RL_env.env import EBASTv2Env
 config_path = ROOT / "test_run" / "ast_test" / "test_ast.yaml"
 
 # Get the save path for animation
-save_path = ROOT / "saved_animation" / "test_ast.gif"
+save_path = ROOT / "saved_animation" / "test_ast_2.gif"
 
 # Get the encounter settings path
 encounter_settings_path = ROOT / "test_run" / "ast_test" / "encounter_settings.json"
 
+# Log path
+log_path = ROOT / "test_run" / "ast_test" / "logs" / "episode_recap.txt"
+
 # =========================
-# Load the Configuration
+# Instantiate the environment wrapper
 # =========================
 # Instantiate the RL-environment wrapper class
 env = EBASTv2Env(
@@ -35,13 +39,19 @@ env = EBASTv2Env(
     encounter_settings_path=encounter_settings_path
     )
 
-obs, info = env.reset()
+obs, info = env.reset(seed=45)
 
 i = 0
 while i < 5:
     action = env.action_space.sample()
     env.step(action)
     i += 1
+
+# =========================
+# Log the episode
+# =========================
+log_episode_recap(env=env, log_path=log_path)
+print(f"Episode recap saved to: {log_path}")
 
 # =========================
 # Animation and Plot
@@ -68,11 +78,16 @@ env.instance.AnimateFleetTrajectory(
         plot_waypoints=True,
         plot_roa=True,
         plot_start_end=True,
+        plot_inter_wp_roa=True,
+        plot_inter_wp_proj=False,
         with_labels=True,
         precompute_ship_outlines=True,
-        # save_path=save_path,
+        save_path=save_path,
         writer_fps=20,
         palette=None,
         blit=True,
         ship_scale=1.0
     )
+
+# Plot Trajectory
+env.instance.PlotFleetTrajectory(mode="quick", ship_scale=1.0)

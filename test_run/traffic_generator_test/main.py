@@ -12,13 +12,15 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
 from orchestrator.sit_cosim import ShipInTransitCoSimulation
-from orchestrator.scenario_config import (prepare_config_and_spawn_requests_with_traffic_gen,
-                                          sample_beta_and_rel_speed_given_encounter_settings)
+from orchestrator.scenario_config import (prepare_spawn_requests_with_traffic_gen,
+                                          sample_beta_and_rel_speed_given_encounter_settings,
+                                          load_base_config)
 
 # =========================
 # Load the Configuration
 # =========================
 import random
+import numpy as np
 
 ## Get the config path
 config_path = ROOT / "test_run" / "traffic_generator_test" / "traffic_gen.yaml"
@@ -51,14 +53,17 @@ availableEncounterTypes = ["head-on",
                            "crossing-stand-on"
                            ]
 
+initial_own_ship_cog_and_heading    = np.arange(0.0, 360.0, 15.0)
+os_init_heading                     = random.choice(initial_own_ship_cog_and_heading)
+
 own_ship_initial = {
     "position": {
         "north": 0.0,
         "east": 0.0,
     },
     "sog": 10.0,    # m/s
-    "cog": 0.0,
-    "heading": 0.0,
+    "cog": os_init_heading,
+    "heading": os_init_heading,
     "navStatus": "Under way using engine",
 }
 
@@ -98,10 +103,11 @@ encounters = {
         },
 }
 
-config, spawn_requests = prepare_config_and_spawn_requests_with_traffic_gen(own_ship_initial, 
-                                                                            encounters, 
-                                                                            config_path, 
-                                                                            encounter_settings_path)
+config          = load_base_config(config_path)
+spawn_requests  = prepare_spawn_requests_with_traffic_gen(own_ship_initial, 
+                                                         encounters, 
+                                                         config_path, 
+                                                         encounter_settings_path)
 
 # =========================
 # Instantiate Co-simulation Wrapper
@@ -151,8 +157,8 @@ instance.AnimateFleetTrajectory(
         ship_scale=1.0
     )
 
-# # Plot Trajectory
-# instance.PlotFleetTrajectory(mode="quick", ship_scale=1.0)
+# Plot Trajectory
+instance.PlotFleetTrajectory(mode="quick", ship_scale=1.0)
 
 # # Plot Simulation Results
 # key_group_list = [

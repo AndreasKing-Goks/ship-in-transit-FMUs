@@ -8,12 +8,9 @@ from gymnasium.spaces import Box
 
 import numpy as np
 import pandas as pd
-import random
 
 from orchestrator.sit_cosim import ShipInTransitCoSimulation
-from orchestrator.scenario_config import (prepare_config_and_spawn_requests_with_traffic_gen,
-                                          sample_beta_and_rel_speed_given_encounter_settings,
-                                          load_base_config)
+from orchestrator.scenario_config import load_base_config
 
 from RL_env.reward_designs import (RewardDesign1, RewardDesign2, RewardDesign3,
                                    RewardDesign4, RewardDesign5, RewardDesign6)
@@ -30,7 +27,13 @@ class EBASTv2Env(gym.Env):
                  ROOT,
                  config_path,
                  encounter_settings_path,
+                 spawn_requests_bank,
                  skip_map_evaluation    : bool=True):
+        # Store the spawn requests to generate finite encounter cases
+        self.spawn_requests_bank        = spawn_requests_bank
+        self.spawn_cases                = self.spawn_requests_bank["cases"]
+        self.n_spawn_cases              = self.spawn_requests_bank["n_cases"]
+        
         # Map evaluation flag
         self.skip_map_evaluation        = skip_map_evaluation
         
@@ -99,8 +102,8 @@ class EBASTv2Env(gym.Env):
         for sid, idx in zip(self.ts_iw_id, self.ts_iw_idx):
             max_scope_angle     = self.ship_configs[idx]["fmu_params"]["MISSION_MANAGER"]["scope_angle_max_deg"]
             min_scope_angle     = -max_scope_angle
-            max_scope_length    = 2500
-            min_scope_length    = 1500
+            max_scope_length    = 5000
+            min_scope_length    = 2500
             
             data = {
                 "min": [min_scope_angle, min_scope_length],
@@ -141,12 +144,12 @@ class EBASTv2Env(gym.Env):
         """
         
         # Positional states range
-        north_bound             = [-30000, 30000]                                   # Arbitrary
-        east_bound              = [-30000, 30000]                                   # Arbitrary
+        rel_north_bound         = [-50000, 50000]                                   # Arbitrary
+        rel_east_bound          = [-50000, 50000]                                   # Arbitrary
         yaw_angle_deg_bound     = [-np.pi, np.pi]                                   # Follow NED angle
         
-        pos_min_bound           = [north_bound[0], east_bound[0], yaw_angle_deg_bound[0]]
-        pos_max_bound           = [north_bound[1], east_bound[1], yaw_angle_deg_bound[1]]
+        pos_min_bound           = [rel_north_bound[0], rel_east_bound[0], yaw_angle_deg_bound[0]]
+        pos_max_bound           = [rel_north_bound[1], rel_east_bound[1], yaw_angle_deg_bound[1]]
         
         # Forward speed range
         sogMax_list             = []
@@ -398,8 +401,11 @@ class EBASTv2Env(gym.Env):
             tar_forward_speed   = self.instance.GetLastValue(slaveName=f"{tar_ship_id}__SHIP_MODEL",
                                                          slaveVar="forward_speed")        
             
+            rel_tar_north       = tar_north - own_north
+            rel_tar_east        = tar_east - own_east
+            
             # Compile the lists
-            tar_ship_pos        = [tar_north, tar_east, tar_heading]
+            tar_ship_pos        = [rel_tar_north, rel_tar_east, tar_heading]
             tar_ship_pos_list.extend(tar_ship_pos)
             tar_ship_forward_speed_list.append(tar_forward_speed)
             
@@ -437,7 +443,7 @@ class EBASTv2Env(gym.Env):
                 "own_ship_rud_ang": own_ship_rud_ang,
                 "own_ship_throttle": own_ship_throttle,
                 "own_ship_forward_speed": own_ship_forward_speed,
-                "tar_ships_pos": tar_ships_pos,
+                "tar_ships_pos": tar_ships_pos,                         # Relative to own ship
                 "tar_ships_forward_speed": tar_ships_forward_speed,
                 "action_masks": action_masks,
                 "remaining_requests": remaining_requests
@@ -450,7 +456,7 @@ class EBASTv2Env(gym.Env):
             return observation
         
     
-    def _get_info(self, reset_attempts= None, action_masks=None, ts_iw_id_masked=None, action_masked=None):
+    def _get_info(self, reset_attempts= None, case_idx=None, action_masks=None, ts_iw_id_masked=None, action_masked=None):
         # Empty info container
         info = {}
         
@@ -461,9 +467,13 @@ class EBASTv2Env(gym.Env):
             info["applied_actions"]     = action_masked.copy()
         
         # Info for reset method
-        elif reset_attempts is not None:
+        if reset_attempts is not None:
             info["reset_attempts"]      = reset_attempts
             
+        # Info for case index selection
+        if case_idx is not None:
+            info["case_idx"] = case_idx
+        
         return info
     
     
@@ -512,19 +522,19 @@ class EBASTv2Env(gym.Env):
 
         ### Termination rewards
         if own_ship_collision:
-            reward += 5
+            reward += 2
         if own_ship_grounding:
-            reward += 5
+            reward += 2
         if own_ship_navigation_failure:
-            reward += 3
+            reward += 1
         if own_ship_reaches_end_waypoint:
-            reward += -5
+            reward += -2
         if tar_ships_collision:
-            reward += -5
+            reward += -2
         if tar_ships_grounding:
-            reward += -5
+            reward += -2
         if tar_ships_navigation_failure:
-            reward += -5
+            reward += -1
         if tar_ships_reaches_end_waypoint:
             reward += -1
         
@@ -555,7 +565,7 @@ class EBASTv2Env(gym.Env):
             dist_list.append(dist)
         
         # Get the minimum distance
-        min_dist    = min(dist_list)      
+        min_dist    = min(dist_list)
         
         # Compute the nearest distance reward
         reward      += self.nearest_distance_reward(min_dist)
@@ -571,70 +581,6 @@ class EBASTv2Env(gym.Env):
         # TBD
 
         return reward
-    
-    
-    def _get_config_and_spawn_requests(self):
-        # Generate ship traffic generator's spawn requests
-        availableNavStatus      = [
-            "Under way using engine",
-            "At anchor",
-            "Not under command",
-            "Restricted maneuverability",
-            "Constrained by draft",
-            "Moored",
-            "Aground",
-            "Engaged in fishing",
-            "Under way sailing",
-            "Reserved for future use"
-        ]
-        availableEncounterTypes = [
-            "head-on", 
-            "overtaking-give-way",
-            "overtaking-stand-on",
-            "crossing-give-way",
-            "crossing-stand-on"
-        ]
-        vectorTime              = [15, 20, 25]
-        
-        own_ship_initial        = {
-            "position": {
-                "north": 0.0,
-                "east": 0.0,
-            },
-            "sog": 10.0,    # m/s
-            "cog": 0.0,
-            "heading": 0.0,
-            "navStatus": "Under way using engine",
-        }
-        
-        # Sample encounters
-        encounters = {}
-        for ship_config in self.ship_configs:
-            # Ship ID
-            ship_id = ship_config["id"]
-            
-            # Sample encounter type, then sample relative bearing and relative speed based on it
-            encounter_type = self.np_random.choice(availableEncounterTypes)
-            beta, rel_speed = sample_beta_and_rel_speed_given_encounter_settings(encounter_type,
-                                                                                 self.encounter_settings_path,
-                                                                                 rng=self.np_random)
-            vector_time     = self.np_random.choice(vectorTime)
-            
-            encounter = {
-                "desiredEncounterType": encounter_type,
-                "vectorTime": vector_time,
-                "beta": beta,
-                "relativeSpeed": rel_speed,
-            }
-            
-            encounters[ship_id] = encounter
-        
-        # Get the config and spawn requests based on the Ship Traffic Generator
-        config, spawn_requests = prepare_config_and_spawn_requests_with_traffic_gen(own_ship_initial, 
-                                                                                    encounters, 
-                                                                                    self.config_path, 
-                                                                                    self.encounter_settings_path)
-        return config, spawn_requests
     
     
     def _step(self, action_dict=None):
@@ -716,7 +662,7 @@ class EBASTv2Env(gym.Env):
         observation     = self._get_obs()
         action_masks    = observation["action_masks"].astype(bool)
         
-        # Get the array version of action and IW sampler enabled target ship
+        # Get the denormalized version of action
         action = self._denormalize_action(action_norm).reshape(self.n_ts_iw, 2)
         
         # Mask the action and the target ship ID
@@ -744,6 +690,15 @@ class EBASTv2Env(gym.Env):
                                     ts_iw_id_masked=ts_iw_id_masked,
                                     action_masked=action_masked
                                     )
+        
+        # Record state-action transition
+        self.obs_list.append(observation)
+        self.action_list.append(action_norm)
+        self.reward_list.append(reward)
+        self.terminated_list.append(terminated)
+        self.truncated_list.append(truncated)
+        self.info_list.append(truncated)
+        self.event_timestamp_list.append(self.instance.time)
 
         return observation, reward, terminated, truncated, info
     
@@ -765,24 +720,28 @@ class EBASTv2Env(gym.Env):
             self.truncated          = False
             
             # Use Ship Traffic Generator to generates collision encounter case
-            config, spawn_requests = self._get_config_and_spawn_requests()
+            config          = load_base_config(self.config_path)
+            case_idx        = int(self.np_random.integers(0, self.n_spawn_cases))
+            case            = self.spawn_cases[case_idx]
+            spawn_requests  = case["spawn_requests"]
 
             # Instantiate the ShipInTransitCoSimulation
             self.instance = ShipInTransitCoSimulation(
                 config=config,
                 spawn_requests=spawn_requests,
                 ROOT=self.ROOT,
-                skip_map_evaluation=self.skip_map_evaluation
+                skip_map_evaluation=self.skip_map_evaluation,
+                IW_sampling_animated=True
             )
             
             # List for recording one episode
-            self.obs_list = []
-            self.action_list = []
-            self.action_time_list = []
-            self.reward_list = []
-            self.terminated_list = []
-            self.truncated_list = []
-            self.info_list = []
+            self.obs_list               = []
+            self.action_list            = []
+            self.reward_list            = []
+            self.terminated_list        = []
+            self.truncated_list         = []
+            self.info_list              = []
+            self.event_timestamp_list   = []
             
             # Advance the simulation until an event is found
             found_event = self._advance_until_next_event()
@@ -791,7 +750,13 @@ class EBASTv2Env(gym.Env):
             # reset attempt
             if found_event:
                 observation = self._get_obs()
-                info = self._get_info(reset_attempts=attempt + 1)
+                info = self._get_info(reset_attempts=attempt + 1,
+                                      case_idx=case_idx)
+                
+                # Record
+                self.obs_list.append(observation)
+                self.info_list.append(info)
+                self.event_timestamp_list.append(self.instance.time)
                 return observation, info
 
         raise RuntimeError(

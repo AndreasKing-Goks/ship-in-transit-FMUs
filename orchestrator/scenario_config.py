@@ -5,10 +5,10 @@ import json
 import math
 import tempfile
 import random
-
 import yaml
 import numpy as np
 from pathlib import Path
+import pickle
 
 # trafficgen imports are optional — only required for the trafficgen approach
 try:
@@ -110,6 +110,12 @@ def load_encounter_settings(settings_path):
     """Load the encounter settings JSON."""
     with Path(settings_path).open("r", encoding="utf-8") as f:
         return json.load(f)
+    
+
+def load_spawn_requests_bank_path(spawn_requests_bank_path):
+    """Load the spawn requests bank pickle file."""
+    with open(spawn_requests_bank_path, "rb") as f:
+        return pickle.load(f)
 
 
 def build_situation_input_dict(encounters, own_ship_initial):
@@ -406,7 +412,7 @@ def apply_trial_parameters_trafficgen(situations_ned):
 
     return spawn_requests
 
-def prepare_config_and_spawn_requests_with_traffic_gen(
+def prepare_spawn_requests_with_traffic_gen(
     own_ship_initial_ned,
     encounters,
     config_path,
@@ -435,10 +441,9 @@ def prepare_config_and_spawn_requests_with_traffic_gen(
     situations_ned = convert_trafficgen_to_ned(traffic_situations, encounters)
     
     # Compute the config and spawn requests
-    config              = copy.deepcopy(load_base_config(config_path))
     spawn_requests      = apply_trial_parameters_trafficgen(situations_ned)
     
-    return config, spawn_requests
+    return spawn_requests
 
 def sample_beta_and_rel_speed_given_encounter_settings(encounter_type, encounter_settings_path, margin=2.0, rng=None):
     """
@@ -510,3 +515,136 @@ def sample_beta_and_rel_speed_given_encounter_settings(encounter_type, encounter
     rel_speed = uniform(low, high)
     
     return beta, rel_speed
+
+def get_spawn_requests(config_path, 
+                       encounter_settings_path, 
+                       own_ship_initial=None):
+    
+    # Save the base configuration for the Ship in Transit Co-simulation
+    config_base     = load_base_config(config_path)
+    ship_configs    = config_base["ships"]
+
+    # Generate ship traffic generator's spawn requests
+    availableNavStatus      = [
+        "Under way using engine",
+        "At anchor",
+        "Not under command",
+        "Restricted maneuverability",
+        "Constrained by draft",
+        "Moored",
+        "Aground",
+        "Engaged in fishing",
+        "Under way sailing",
+        "Reserved for future use"
+    ]
+    availableEncounterTypes = [
+        "head-on", 
+        # "overtaking-give-way",
+        # "overtaking-stand-on",
+        "crossing-give-way",
+        "crossing-stand-on"
+    ]
+    
+    initial_own_ship_cog_and_heading    = np.arange(0.0, 360.0, 15.0)
+    os_init_heading                     = random.choice(initial_own_ship_cog_and_heading)
+    
+    if own_ship_initial is None:
+        own_ship_initial        = {
+            "position": {
+                "north": 0.0,
+                "east": 0.0,
+            },
+            "sog": 10.0,    # m/s
+            "cog": os_init_heading,
+            "heading": os_init_heading,
+            "navStatus": "Under way using engine",
+        }
+    
+    # Sample encounters
+    vectorTime      = [15, 20, 25, 30, 35]
+    vector_time     = random.choice(vectorTime)
+    
+    # Generate encounter for target ships only
+    encounters      = {}
+    for ship_config in ship_configs[1:]:
+        # Ship ID
+        ship_id = ship_config["id"]
+        
+        # Sample encounter type, then sample relative bearing and relative speed based on it
+        encounter_type = random.choice(availableEncounterTypes)
+        beta, rel_speed = sample_beta_and_rel_speed_given_encounter_settings(encounter_type,
+                                                                             encounter_settings_path)
+        
+        encounter = {
+            "desiredEncounterType": encounter_type,
+            "vectorTime": vector_time,
+            "beta": beta,
+            "relativeSpeed": rel_speed,
+        }
+        
+        encounters[ship_id] = encounter
+    
+    # Get the config and spawn requests based on the Ship Traffic Generator
+    spawn_requests = prepare_spawn_requests_with_traffic_gen(own_ship_initial, 
+                                                             encounters, 
+                                                             config_path, 
+                                                             encounter_settings_path)
+    return spawn_requests
+
+def generate_spawn_request_bank(
+    config_path,
+    encounter_settings_path,
+    spawn_requests_bank_path,
+    n_cases=100,
+    overwrite=False,
+    max_total_attempts=1000,
+):
+    spawn_requests_bank_path = Path(spawn_requests_bank_path)
+
+    if spawn_requests_bank_path.exists() and not overwrite:
+        print(f"Spawn request bank already exists: {spawn_requests_bank_path}")
+        print("Skipping generation.")
+        return spawn_requests_bank_path
+
+    spawn_requests_bank_path.parent.mkdir(parents=True, exist_ok=True)
+
+    cases = []
+    total_attempts = 0
+
+    while len(cases) < n_cases and total_attempts < max_total_attempts:
+        total_attempts += 1
+
+        try:
+            spawn_requests = get_spawn_requests(
+                config_path=config_path,
+                encounter_settings_path=encounter_settings_path,
+            )
+
+            case = {
+                "case_id": len(cases),
+                "spawn_requests": spawn_requests,
+            }
+
+            cases.append(case)
+            print(f"Generated case {len(cases)}/{n_cases}")
+
+        except RuntimeError as e:
+            print(f"Bank generation attempt {total_attempts} failed: {e}")
+            continue
+
+    if len(cases) < n_cases:
+        raise RuntimeError(
+            f"Only generated {len(cases)}/{n_cases} cases "
+            f"after {total_attempts} attempts."
+        )
+
+    bank = {
+        "n_cases": len(cases),
+        "cases": cases,
+    }
+
+    with open(spawn_requests_bank_path, "wb") as f:
+        pickle.dump(bank, f)
+
+    print(f"Saved spawn request bank to: {spawn_requests_bank_path}")
+    return spawn_requests_bank_path
