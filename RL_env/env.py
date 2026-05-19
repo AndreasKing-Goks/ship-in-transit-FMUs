@@ -103,7 +103,7 @@ class EBASTv2Env(gym.Env):
             max_scope_angle     = self.ship_configs[idx]["fmu_params"]["MISSION_MANAGER"]["scope_angle_max_deg"]
             min_scope_angle     = -max_scope_angle
             max_scope_length    = 5000
-            min_scope_length    = 2500
+            min_scope_length    = 1000
             
             data = {
                 "min": [min_scope_angle, min_scope_length],
@@ -137,7 +137,7 @@ class EBASTv2Env(gym.Env):
                     [north, east, yaw_angle, cross_track_error, rudder_angle, throttle, forward_speed]
                 - Target ship(s) states: list(float)
                     [north, east, yaw_angle, forward_speed] * n_ts
-                - Action masks: list(float(binary))
+                - Action masks: list(float)
                     [action_mask] * n_ts   
                 - Remaining requests: list(float(round val, mimic int))
                     [remaining_requests] * n_ts
@@ -240,8 +240,7 @@ class EBASTv2Env(gym.Env):
                 "tar_ships_pos": Box(-1.0, 1.0, shape=(3*self.n_ts,), dtype=np.float32),
                 "tar_ships_forward_speed": Box(-1.0, 1.0, shape=(self.n_ts,), dtype=np.float32),
 
-                # Binary mask for IW-enabled target ships only
-                "action_masks": gym.spaces.MultiBinary(self.n_ts_iw),
+                "action_masks": Box(low=0.0, high=1.0, shape=(self.n_ts_iw,), dtype=np.float32),
 
                 "remaining_requests": Box(-1.0, 1.0, shape=(self.n_ts_iw,), dtype=np.float32),
             }
@@ -253,7 +252,7 @@ class EBASTv2Env(gym.Env):
             Design a non-linear function for non-termination case reward functions
             Output reward is between 0 and 1
         """
-        self.nearest_distance_reward = RewardDesign4(target=100, offset_param=750000)
+        self.nearest_distance_reward_func = RewardDesign4(target=100, offset_param=750000)
     
     
     def _normalize(self, x, x_min, x_max):
@@ -312,11 +311,12 @@ class EBASTv2Env(gym.Env):
             "tar_ships_pos": self._normalize(observation["tar_ships_pos"], self.tar_ships_pos_bound["min"], self.tar_ships_pos_bound["max"]),
             "tar_ships_forward_speed": self._normalize(observation["tar_ships_forward_speed"], self.tar_ships_forward_speed_bound["min"], self.tar_ships_forward_speed_bound["max"]),
 
-            "action_masks": np.asarray(observation["action_masks"], dtype=np.int8),
+            "action_masks": (np.asarray(observation["action_masks"], dtype=np.float32) > 0.5).astype(np.float32),
 
-            "remaining_requests": self._normalize(observation["remaining_requests"], self.remaining_requests_bound["min"], self.remaining_requests_bound["max"]),
+            "remaining_requests": self._normalize(np.asarray(observation["remaining_requests"], dtype=np.float32),
+                                                  self.remaining_requests_bound["min"],
+                                                  self.remaining_requests_bound["max"]).astype(np.float32),
         }
-
         return observation_norm
     
     def _denormalize_observation(self, observation_norm):
@@ -333,11 +333,12 @@ class EBASTv2Env(gym.Env):
             "tar_ships_pos": self._denormalize(observation_norm["tar_ships_pos"], self.tar_ships_pos_bound["min"], self.tar_ships_pos_bound["max"]),
             "tar_ships_forward_speed": self._denormalize(observation_norm["tar_ships_forward_speed"], self.tar_ships_forward_speed_bound["min"], self.tar_ships_forward_speed_bound["max"]),
 
-            "action_masks": np.asarray(observation_norm["action_masks"], dtype=np.int8),
+            "action_masks": (np.asarray(observation_norm["action_masks"], dtype=np.float32) > 0.5).astype(np.float32),
 
-            "remaining_requests": self._denormalize(observation_norm["remaining_requests"], self.remaining_requests_bound["min"], self.remaining_requests_bound["max"]),
+            "remaining_requests": np.rint(self._denormalize(observation_norm["remaining_requests"],
+                                                            self.remaining_requests_bound["min"],
+                                                            self.remaining_requests_bound["max"])).astype(np.float32),
         }
-
         return observation
     
     
@@ -432,8 +433,12 @@ class EBASTv2Env(gym.Env):
         own_ship_forward_speed       = np.array([own_forward_speed], dtype=np.float32)
         tar_ships_pos                = np.array(tar_ship_pos_list, dtype=np.float32)
         tar_ships_forward_speed      = np.array(tar_ship_forward_speed_list, dtype=np.float32)
-        action_masks                 = np.array(action_masks_list, dtype=np.int8)                   # <- Action space is MultiBinary
-        remaining_requests           = np.array(remaining_requests_list, dtype=np.float32)
+        
+        action_masks                 = np.asarray(action_masks_list, dtype=np.float32)
+        action_masks                 = (action_masks > 0.5).astype(np.float32)
+        
+        remaining_requests           = np.asarray(remaining_requests_list, dtype=np.float32)
+        remaining_requests           = np.rint(remaining_requests).astype(np.float32)
         
         # Get observation
         observation = {
@@ -475,6 +480,39 @@ class EBASTv2Env(gym.Env):
             info["case_idx"] = case_idx
         
         return info
+    
+    
+    def _get_distances_to_own_ship(self):
+        # IDs
+        os_id       = self.os_id
+        ts_ids      = self.ts_id
+        
+        # Container
+        dist_dict   = {}
+        
+        # Own ship position
+        own_north   = self.instance.GetLastValue(slaveName=f"{os_id}__SHIP_MODEL",
+                                                         slaveVar="north")
+        own_east    = self.instance.GetLastValue(slaveName=f"{os_id}__SHIP_MODEL",
+                                                         slaveVar="east")
+        
+        # For each target ships
+        for ts_id in ts_ids:
+            # Target ship position
+            tar_north           = self.instance.GetLastValue(slaveName=f"{ts_id}__SHIP_MODEL",
+                                                             slaveVar="north")
+            tar_east            = self.instance.GetLastValue(slaveName=f"{ts_id}__SHIP_MODEL",
+                                                             slaveVar="east")
+            
+            # Compute the hypotenuse
+            d_north             = own_north - tar_north
+            d_east              = own_east - tar_east
+            dist                = np.hypot(d_north, d_east)
+            
+            # Add to the distance list
+            dist_dict[ts_id]    = dist
+        
+        return dist_dict        
     
     
     def _compute_reward(self, observation):
@@ -522,21 +560,60 @@ class EBASTv2Env(gym.Env):
 
         ### Termination rewards
         if own_ship_collision:
-            reward += 2
+            rew     = 2
+            reward += rew
+            self.reward_components["own_ship_collision_rewards"].append(rew)
+        else:
+            self.reward_components["own_ship_collision_rewards"].append(0.0)
+            
         if own_ship_grounding:
-            reward += 2
+            rew     = 2
+            reward += rew
+            self.reward_components["own_ship_grounding_rewards"].append(rew)
+        else:
+            self.reward_components["own_ship_grounding_rewards"].append(0.0)
+            
         if own_ship_navigation_failure:
-            reward += 1
+            rew     = 1
+            reward += rew
+            self.reward_components["own_ship_navigational_failure_rewards"].append(rew)
+        else:
+            self.reward_components["own_ship_navigational_failure_rewards"].append(0.0)
+            
         if own_ship_reaches_end_waypoint:
-            reward += -2
+            rew     = -2
+            reward += rew
+            self.reward_components["own_ship_reaches_end_waypoint_rewards"].append(rew)
+        else:
+            self.reward_components["own_ship_reaches_end_waypoint_rewards"].append(0.0)
+            
         if tar_ships_collision:
-            reward += -2
+            rew     = -2
+            reward += rew
+            self.reward_components["tar_ships_collision_rewards"].append(rew)
+        else:
+            self.reward_components["tar_ships_collision_rewards"].append(0.0)
+            
         if tar_ships_grounding:
-            reward += -2
+            rew     = -2
+            reward += rew
+            self.reward_components["tar_ships_grounding_rewards"].append(rew)
+        else:
+            self.reward_components["tar_ships_grounding_rewards"].append(0.0)
+            
         if tar_ships_navigation_failure:
-            reward += -1
+            rew     = -1
+            reward += rew
+            self.reward_components["tar_ships_navigation_failure_rewards"].append(rew)
+        else:
+            self.reward_components["tar_ships_navigation_failure_rewards"].append(0.0)
+            
         if tar_ships_reaches_end_waypoint:
-            reward += -1
+            rew     = -1
+            reward += rew
+            self.reward_components["tar_ships_reaches_end_waypoint_rewards"].append(rew)
+        else:
+            self.reward_components["tar_ships_reaches_end_waypoint_rewards"].append(0.0)
         
         ### Non-termination rewards
         ## Unpack the observation:
@@ -544,11 +621,11 @@ class EBASTv2Env(gym.Env):
         tar_ships_pos       = observation["tar_ships_pos"].reshape(self.n_ts, 3)
         remaining_requests  = observation["remaining_requests"]
         
-        ## Nearest distance reward
+        ## Nearest distance reward when RoA
         own_north       = own_ship_pos[0]
         own_east        = own_ship_pos[1]
         
-        # Compute the distance of each target ship to the own ship
+        # Compute the distance of each target ship to the own ship when RoA
         dist_list = []
         for unshifted_idx in self.ts_iw_idx:
             idx             = unshifted_idx - 1
@@ -564,20 +641,27 @@ class EBASTv2Env(gym.Env):
             dist            = np.hypot(d_north, d_east)         
             dist_list.append(dist)
         
-        # Get the minimum distance
-        min_dist    = min(dist_list)
+        # Get the nearest distance when RoA
+        rew         = np.mean([self.nearest_distance_reward_func(dist) for dist in dist_list])
+        reward     += rew
+        self.reward_components["nearest_distance_roa_rewards"].append(rew)
         
-        # Compute the nearest distance reward
-        reward      += self.nearest_distance_reward(min_dist)
+        ## Nearest distance reward during state-action transition
+        dist_list   = list(self.nearest_dist_dict.values())
+        rew         = np.mean([self.nearest_distance_reward_func(dist) for dist in dist_list])
+        reward     += rew
+        self.reward_components["nearest_distance_rewards"].append(rew)
         
         ## Intermediate waypoint sampling penalty/reward
         iws_count_coeff         = 0.05
         max_remaining_requests  = self.remaining_requests_bound["max"]
         used_requests           = max_remaining_requests - remaining_requests
         used_to_max_ratio       = used_requests / max_remaining_requests
-        reward                 += -np.sum(used_to_max_ratio) * iws_count_coeff
+        rew                     = -np.sum(used_to_max_ratio) * iws_count_coeff
+        reward                 += rew
+        self.reward_components["scope_angle_request_done_rewards"].append(rew)
         
-        # Trajectory smoothness penalty/reward
+        # Scope angle likelihood reward
         # TBD
 
         return reward
@@ -616,7 +700,11 @@ class EBASTv2Env(gym.Env):
         """
             Do simulator step until and event is found
         """
+        # Initial request flag
         any_request = False
+        
+        # Start recording
+        self.nearest_dist_dict  = self._get_distances_to_own_ship()
 
         while not any_request:
             # Simulator integration
@@ -626,6 +714,13 @@ class EBASTv2Env(gym.Env):
             # simulator step up without action
             if isinstance(action_dict, dict):
                 action_dict = None
+                
+            # Record target ships' nearest distance to own ship
+            nearest_dist_dict_temp = self._get_distances_to_own_ship()
+            self.nearest_dist_dict = {
+                ts_id: min(old_val, nearest_dist_dict_temp[ts_id])
+                for ts_id, old_val in self.nearest_dist_dict.items()
+            }
 
             # Check if the simulator still within the maximum simulation time
             if self.instance.time > self.instance.stopTime:
@@ -735,13 +830,29 @@ class EBASTv2Env(gym.Env):
             )
             
             # List for recording one episode
-            self.obs_list               = []
-            self.action_list            = []
-            self.reward_list            = []
-            self.terminated_list        = []
-            self.truncated_list         = []
-            self.info_list              = []
-            self.event_timestamp_list   = []
+            self.obs_list                   = []
+            self.action_list                = []
+            self.terminated_list            = []
+            self.truncated_list             = []
+            self.info_list                  = []
+            self.event_timestamp_list       = []
+            
+            # Reward container
+            self.reward_list                            = []
+            self.reward_components = {
+                "own_ship_collision_rewards"             : [],
+                "own_ship_grounding_rewards"             : [],
+                "own_ship_navigational_failure_rewards"  : [],
+                "own_ship_reaches_end_waypoint_rewards"  : [],
+                "tar_ships_collision_rewards"            : [],
+                "tar_ships_grounding_rewards"            : [],
+                "tar_ships_navigation_failure_rewards"   : [],
+                "tar_ships_reaches_end_waypoint_rewards" : [],
+                "nearest_distance_roa_rewards"           : [],
+                "nearest_distance_rewards"               : [],
+                "scope_angle_request_done_rewards"       : [],
+                "scope_angle_likelihood_rewards"         : [],  
+            }
             
             # Advance the simulation until an event is found
             found_event = self._advance_until_next_event()

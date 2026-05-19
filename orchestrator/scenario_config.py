@@ -19,10 +19,7 @@ try:
 except ImportError:
     _HAS_TRAFFICGEN = False
 
-
-# ═════════════════════════════════════════════════════════════
 # Shared helpers
-# ═════════════════════════════════════════════════════════════
 def load_base_config(config_path):
     """Load a baseline YAML scenario config."""
     with Path(config_path).open("r", encoding="utf-8") as f:
@@ -38,9 +35,7 @@ def load_encounter_settings(encounter_settings_path):
     with Path(encounter_settings_path).open("r", encoding="utf-8") as f:
         return json.load(f)
 
-# ═════════════════════════════════════════════════════════════
 # Direct-spawn approach
-# ═════════════════════════════════════════════════════════════
 def apply_trial_parameters_direct(config, parameterization, target_ship_ids):
     """Apply Ax trial parameters to all target-ship spawns and routes (direct spawn)."""
     for ts_id in target_ship_ids:
@@ -87,9 +82,7 @@ def prepare_trial_config_direct(parameterization, config_path, target_ship_ids):
     return config
 
 
-# ═════════════════════════════════════════════════════════════
 # Trafficgen approach
-# ═════════════════════════════════════════════════════════════
 ENCOUNTER_TYPE_TO_KEY = {
     "head-on":             "headOn",
     "overtaking-stand-on": "overtakingStandOn",

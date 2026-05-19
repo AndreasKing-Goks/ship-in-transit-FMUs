@@ -1,12 +1,13 @@
 from pathlib import Path
 import numpy as np
+from RL_env.env import EBASTv2Env
 
 
 def _arr(x):
     return np.asarray(x, dtype=np.float32).reshape(-1)
 
 
-def format_episode_recap(env, episode_name="Episode Recap", time_decimals=3):
+def format_episode_recap(env: EBASTv2Env, episode_name="Episode Recap", time_decimals=3):
     lines = []
 
     n_transitions = len(env.action_list)
@@ -29,10 +30,26 @@ def format_episode_recap(env, episode_name="Episode Recap", time_decimals=3):
         obs_after = env._denormalize_observation(obs_after_norm)
 
         action_norm = _arr(env.action_list[k])
-        reward = env.reward_list[k]
         terminated = env.terminated_list[k]
         truncated = env.truncated_list[k]
+        
+        reward = env.reward_list[k]
+        own_ship_collision_reward = env.reward_components["own_ship_collision_rewards"][k]
+        own_ship_grounding_reward = env.reward_components["own_ship_grounding_rewards"][k]
+        own_ship_navigational_failure_reward = env.reward_components["own_ship_navigational_failure_rewards"][k]
+        own_ship_reaches_end_waypoint_reward = env.reward_components["own_ship_reaches_end_waypoint_rewards"][k]
 
+        tar_ships_collision_reward = env.reward_components["tar_ships_collision_rewards"][k]
+        tar_ships_grounding_reward = env.reward_components["tar_ships_grounding_rewards"][k]
+        tar_ships_navigation_failure_reward = env.reward_components["tar_ships_navigation_failure_rewards"][k]
+        tar_ships_reaches_end_waypoint_reward = env.reward_components["tar_ships_reaches_end_waypoint_rewards"][k]
+
+        nearest_distance_roa_reward = env.reward_components["nearest_distance_roa_rewards"][k]
+        nearest_distance_reward = env.reward_components["nearest_distance_rewards"][k]
+
+        scope_angle_request_done_reward = env.reward_components["scope_angle_request_done_rewards"][k]
+        # scope_angle_likelihood_reward = env.reward_components["scope_angle_likelihood_rewards"][k]
+        
         timestamp_before = round(env.event_timestamp_list[k] * 1e-9, time_decimals)
         timestamp_after = round(env.event_timestamp_list[k + 1] * 1e-9, time_decimals)
 
@@ -43,9 +60,24 @@ def format_episode_recap(env, episode_name="Episode Recap", time_decimals=3):
         lines.append("-" * 100)
         lines.append(f"Simulation time before action: {timestamp_before} s")
         lines.append(f"Simulation time after action: {timestamp_after} s")
-        lines.append(f"Reward: {reward}")
         lines.append(f"Terminated: {terminated}")
         lines.append(f"Truncated: {truncated}")
+        lines.append(f"Reward: {reward}")
+        lines.append(f"    - Own Ship Collision: {own_ship_collision_reward}")
+        lines.append(f"    - Own Ship Grounding: {own_ship_grounding_reward}")
+        lines.append(f"    - Own Ship Navigational Failure: {own_ship_navigational_failure_reward}")
+        lines.append(f"    - Own Ship Reaches End Waypoint: {own_ship_reaches_end_waypoint_reward}")
+
+        lines.append(f"    - Target Ships Collision: {tar_ships_collision_reward}")
+        lines.append(f"    - Target Ships Grounding: {tar_ships_grounding_reward}")
+        lines.append(f"    - Target Ships Navigation Failure: {tar_ships_navigation_failure_reward}")
+        lines.append(f"    - Target Ships Reaches End Waypoint: {tar_ships_reaches_end_waypoint_reward}")
+
+        lines.append(f"    - Nearest Distance ROA: {nearest_distance_roa_reward}")
+        lines.append(f"    - Nearest Distance: {nearest_distance_reward}")
+
+        lines.append(f"    - Scope Angle Request Done: {scope_angle_request_done_reward}")
+        # lines.append(f"    - Scope Angle Likelihood: {scope_angle_likelihood_reward}")
         lines.append("")
 
         lines.append("[OBSERVATION BEFORE ACTION - DENORMALIZED]")

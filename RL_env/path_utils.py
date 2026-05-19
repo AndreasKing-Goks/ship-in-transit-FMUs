@@ -7,7 +7,7 @@ import uuid
 Helper function for getting the data path
 '''
 
-def get_RL_model_path(root: Path, model_name: str, unique: bool = True):
+def get_RL_model_path(root: Path, model_name: str, unique: bool = True, save_anim_filename: str = None):
     """
     Generate model and log paths with unique timestamp (and short UUID) suffix.
     
@@ -31,8 +31,26 @@ def get_RL_model_path(root: Path, model_name: str, unique: bool = True):
         model_name_unique = model_name
 
     # Full paths
-    model_path = str(base_dir / model_name_unique / "model")
-    log_path   = str(base_dir / model_name_unique / "log")
-    tb_path   = str(base_dir / model_name_unique / "tb")
+    model_dir      = str(base_dir / model_name_unique / "model")
+    model_dir.mkdir(parents=True, exist_ok=True)
+    model_path = str(model_dir)
+    
+    log_dir        = str(base_dir / model_name_unique / "log")
+    log_dir.mkdir(parents=True, exist_ok=True)
+    log_path   = str(log_dir)
+    
+    tb_dir         = str(base_dir / model_name_unique / "tb")
+    tb_dir.mkdir(parents=True, exist_ok=True)
+    tb_path    = str(tb_dir)
+    
+    if save_anim_filename is not None:
+        saved_anim_dir = base_dir / model_name_unique / "saved_animation"
 
-    return model_path, log_path, tb_path
+        # Create directory automatically if it does not exist
+        saved_anim_dir.mkdir(parents=True, exist_ok=True)
+
+        saved_anim_path = str(saved_anim_dir / save_anim_filename)
+    else:
+        saved_anim_path = None
+
+    return model_path, log_path, tb_path, saved_anim_path
