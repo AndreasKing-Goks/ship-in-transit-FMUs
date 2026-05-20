@@ -582,13 +582,15 @@ class ShipInTransitCoSimulation(CoSimInstance):
         return slave_name
     
     
-    def get_masked_input_val_for_delayed_ship(self, ship_id, in_slave, in_var):
+    def get_masked_input_val_for_inactive_ship(self, ship_id, in_slave, in_var):
         """
-            Return the value to be written into an delayed ship's input port.
+            Return the value to be written into an inactive ship's input port.
+            A ship is considered inactive when it experiences delayed start or
+            when the ship already reaches its mission trajectory's end waypoint.
             This masks the ship's incoming signals so subsystems do not evolve
-            in a meaningful way during the delayed phase.
+            in a meaningful way during the inactive phase.
             
-            The masking protocol are, until the delayed start period end:
+            The masking protocol are, until the inactive start period begin/end:
                 - For any positional input, keep the input value constant
                 - For any actuation input (thorttle, speed, shaft_speed), hold the input at zero
                 - Specifically for COLAV, target ship positional inputs are set to a VERY far away
@@ -685,6 +687,9 @@ class ShipInTransitCoSimulation(CoSimInstance):
             about which ship FMUs belong to. Thus additional protocol is needed
             to delayed start a ship simulator.
             
+            Delayed start mask can also be used to "turn off" the ship's controllers
+            and internals machinery system upon reaching its trajectory's end waypoint. 
+            
             Each ship has unique FMUs coded with three inital letters and "__":
             - OS0__[FMU_NAME] -> Own Ship
             - TS*__[FMU_NAME] -> Target Ship {1, 2, 3, ...}
@@ -693,7 +698,7 @@ class ShipInTransitCoSimulation(CoSimInstance):
             does not evolve in a meaningful way. The goal is to make the ship 
             stayed still until the simulation time reach delayed start marker.
             
-            This is achievable through protocol explained in get_masked_input_val_for_delayed_ship()
+            This is achievable through protocol explained in get_masked_input_val_for_inactive_ship()
         """
         for i in range(len(self.slave_input_name)):
             try:
@@ -702,8 +707,9 @@ class ShipInTransitCoSimulation(CoSimInstance):
                 out_slave= self.slave_output_name[i]
                 out_var  = self.slave_output_var[i]
 
-                ship_id = in_slave[:3]
-                is_not_delayed = not self.ship_delayed.get(ship_id)[-1]
+                ship_id                 = in_slave[:3]
+                is_delayed              = self.ship_delayed.get(ship_id)[-1]                # Freeze the ship dynamic
+                is_reach_end_waypoint   = self.ship_reach_end_waypoint.get(ship_id)[-1]     # Turn off the ship
 
                 out_vr, out_type = GetVariableInfo(self.slaves_variables[out_slave], out_var)
                 in_vr,  in_type  = GetVariableInfo(self.slaves_variables[in_slave],  in_var)
@@ -711,12 +717,13 @@ class ShipInTransitCoSimulation(CoSimInstance):
                 if out_type != in_type:
                     continue  # or raise
                 
-                if is_not_delayed:
-                    out_val = [self.GetLastValue(slaveName=out_slave, slaveVar=out_var)]
+                if is_delayed or is_reach_end_waypoint:
+                    out_val = [self.get_masked_input_val_for_inactive_ship(ship_id=ship_id,
+                                                                           in_slave=in_slave,
+                                                                           in_var=in_var)]
                 else:
-                    out_val = [self.get_masked_input_val_for_delayed_ship(ship_id=ship_id,
-                                                                          in_slave=in_slave,
-                                                                          in_var=in_var)]
+                    out_val = [self.GetLastValue(slaveName=out_slave, slaveVar=out_var)]
+                    
 
                 if out_type == CosimVariableType.REAL:
                     self.manipulator.slave_real_values(self.slaves_index[in_slave], [in_vr], out_val)

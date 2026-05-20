@@ -416,8 +416,8 @@ Target ships
     Forward speed: 5.000584602355957
     IW-enabled: False
   Target ship [TS2]
-    Position/state vector: [3252.93359375, 3701.50390625, 2.9470646381378174]
-    Forward speed: -0.3034275770187378
+    Position/state vector: [3168.375, 3709.234375, 3.0573318004608154]
+    Forward speed: 0.052784264087677
     IW-enabled: True
     Action mask: 0
     Remaining requests: 0.0
