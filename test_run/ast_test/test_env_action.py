@@ -22,7 +22,7 @@ from orchestrator.scenario_config import generate_spawn_request_bank, load_spawn
 config_path = ROOT / "test_run" / "ast_test" / "test_ast.yaml"
 
 # Get the save path for animation
-save_path = ROOT / "saved_animation" / "test_ast_2.gif"
+save_path = ROOT / "saved_animation" / "test_env_action.gif"
 
 # Get the encounter settings path
 encounter_settings_path = ROOT / "test_run" / "ast_test" / "encounter_settings.json"
@@ -40,7 +40,7 @@ spawn_requests_bank_path = ROOT / "test_run" / "ast_test" / "spawn_request_bank.
 spawn_requests_bank_path    = generate_spawn_request_bank(config_path=config_path,
                                                           encounter_settings_path=encounter_settings_path,
                                                           spawn_requests_bank_path=spawn_requests_bank_path,
-                                                          n_cases=50,
+                                                          n_cases=250,
                                                           overwrite=False)
 spawn_requests_bank         = load_spawn_requests_bank_path(spawn_requests_bank_path)
 
@@ -52,12 +52,12 @@ env = EBASTv2Env(
     spawn_requests_bank=spawn_requests_bank
     )
 
-obs, info   = env.reset(seed=46)
+obs, info   = env.reset(seed=250)
 
-action_list = [[30,2500],
+action_list = [[0,2500],
                [15,2000],
-               [0,2000],
-               [0,2000],
+               [30,2000],
+               [30,2000],
                [-15,2000]]
 
 i = 0

@@ -15,11 +15,65 @@ def format_episode_recap(env: EBASTv2Env, episode_name="Episode Recap", time_dec
     lines.append("=" * 100)
     lines.append(episode_name)
     lines.append("=" * 100)
-    lines.append(f"Own ship ID: {env.os_id}")
-    lines.append(f"Target ship IDs: {env.ts_id}")
-    lines.append(f"IW-enabled target ship IDs: {env.ts_iw_id}")
-    lines.append(f"Number of recorded observations: {len(env.obs_list)}")
-    lines.append(f"Number of recorded transitions: {n_transitions}")
+    lines.append(f"Own ship ID                              : {env.os_id}")
+    lines.append(f"Target ship IDs                          : {env.ts_id}")
+    lines.append(f"IW-enabled target ship IDs               : {env.ts_iw_id}")
+    lines.append(f"Number of recorded observations          : {len(env.obs_list)}")
+    lines.append(f"Number of recorded transitions           : {n_transitions}")
+    lines.append("")
+    
+    path                        = env.spawn_requests_bank["path"]
+    n_cases                     = env.spawn_requests_bank["n_cases"]
+    north_bound                 = env.spawn_requests_bank["north_bound"]
+    east_bound                  = env.spawn_requests_bank["east_bound"]
+    rounded_north_bound         = env.spawn_requests_bank["rounded_north_bound"]
+    rounded_east_bound          = env.spawn_requests_bank["rounded_east_bound"]
+    
+    case_idx                    = env.case_idx
+    spawn_requests              = env.spawn_requests
+    own_ship_initial            = env.own_ship_initial
+    encounters                  = env.encounters
+    
+    print(own_ship_initial)
+    
+    lines.append(f"Spawn requests bank path -> {path}.")
+    lines.append(f"Use case {case_idx} out of {n_cases} cases:")
+    lines.append(f"  ¤ {env.os_id} Initials:")
+    lines.append("     - Start")
+    lines.append(f"       > north                           : {spawn_requests[env.os_id]["north_route"][0]:.1f} [m]")
+    lines.append(f"       > east                            : {spawn_requests[env.os_id]["east_route"][0]:.1f} [m]")
+    lines.append("     - East")
+    lines.append(f"       > north                           : {spawn_requests[env.os_id]["north_route"][-1]:.1f} [m]")
+    lines.append(f"       > east                            : {spawn_requests[env.os_id]["east_route"][-1]:.1f} [m]")
+    lines.append(f"     - sog                               : {own_ship_initial["sog"]:.1f} [m/s]")
+    lines.append(f"     - cog                               : {own_ship_initial["cog"]:.1f} [deg]")
+    lines.append(f"     - heading                           : {own_ship_initial["heading"]:.1f} [deg]")
+    lines.append(f"     - navStatus                         : {own_ship_initial["navStatus"]}")
+    lines.append("")
+    
+    for ts_id in list(encounters.keys()):
+        lines.append(f"  ¤ {ts_id} encounter:")
+        lines.append("     - Start")
+        lines.append(f"       > north                           : {spawn_requests[ts_id]["north_route"][0]:.1f} [m]")
+        lines.append(f"       > east                            : {spawn_requests[ts_id]["east_route"][0]:.1f} [m]")
+        lines.append("     - East")
+        lines.append(f"       > north                           : {spawn_requests[ts_id]["north_route"][-1]:.1f} [m]")
+        lines.append(f"       > east                            : {spawn_requests[ts_id]["east_route"][-1]:.1f} [m]")
+        lines.append(f"     - encounterType                     : {encounters[ts_id]["desiredEncounterType"]}")
+        lines.append(f"     - vectorTime                        : {encounters[ts_id]["vectorTime"]:.1f} [minutes]")
+        lines.append(f"     - beta                              : {encounters[ts_id]["beta"]:.1f} [deg]")
+        lines.append(f"     - relativeSpeed                     : {encounters[ts_id]["relativeSpeed"]*own_ship_initial["sog"]:.1f} [m/s]")
+        lines.append("")
+    
+    lines.append("Positional observation space bound [min, max]:")
+    lines.append(
+        f" - NORTH BOUND: {[f'{x:.2f}' for x in north_bound]} "
+        f"--rounded to-> {[f'{x:.2f}' for x in rounded_north_bound]}"
+    )
+    lines.append(
+        f" - EAST  BOUND: {[f'{x:.2f}' for x in east_bound]} "
+        f"--rounded to-> {[f'{x:.2f}' for x in rounded_east_bound]}"
+    )
     lines.append("")
 
     for k in range(n_transitions):
@@ -58,26 +112,26 @@ def format_episode_recap(env: EBASTv2Env, episode_name="Episode Recap", time_dec
         lines.append("-" * 100)
         lines.append(f"TRANSITION {k}")
         lines.append("-" * 100)
-        lines.append(f"Simulation time before action: {timestamp_before} s")
-        lines.append(f"Simulation time after action: {timestamp_after} s")
-        lines.append(f"Terminated: {terminated}")
-        lines.append(f"Truncated: {truncated}")
-        lines.append(f"Reward: {reward}")
-        lines.append(f"    - Own Ship Collision: {own_ship_collision_reward}")
-        lines.append(f"    - Own Ship Grounding: {own_ship_grounding_reward}")
-        lines.append(f"    - Own Ship Navigational Failure: {own_ship_navigational_failure_reward}")
-        lines.append(f"    - Own Ship Reaches End Waypoint: {own_ship_reaches_end_waypoint_reward}")
+        lines.append(f"Simulation time before action            : {timestamp_before} s")
+        lines.append(f"Simulation time after action             : {timestamp_after} s")
+        lines.append(f"Terminated                               : {terminated}")
+        lines.append(f"Truncated                                : {truncated}")
+        lines.append(f"Total Reward                             : {reward}")
+        lines.append(f"  - Own Ship Collision                   : {own_ship_collision_reward}")
+        lines.append(f"  - Own Ship Grounding                   : {own_ship_grounding_reward}")
+        lines.append(f"  - Own Ship Navigational Failure        : {own_ship_navigational_failure_reward}")
+        lines.append(f"  - Own Ship Reaches End Waypoint        : {own_ship_reaches_end_waypoint_reward}")
 
-        lines.append(f"    - Target Ships Collision: {tar_ships_collision_reward}")
-        lines.append(f"    - Target Ships Grounding: {tar_ships_grounding_reward}")
-        lines.append(f"    - Target Ships Navigation Failure: {tar_ships_navigation_failure_reward}")
-        lines.append(f"    - Target Ships Reaches End Waypoint: {tar_ships_reaches_end_waypoint_reward}")
+        lines.append(f"  - Target Ships Collision               : {tar_ships_collision_reward}")
+        lines.append(f"  - Target Ships Grounding               : {tar_ships_grounding_reward}")
+        lines.append(f"  - Target Ships Navigation Failure      : {tar_ships_navigation_failure_reward}")
+        lines.append(f"  - Target Ships Reaches End Waypoint    : {tar_ships_reaches_end_waypoint_reward}")
 
-        lines.append(f"    - Nearest Distance ROA: {nearest_distance_roa_reward}")
-        lines.append(f"    - Nearest Distance: {nearest_distance_reward}")
+        lines.append(f"  - Nearest Distance ROA                 : {nearest_distance_roa_reward}")
+        lines.append(f"  - Nearest Distance                     : {nearest_distance_reward}")
 
-        lines.append(f"    - Scope Angle Request Done: {scope_angle_request_done_reward}")
-        # lines.append(f"    - Scope Angle Likelihood: {scope_angle_likelihood_reward}")
+        lines.append(f"  - Scope Angle Request Done             : {scope_angle_request_done_reward}")
+        # lines.append(f"  - Scope Angle Likelihood               : {scope_angle_likelihood_reward}")
         lines.append("")
 
         lines.append("[OBSERVATION BEFORE ACTION - DENORMALIZED]")
@@ -85,8 +139,8 @@ def format_episode_recap(env: EBASTv2Env, episode_name="Episode Recap", time_dec
 
         lines.append("[ACTION]")
         lines.append("")
-        lines.append(f"Raw normalized action vector: {action_norm.tolist()}")
-        lines.append(f"Denormalized action vector: {action_phys.tolist()}")
+        lines.append(f"Raw normalized action vector             : {action_norm.tolist()}")
+        lines.append(f"Denormalized action vector               : {action_phys.tolist()} [deg, m]")
         lines.append("")
 
         for i, sid in enumerate(env.ts_iw_id):
@@ -99,12 +153,12 @@ def format_episode_recap(env: EBASTv2Env, episode_name="Episode Recap", time_dec
             bounds = env.action_bound[sid]
 
             lines.append(f"IW action for target ship [{sid}]")
-            lines.append(f"  Normalized scope angle: {float(norm_scope_angle)}")
-            lines.append(f"  Normalized scope length: {float(norm_scope_length)}")
-            lines.append(f"  Scope angle deg: {float(phys_scope_angle)}")
-            lines.append(f"  Scope length m: {float(phys_scope_length)}")
-            lines.append(f"  Scope angle bounds deg: [{bounds['min'][0]}, {bounds['max'][0]}]")
-            lines.append(f"  Scope length bounds m: [{bounds['min'][1]}, {bounds['max'][1]}]")
+            lines.append(f"  Normalized scope angle                 : {float(norm_scope_angle)}")
+            lines.append(f"  Normalized scope length                : {float(norm_scope_length)}")
+            lines.append(f"  Scope angle deg                        : {float(phys_scope_angle)}")
+            lines.append(f"  Scope length m                         : {float(phys_scope_length)}")
+            lines.append(f"  Scope angle bounds deg                 : [{bounds['min'][0]}, {bounds['max'][0]}]")
+            lines.append(f"  Scope length bounds m                  : [{bounds['min'][1]}, {bounds['max'][1]}]")
             lines.append("")
 
         lines.append("[OBSERVATION AFTER ACTION - DENORMALIZED]")
@@ -116,18 +170,38 @@ def format_episode_recap(env: EBASTv2Env, episode_name="Episode Recap", time_dec
 def _append_observation_recap(lines, env, obs):
     lines.append("")
 
-    lines.append(f"COLAV states: {_arr(obs['colav_states']).tolist()}")
-    lines.append(f"Action masks: {_arr(obs['action_masks']).astype(int).tolist()}")
-    lines.append(f"Remaining requests: {_arr(obs['remaining_requests']).tolist()}")
+    lines.append(
+        f"COLAV states                             : "
+        f"[{', '.join(str(x) for x in _arr(obs['colav_states']))}] [%, deg]"
+    )
+    lines.append(
+        f"Action masks                             : "
+        f"{', '.join(str(int(x)) for x in _arr(obs['action_masks']))}"
+    )
     lines.append("")
 
     own_pos = _arr(obs["own_ship_pos"])
     lines.append(f"Own ship [{env.os_id}]")
-    lines.append(f"  Position/state vector: {own_pos.tolist()}")
-    lines.append(f"  Cross-track error: {_arr(obs['own_ship_e_ct']).tolist()}")
-    lines.append(f"  Rudder angle: {_arr(obs['own_ship_rud_ang']).tolist()}")
-    lines.append(f"  Throttle: {_arr(obs['own_ship_throttle']).tolist()}")
-    lines.append(f"  Forward speed: {_arr(obs['own_ship_forward_speed']).tolist()}")
+    lines.append(
+        f"  Position/state vector                  : "
+        f"[{', '.join(f'{x:.1f}' for x in own_pos)}] [m, m, deg]"
+    )
+    lines.append(
+        f"  Cross-track error                      : "
+        f"{', '.join(f'{x:.1f} [m]' for x in _arr(obs['own_ship_e_ct']))}"
+    )
+    lines.append(
+        f"  Rudder angle                           : "
+        f"{', '.join(f'{x:.1f} [deg]' for x in _arr(obs['own_ship_rud_ang']))}"
+    )
+    lines.append(
+        f"  Throttle                               : "
+        f"{', '.join(f'{x:-1f}' for x in _arr(obs['own_ship_throttle']))} [%]"
+    )
+    lines.append(
+        f"  Forward speed                          : "
+        f"{', '.join(f'{x:-1f} [m/s]' for x in _arr(obs['own_ship_forward_speed']))}"
+    )
     lines.append("")
 
     tar_pos_flat = _arr(obs["tar_ships_pos"])
@@ -139,16 +213,19 @@ def _append_observation_recap(lines, env, obs):
         speed_i = tar_speed[i]
 
         lines.append(f"  Target ship [{sid}]")
-        lines.append(f"    Position/state vector: {pos_i.tolist()}")
-        lines.append(f"    Forward speed: {float(speed_i)}")
+        lines.append(
+            f"    Position/state vector                : "
+            f"[{', '.join(f'{x:.1f}' for x in pos_i)}] [m, m, deg]"
+        )
+        lines.append(f"    Forward speed                        : {float(speed_i):-1f} [m/s]")
 
         if sid in env.ts_iw_id:
             iw_idx = env.ts_iw_id.index(sid)
-            lines.append(f"    IW-enabled: True")
-            lines.append(f"    Action mask: {int(_arr(obs['action_masks'])[iw_idx])}")
-            lines.append(f"    Remaining requests: {float(_arr(obs['remaining_requests'])[iw_idx])}")
+            lines.append(f"    IW-enabled                           : True")
+            lines.append(f"    Action mask                          : {int(_arr(obs['action_masks'])[iw_idx])}")
+            lines.append(f"    Remaining requests                   : {int(_arr(obs['remaining_requests'])[iw_idx])}")
         else:
-            lines.append(f"    IW-enabled: False")
+            lines.append(f"    IW-enabled                           : False")
 
     lines.append("")
 
@@ -159,7 +236,7 @@ def log_episode_recap(env, log_path, time_decimals=3):
 
     text = format_episode_recap(
         env,
-        time_decimals=time_decimals
+        time_decimals=time_decimals,
     )
 
     log_path.write_text(text, encoding="utf-8")

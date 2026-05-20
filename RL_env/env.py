@@ -28,11 +28,12 @@ class EBASTv2Env(gym.Env):
                  config_path,
                  encounter_settings_path,
                  spawn_requests_bank,
-                 skip_map_evaluation    : bool=True):
+                 skip_map_evaluation: bool=True,
+                 custom_pos_bound: dict=None):
         # Store the spawn requests to generate finite encounter cases
         self.spawn_requests_bank        = spawn_requests_bank
-        self.spawn_cases                = self.spawn_requests_bank["cases"]
         self.n_spawn_cases              = self.spawn_requests_bank["n_cases"]
+        self.spawn_cases                = self.spawn_requests_bank["cases"]
         
         # Map evaluation flag
         self.skip_map_evaluation        = skip_map_evaluation
@@ -79,7 +80,7 @@ class EBASTv2Env(gym.Env):
         self._init_action_space()
         
         # Initialize observation space
-        self._init_observation_space()
+        self._init_observation_space(custom_pos_bound)
         
         # Initialize the reward design
         self._init_reward_design()
@@ -128,7 +129,7 @@ class EBASTv2Env(gym.Env):
         )
         
         
-    def _init_observation_space(self):
+    def _init_observation_space(self, custom_pos_bound:dict=None):
         """
             Observation space is defined as collection of exposed states:
                 - COLAV states: list(float)
@@ -144,9 +145,13 @@ class EBASTv2Env(gym.Env):
         """
         
         # Positional states range
-        rel_north_bound         = [-50000, 50000]                                   # Arbitrary
-        rel_east_bound          = [-50000, 50000]                                   # Arbitrary
-        yaw_angle_deg_bound     = [-np.pi, np.pi]                                   # Follow NED angle
+        if custom_pos_bound is not None:
+            rel_north_bound         = custom_pos_bound["north_bound"]                   # Arbitrary
+            rel_east_bound          = custom_pos_bound["east_bound"]                    # Arbitrary
+        else:
+            rel_north_bound         = self.spawn_requests_bank["rounded_north_bound"]
+            rel_east_bound          = self.spawn_requests_bank["rounded_east_bound"]
+        yaw_angle_deg_bound     = [-np.pi, np.pi]                                       # Follow NED angle
         
         pos_min_bound           = [rel_north_bound[0], rel_east_bound[0], yaw_angle_deg_bound[0]]
         pos_max_bound           = [rel_north_bound[1], rel_east_bound[1], yaw_angle_deg_bound[1]]
@@ -815,10 +820,18 @@ class EBASTv2Env(gym.Env):
             self.truncated          = False
             
             # Use Ship Traffic Generator to generates collision encounter case
-            config          = load_base_config(self.config_path)
-            case_idx        = int(self.np_random.integers(0, self.n_spawn_cases))
-            case            = self.spawn_cases[case_idx]
-            spawn_requests  = case["spawn_requests"]
+            config                  = load_base_config(self.config_path)
+            case_idx                = int(self.np_random.integers(0, self.n_spawn_cases))
+            case                    = self.spawn_cases[case_idx]
+            spawn_requests          = case["spawn_requests"]
+            own_ship_initial        = case["own_ship_initial"]
+            encounters              = case["encounters"]
+            
+            # For output
+            self.case_idx           = case_idx
+            self.spawn_requests     = spawn_requests
+            self.own_ship_initial   = own_ship_initial
+            self.encounters         = encounters 
 
             # Instantiate the ShipInTransitCoSimulation
             self.instance = ShipInTransitCoSimulation(

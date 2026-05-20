@@ -554,8 +554,9 @@ def get_spawn_requests(config_path,
         }
     
     # Sample encounters
-    vectorTime      = [15, 20, 25, 30, 35]
-    vector_time     = random.choice(vectorTime)
+    # vectorTime      = [15, 20, 25, 30, 35]
+    # vector_time     = random.choice(vectorTime)
+    vector_time     = 15
     
     # Generate encounter for target ships only
     encounters      = {}
@@ -582,7 +583,16 @@ def get_spawn_requests(config_path,
                                                              encounters, 
                                                              config_path, 
                                                              encounter_settings_path)
-    return spawn_requests
+    return spawn_requests, own_ship_initial, encounters
+
+def nice_bounds(bound, step=5000):
+        min_val = bound[0]
+        max_val = bound[1]
+
+        nice_min = math.floor(min_val / step) * step
+        nice_max = math.ceil(max_val / step) * step
+
+        return [nice_min, nice_max]
 
 def generate_spawn_request_bank(
     config_path,
@@ -591,6 +601,7 @@ def generate_spawn_request_bank(
     n_cases=100,
     overwrite=False,
     max_total_attempts=1000,
+    step=5000
 ):
     spawn_requests_bank_path = Path(spawn_requests_bank_path)
 
@@ -608,7 +619,7 @@ def generate_spawn_request_bank(
         total_attempts += 1
 
         try:
-            spawn_requests = get_spawn_requests(
+            spawn_requests, own_ship_initial, encounters = get_spawn_requests(
                 config_path=config_path,
                 encounter_settings_path=encounter_settings_path,
             )
@@ -616,6 +627,8 @@ def generate_spawn_request_bank(
             case = {
                 "case_id": len(cases),
                 "spawn_requests": spawn_requests,
+                "own_ship_initial": own_ship_initial,
+                "encounters": encounters,
             }
 
             cases.append(case)
@@ -631,9 +644,33 @@ def generate_spawn_request_bank(
             f"after {total_attempts} attempts."
         )
 
+    north_values    = []
+    east_values     = []
+    
+    for case in cases:
+        for req in case["spawn_requests"].values():
+            north_values.extend(req["north_route"])
+            east_values.extend(req["east_route"])
+    
+    # True bound
+    north_bound_min, north_bound_max = min(north_values), max(north_values)
+    east_bound_min, east_bound_max   = min(east_values), max(east_values)
+    
+    north_bound         = [north_bound_min, north_bound_max]
+    east_bound          = [east_bound_min, east_bound_max]
+    
+    # Rounded bound
+    rounded_north_bound = nice_bounds(north_bound, step=step)
+    rounded_east_bound  = nice_bounds(east_bound, step=step)
+
     bank = {
+        "path":str(spawn_requests_bank_path),
         "n_cases": len(cases),
         "cases": cases,
+        "north_bound": north_bound,
+        "east_bound": east_bound,
+        "rounded_north_bound": rounded_north_bound,
+        "rounded_east_bound": rounded_east_bound,
     }
 
     with open(spawn_requests_bank_path, "wb") as f:

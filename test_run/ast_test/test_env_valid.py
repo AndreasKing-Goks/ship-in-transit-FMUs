@@ -35,7 +35,7 @@ import numpy as np
 config_path = ROOT / "test_run" / "ast_test" / "test_ast.yaml"
 
 # Get the save path for animation
-save_path = ROOT / "saved_animation" / "test_ast_2.gif"
+save_path = ROOT / "saved_animation" / "test_env_valid.gif"
 
 # Get the encounter settings path
 encounter_settings_path = ROOT / "test_run" / "ast_test" / "encounter_settings.json"
