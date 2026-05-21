@@ -585,12 +585,12 @@ def get_spawn_requests(config_path,
                                                              encounter_settings_path)
     return spawn_requests, own_ship_initial, encounters
 
-def nice_bounds(bound, step=5000):
+def nice_bounds(bound, round_step=5000):
         min_val = bound[0]
         max_val = bound[1]
 
-        nice_min = math.floor(min_val / step) * step
-        nice_max = math.ceil(max_val / step) * step
+        nice_min = math.floor(min_val / round_step) * round_step
+        nice_max = math.ceil(max_val / round_step) * round_step
 
         return [nice_min, nice_max]
 
@@ -599,9 +599,10 @@ def generate_spawn_request_bank(
     encounter_settings_path,
     spawn_requests_bank_path,
     n_cases=100,
+    training_case_ratio:float=None,
     overwrite=False,
     max_total_attempts=1000,
-    step=5000
+    round_step=5000
 ):
     spawn_requests_bank_path = Path(spawn_requests_bank_path)
 
@@ -660,18 +661,33 @@ def generate_spawn_request_bank(
     east_bound          = [east_bound_min, east_bound_max]
     
     # Rounded bound
-    rounded_north_bound = nice_bounds(north_bound, step=step)
-    rounded_east_bound  = nice_bounds(east_bound, step=step)
+    rounded_north_bound = nice_bounds(north_bound, round_step=round_step)
+    rounded_east_bound  = nice_bounds(east_bound, round_step=round_step)
 
-    bank = {
-        "path":str(spawn_requests_bank_path),
-        "n_cases": len(cases),
-        "cases": cases,
-        "north_bound": north_bound,
-        "east_bound": east_bound,
-        "rounded_north_bound": rounded_north_bound,
-        "rounded_east_bound": rounded_east_bound,
-    }
+    if training_case_ratio is not None:
+        n_train_cases       = math.ceil(len(cases) * training_case_ratio)
+        start_eval_case_id  = n_train_cases
+        
+        bank = {
+            "path":str(spawn_requests_bank_path),
+            "n_cases": len(cases),
+            "start_eval_case_id": start_eval_case_id,
+            "cases": cases,
+            "north_bound": north_bound,
+            "east_bound": east_bound,
+            "rounded_north_bound": rounded_north_bound,
+            "rounded_east_bound": rounded_east_bound,
+        }
+    else:
+        bank = {
+            "path":str(spawn_requests_bank_path),
+            "n_cases": len(cases),
+            "cases": cases,
+            "north_bound": north_bound,
+            "east_bound": east_bound,
+            "rounded_north_bound": rounded_north_bound,
+            "rounded_east_bound": rounded_east_bound,
+        }
 
     with open(spawn_requests_bank_path, "wb") as f:
         pickle.dump(bank, f)

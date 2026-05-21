@@ -33,7 +33,11 @@ class EBASTv2Env(gym.Env):
         # Store the spawn requests to generate finite encounter cases
         self.spawn_requests_bank        = spawn_requests_bank
         self.n_spawn_cases              = self.spawn_requests_bank["n_cases"]
+        self.start_eval_case_id         = self.spawn_requests_bank["start_eval_case_id"]
         self.spawn_cases                = self.spawn_requests_bank["cases"]
+        
+        # Initially set the environment for training
+        self.for_training               = True
         
         # Map evaluation flag
         self.skip_map_evaluation        = skip_map_evaluation
@@ -84,7 +88,15 @@ class EBASTv2Env(gym.Env):
         
         # Initialize the reward design
         self._init_reward_design()
-            
+        
+    
+    def set_for_training(self):
+        self.for_training   = True
+        
+    
+    def set_for_evaluation(self):
+        self.for_training   = False
+    
     
     def _init_action_space(self):
         """
@@ -819,9 +831,14 @@ class EBASTv2Env(gym.Env):
             self.terminated         = False
             self.truncated          = False
             
+            # Sample the case index depends on the training/evaluation mode
+            if self.for_training:
+                case_idx                = int(self.np_random.integers(0, self.start_eval_case_id))
+            else:
+                case_idx                = int(self.np_random.integers(self.start_eval_case_id, self.n_spawn_cases))
+            
             # Use Ship Traffic Generator to generates collision encounter case
             config                  = load_base_config(self.config_path)
-            case_idx                = int(self.np_random.integers(0, self.n_spawn_cases))
             case                    = self.spawn_cases[case_idx]
             spawn_requests          = case["spawn_requests"]
             own_ship_initial        = case["own_ship_initial"]

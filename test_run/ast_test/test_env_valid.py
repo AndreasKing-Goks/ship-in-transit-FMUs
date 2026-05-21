@@ -53,7 +53,8 @@ spawn_requests_bank_path = ROOT / "test_run" / "ast_test" / "spawn_request_bank.
 spawn_requests_bank_path    = generate_spawn_request_bank(config_path=config_path,
                                                           encounter_settings_path=encounter_settings_path,
                                                           spawn_requests_bank_path=spawn_requests_bank_path,
-                                                          n_cases=50,
+                                                          n_cases=100,
+                                                          training_case_ratio=0.8,                              # Specifically for RL-env
                                                           overwrite=False)
 spawn_requests_bank         = load_spawn_requests_bank_path(spawn_requests_bank_path)
 

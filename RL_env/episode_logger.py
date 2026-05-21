@@ -22,8 +22,11 @@ def format_episode_recap(env: EBASTv2Env, episode_name="Episode Recap", time_dec
     lines.append(f"Number of recorded transitions           : {n_transitions}")
     lines.append("")
     
-    path                        = env.spawn_requests_bank["path"]
+    path                        = Path(env.spawn_requests_bank["path"])
+    relative_path               = path.relative_to(env.ROOT)
     n_cases                     = env.spawn_requests_bank["n_cases"]
+    n_training_cases            = env.spawn_requests_bank["start_eval_case_id"]
+    n_evaluation_cases          = n_cases - n_training_cases
     north_bound                 = env.spawn_requests_bank["north_bound"]
     east_bound                  = env.spawn_requests_bank["east_bound"]
     rounded_north_bound         = env.spawn_requests_bank["rounded_north_bound"]
@@ -34,10 +37,11 @@ def format_episode_recap(env: EBASTv2Env, episode_name="Episode Recap", time_dec
     own_ship_initial            = env.own_ship_initial
     encounters                  = env.encounters
     
-    print(own_ship_initial)
-    
-    lines.append(f"Spawn requests bank path -> {path}.")
-    lines.append(f"Use case {case_idx} out of {n_cases} cases:")
+    lines.append("Spawn requests bank path:")
+    lines.append(f"  -> .\{relative_path}.")
+    lines.append(f"Split {n_cases} cases into {n_training_cases} training cases and {n_evaluation_cases} evaluation cases")
+    lines.append(f"Use case {case_idx}:")
+    lines.append("")
     lines.append(f"  ¤ {env.os_id} Initials:")
     lines.append("     - Start")
     lines.append(f"       > north                           : {spawn_requests[env.os_id]["north_route"][0]:.1f} [m]")

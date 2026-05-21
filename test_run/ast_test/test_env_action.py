@@ -40,7 +40,8 @@ spawn_requests_bank_path = ROOT / "test_run" / "ast_test" / "spawn_request_bank.
 spawn_requests_bank_path    = generate_spawn_request_bank(config_path=config_path,
                                                           encounter_settings_path=encounter_settings_path,
                                                           spawn_requests_bank_path=spawn_requests_bank_path,
-                                                          n_cases=250,
+                                                          n_cases=100,
+                                                          training_case_ratio=0.8,                              # Specifically for RL-env
                                                           overwrite=False)
 spawn_requests_bank         = load_spawn_requests_bank_path(spawn_requests_bank_path)
 
@@ -52,13 +53,15 @@ env = EBASTv2Env(
     spawn_requests_bank=spawn_requests_bank
     )
 
+env.set_for_evaluation()
+
 obs, info   = env.reset(seed=250)
 
-action_list = [[0,2500],
-               [15,2000],
+action_list = [[30,2500],
                [30,2000],
-               [30,2000],
-               [-15,2000]]
+               [-30,2000],
+               [-30,2000],
+               [-30,2000]]
 
 i = 0
 while i < 5:
