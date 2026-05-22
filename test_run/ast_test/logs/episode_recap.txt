@@ -59,7 +59,7 @@ Simulation time before action            : 255.0 s
 Simulation time after action             : 690.0 s
 Terminated                               : False
 Truncated                                : False
-Total Reward                             : -0.010000000707805157
+Total Reward                             : -1.5537640365304537
   - Own Ship Collision                   : 0.0
   - Own Ship Grounding                   : 0.0
   - Own Ship Navigational Failure        : 0.0
@@ -71,6 +71,7 @@ Total Reward                             : -0.010000000707805157
   - Nearest Distance ROA                 : 0.0
   - Nearest Distance                     : 1.3907232654632846e-24
   - Scope Angle Request Done             : -0.010000000707805157
+  - Scope Angle Log Likelihood           : -1.5437640358226485
 
 [OBSERVATION BEFORE ACTION - DENORMALIZED]
 
@@ -140,7 +141,7 @@ Simulation time before action            : 690.0 s
 Simulation time after action             : 1080.0 s
 Terminated                               : False
 Truncated                                : False
-Total Reward                             : -0.020000001415610164
+Total Reward                             : -0.525675290162434
   - Own Ship Collision                   : 0.0
   - Own Ship Grounding                   : 0.0
   - Own Ship Navigational Failure        : 0.0
@@ -152,6 +153,7 @@ Total Reward                             : -0.020000001415610164
   - Nearest Distance ROA                 : 1.4087177105664584e-34
   - Nearest Distance                     : 1.5091861470255578e-16
   - Scope Angle Request Done             : -0.020000001415610313
+  - Scope Angle Log Likelihood           : -0.5056752887468238
 
 [OBSERVATION BEFORE ACTION - DENORMALIZED]
 
@@ -221,7 +223,7 @@ Simulation time before action            : 1080.0 s
 Simulation time after action             : 1495.0 s
 Terminated                               : False
 Truncated                                : False
-Total Reward                             : -0.02503456166429927
+Total Reward                             : -4.130709850411123
   - Own Ship Collision                   : 0.0
   - Own Ship Grounding                   : 0.0
   - Own Ship Navigational Failure        : 0.0
@@ -233,6 +235,7 @@ Total Reward                             : -0.02503456166429927
   - Nearest Distance ROA                 : 0.004965439438819885
   - Nearest Distance                     : 8.897374205833484e-11
   - Scope Angle Request Done             : -0.030000001192092896
+  - Scope Angle Log Likelihood           : -4.105675288746824
 
 [OBSERVATION BEFORE ACTION - DENORMALIZED]
 
@@ -302,7 +305,7 @@ Simulation time before action            : 1495.0 s
 Simulation time after action             : 1890.0 s
 Terminated                               : False
 Truncated                                : False
-Total Reward                             : -0.03999991954149793
+Total Reward                             : -0.5456752082883217
   - Own Ship Collision                   : 0.0
   - Own Ship Grounding                   : 0.0
   - Own Ship Navigational Failure        : 0.0
@@ -314,6 +317,7 @@ Total Reward                             : -0.03999991954149793
   - Nearest Distance ROA                 : 9.634757575094355e-11
   - Nearest Distance                     : 8.319337511748966e-08
   - Scope Angle Request Done             : -0.04000000283122063
+  - Scope Angle Log Likelihood           : -0.5056752887468238
 
 [OBSERVATION BEFORE ACTION - DENORMALIZED]
 
@@ -383,7 +387,7 @@ Simulation time before action            : 1890.0 s
 Simulation time after action             : 2385.0 s
 Terminated                               : True
 Truncated                                : False
-Total Reward                             : 2.450000579756206
+Total Reward                             : 1.944325291009382
   - Own Ship Collision                   : 2
   - Own Ship Grounding                   : 0.0
   - Own Ship Navigational Failure        : 0.0
@@ -395,6 +399,7 @@ Total Reward                             : 2.450000579756206
   - Nearest Distance ROA                 : 0.0
   - Nearest Distance                     : 0.5000005805012641
   - Scope Angle Request Done             : -0.05000000074505806
+  - Scope Angle Log Likelihood           : -0.5056752887468238
 
 [OBSERVATION BEFORE ACTION - DENORMALIZED]
 

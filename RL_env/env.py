@@ -639,13 +639,19 @@ class EBASTv2Env(gym.Env):
                                     )
         
         # Reward computation
+        scope_angles            = [act[0] for act in action]
+        prev_scope_angles       = self.prev_scope_angels
         args                    = (self.os_id, self.ts_id, 
                                    self.instance.stop_info, self.n_ts,
                                    self.reward_components,
                                    self.skip_map_evaluation,
                                    self.ts_iw_idx, self.nearest_dist_dict,
-                                   self.remaining_requests_bound)
+                                   self.remaining_requests_bound,
+                                   scope_angles, prev_scope_angles)
         reward                  = compute_reward(self._get_obs(normalized=False), args)     # Use denormalized observation
+        
+        # Assign the currently sampled scope angle to the previous scope angle holder variable
+        self.prev_scope_angels  = scope_angles
         
         # Record state-action transition
         self.obs_list.append(observation)
@@ -725,8 +731,11 @@ class EBASTv2Env(gym.Env):
                 "nearest_distance_roa_rewards"           : [],
                 "nearest_distance_rewards"               : [],
                 "scope_angle_request_done_rewards"       : [],
-                "scope_angle_likelihood_rewards"         : [],  
+                "scope_angle_log_likelihood_rewards"     : [],  
             }
+            
+            # Prev_action recorder (initiated at 0.0 degree)
+            self.prev_scope_angels          = [0.0] * self.n_ts_iw
             
             # Advance the simulation until an event is found
             found_event = self._advance_until_next_event()

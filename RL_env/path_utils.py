@@ -15,12 +15,13 @@ def get_RL_model_path(root: Path, model_name: str, unique: bool = True, save_ani
         model_path, log_path = get_trained_model_path(ROOT, "AST-train")
         
         # Returns something like:
-        # model_path = ".../trained_model/AST-train_2025-11-09_18-25-03_ab12/model"
-        # log_path   = ".../trained_model/AST-train_2025-11-09_18-25-03_ab12/log"
-        # tb_path   = ".../trained_model/AST-train_2025-11-09_18-25-03_ab12/tb"
+        # model_path = "...trained_model/AST-train_2025-11-09_18-25-03_ab12/model"
+        # log_path   = "...trained_model/AST-train_2025-11-09_18-25-03_ab12/log"
+        # tb_path    = "...trained_model/AST-train_2025-11-09_18-25-03_ab12/tb"
     """
     # Base directory
     base_dir = Path(root) / "train_ast" / "trained_model"
+    base_dir.mkdir(parents=True, exist_ok=True)
 
     # Create unique suffix (timestamp + short UUID)
     if unique:
@@ -31,17 +32,17 @@ def get_RL_model_path(root: Path, model_name: str, unique: bool = True, save_ani
         model_name_unique = model_name
 
     # Full paths
-    model_dir      = str(base_dir / model_name_unique / "model")
+    model_dir = base_dir / model_name_unique / "model"
     model_dir.mkdir(parents=True, exist_ok=True)
-    model_path = str(model_dir)
-    
-    log_dir        = str(base_dir / model_name_unique / "log")
+    model_path = str(model_dir / "model.zip")
+
+    log_dir = base_dir / model_name_unique / "log"
     log_dir.mkdir(parents=True, exist_ok=True)
-    log_path   = str(log_dir)
-    
-    tb_dir         = str(base_dir / model_name_unique / "tb")
+    log_path = str(log_dir / "episode_recap.txt")
+
+    tb_dir = base_dir / model_name_unique / "tb"
     tb_dir.mkdir(parents=True, exist_ok=True)
-    tb_path    = str(tb_dir)
+    tb_path = str(tb_dir)
     
     if save_anim_filename is not None:
         saved_anim_dir = base_dir / model_name_unique / "saved_animation"

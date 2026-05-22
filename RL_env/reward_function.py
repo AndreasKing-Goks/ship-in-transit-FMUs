@@ -2,10 +2,51 @@ from RL_env.reward_designs import (RewardDesign1, RewardDesign2, RewardDesign3,
                                    RewardDesign4, RewardDesign5, RewardDesign6)
 
 import numpy as np
+from scipy.stats import truncnorm
 
 # Instantiate Reward Function 4 for nearest distance reward function
 nearest_distance_reward_func = RewardDesign4(target=100, offset_param=750000)
 
+def wrap_angle(x):
+    # wrap to (-pi, pi]
+    return (x + np.pi) % (2*np.pi) - np.pi
+
+def logprior_scope_angle(
+    scope_angle,
+    prev_scope_angle,
+    sigma=15.0,
+    theta=30.0
+):
+    """
+        Truncated normal distribution prior for the sampled scope angle around 
+        the previous scope angle. The idea is that RL agent would ideally keep 
+        it course heading the same as the previous scope angle it used.
+    
+        Truncated normal prior centered at prev_scope_angle.
+        
+        (a, b) is a measure of how many standard deviations away the lower and
+        upper bounds from the mean value.
+
+        Support:
+            [-theta, theta] degrees
+    """
+    
+    # Upper and Lower bound
+    lower = -theta
+    upper = theta
+
+    # Normalized
+    a = (lower - prev_scope_angle) / sigma
+    b = (upper - prev_scope_angle) / sigma
+
+    return truncnorm.logpdf(
+        scope_angle,
+        a,
+        b,
+        loc=prev_scope_angle,
+        scale=sigma
+    )
+    
 def compute_reward(observation, args):
         """
             Compute reward after the environment transitions to the next state.
@@ -17,7 +58,8 @@ def compute_reward(observation, args):
          reward_components,
          skip_map_evaluation,
          ts_iw_idx, nearest_dist_dict,
-         remaining_requests_bound) = args
+         remaining_requests_bound,
+         scope_angles, prev_scope_angles) = args
         
         # Initial reward signal
         reward      = 0.0
@@ -58,56 +100,56 @@ def compute_reward(observation, args):
 
         ### Termination rewards
         if own_ship_collision:
-            rew     = 2
+            rew     = 2.0
             reward += rew
             reward_components["own_ship_collision_rewards"].append(rew)
         else:
             reward_components["own_ship_collision_rewards"].append(0.0)
             
         if own_ship_grounding:
-            rew     = 2
+            rew     = 2.0
             reward += rew
             reward_components["own_ship_grounding_rewards"].append(rew)
         else:
             reward_components["own_ship_grounding_rewards"].append(0.0)
             
         if own_ship_navigation_failure:
-            rew     = 1
+            rew     = 1.0
             reward += rew
             reward_components["own_ship_navigational_failure_rewards"].append(rew)
         else:
             reward_components["own_ship_navigational_failure_rewards"].append(0.0)
             
         if own_ship_reaches_end_waypoint:
-            rew     = -2
+            rew     = -2.0
             reward += rew
             reward_components["own_ship_reaches_end_waypoint_rewards"].append(rew)
         else:
             reward_components["own_ship_reaches_end_waypoint_rewards"].append(0.0)
             
         if tar_ships_collision:
-            rew     = -2
+            rew     = -2.0
             reward += rew
             reward_components["tar_ships_collision_rewards"].append(rew)
         else:
             reward_components["tar_ships_collision_rewards"].append(0.0)
             
         if tar_ships_grounding:
-            rew     = -2
+            rew     = -2.0
             reward += rew
             reward_components["tar_ships_grounding_rewards"].append(rew)
         else:
             reward_components["tar_ships_grounding_rewards"].append(0.0)
             
         if tar_ships_navigation_failure:
-            rew     = -1
+            rew     = -1.0
             reward += rew
             reward_components["tar_ships_navigation_failure_rewards"].append(rew)
         else:
             reward_components["tar_ships_navigation_failure_rewards"].append(0.0)
             
         if tar_ships_reaches_end_waypoint:
-            rew     = -1
+            rew     = -1.0
             reward += rew
             reward_components["tar_ships_reaches_end_waypoint_rewards"].append(rew)
         else:
@@ -159,7 +201,15 @@ def compute_reward(observation, args):
         reward                 += rew
         reward_components["scope_angle_request_done_rewards"].append(rew)
         
-        # Scope angle likelihood reward
-        # TBD
+        # Scope angle log likelihood reward
+        rews                    = []
+        ll_coeff                = 0.2
+        ll_floor                = -2.0
+        for sc, psc in zip(scope_angles, prev_scope_angles):
+            rew                 = max(logprior_scope_angle(scope_angle=sc, prev_scope_angle=psc, sigma=10, theta=30)  * ll_coeff,
+                                         ll_floor)
+            rews.append(rew)
+        reward                 += np.mean(rew)
+        reward_components["scope_angle_log_likelihood_rewards"].append(rew) 
 
         return reward

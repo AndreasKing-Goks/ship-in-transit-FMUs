@@ -106,7 +106,7 @@ def format_episode_recap(env: EBASTv2Env, episode_name="Episode Recap", time_dec
         nearest_distance_reward = env.reward_components["nearest_distance_rewards"][k]
 
         scope_angle_request_done_reward = env.reward_components["scope_angle_request_done_rewards"][k]
-        # scope_angle_likelihood_reward = env.reward_components["scope_angle_likelihood_rewards"][k]
+        scope_angle_log_likelihood_reward = env.reward_components["scope_angle_log_likelihood_rewards"][k]
         
         timestamp_before = round(env.event_timestamp_list[k] * 1e-9, time_decimals)
         timestamp_after = round(env.event_timestamp_list[k + 1] * 1e-9, time_decimals)
@@ -135,7 +135,7 @@ def format_episode_recap(env: EBASTv2Env, episode_name="Episode Recap", time_dec
         lines.append(f"  - Nearest Distance                     : {nearest_distance_reward}")
 
         lines.append(f"  - Scope Angle Request Done             : {scope_angle_request_done_reward}")
-        # lines.append(f"  - Scope Angle Likelihood               : {scope_angle_likelihood_reward}")
+        lines.append(f"  - Scope Angle Log Likelihood           : {scope_angle_log_likelihood_reward}")
         lines.append("")
 
         lines.append("[OBSERVATION BEFORE ACTION - DENORMALIZED]")

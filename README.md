@@ -35,6 +35,13 @@ This simulator also supports animation visualization. However it requires `FFmpe
 
 Only when you care about doing reinforcement learning-based process. Recommended to do these steps in order.
 
+### Scipy
+`SciPy` is used specifically for Adaptive Stress Testing algorithm because `SciPy` includes a probability distribution `Truncated Normal` that is used for the reward function computation. Run this command to install the package:
+
+```bash
+pip install scipy
+```
+
 ### Gymnasium
 First, we need to install `gymnasium` to define the RL observation and action space, and wraps our custom RL-environment wrapper to comply with `stable-baselines3` package. Install this package by running:
 ```bash
