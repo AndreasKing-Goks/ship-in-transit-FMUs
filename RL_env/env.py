@@ -108,8 +108,12 @@ class EBASTv2Env(gym.Env):
         action_low = []
         action_high = []
         
+        # Collection of max_scope_angle for all target ships
+        self.max_scope_angles   = []
+        
         for sid, idx in zip(self.ts_iw_id, self.ts_iw_idx):
             max_scope_angle     = self.ship_configs[idx]["fmu_params"]["MISSION_MANAGER"]["scope_angle_max_deg"]
+            self.max_scope_angles.append(max_scope_angle)
             min_scope_angle     = -max_scope_angle
             max_scope_length    = 5000
             min_scope_length    = 1000
@@ -647,6 +651,7 @@ class EBASTv2Env(gym.Env):
                                    self.skip_map_evaluation,
                                    self.ts_iw_idx, self.nearest_dist_dict,
                                    self.remaining_requests_bound,
+                                   self.max_scope_angles,
                                    scope_angles, prev_scope_angles)
         reward                  = compute_reward(self._get_obs(normalized=False), args)     # Use denormalized observation
         
@@ -720,18 +725,18 @@ class EBASTv2Env(gym.Env):
             # Reward container
             self.reward_list                            = []
             self.reward_components = {
-                "own_ship_collision_rewards"             : [],
-                "own_ship_grounding_rewards"             : [],
-                "own_ship_navigational_failure_rewards"  : [],
-                "own_ship_reaches_end_waypoint_rewards"  : [],
-                "tar_ships_collision_rewards"            : [],
-                "tar_ships_grounding_rewards"            : [],
-                "tar_ships_navigation_failure_rewards"   : [],
-                "tar_ships_reaches_end_waypoint_rewards" : [],
-                "nearest_distance_roa_rewards"           : [],
-                "nearest_distance_rewards"               : [],
-                "scope_angle_request_done_rewards"       : [],
-                "scope_angle_log_likelihood_rewards"     : [],  
+                "own_ship_collision_rewards"                : [],
+                "own_ship_grounding_rewards"                : [],
+                "own_ship_navigational_failure_rewards"     : [],
+                "own_ship_reaches_end_waypoint_rewards"     : [],
+                "tar_ships_collision_rewards"               : [],
+                "tar_ships_grounding_rewards"               : [],
+                "tar_ships_navigation_failure_rewards"      : [],
+                "tar_ships_reaches_end_waypoint_rewards"    : [],
+                "nearest_distance_roa_rewards"              : [],
+                "nearest_distance_rewards"                  : [],
+                "scope_angle_request_done_rewards"          : [],
+                "scope_angle_change_log_likelihood_rewards" : [],  
             }
             
             # Prev_action recorder (initiated at 0.0 degree)

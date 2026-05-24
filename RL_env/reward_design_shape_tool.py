@@ -7,7 +7,7 @@ import numpy as np
 
 ## PATH HELPER (OBLIGATORY)
 # project root = two levels up from this file
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from RL_env.reward_designs import (
@@ -17,7 +17,7 @@ from RL_env.reward_designs import (
 
 # === Customizable boundaries for X axis ===
 x_min = 0
-x_max = 2500
+x_max = 10000
 
 # Generate x values
 x = np.linspace(x_min, x_max, 1000)
@@ -27,7 +27,7 @@ designs = [
     RewardDesign1(target=50, offset_param=250),
     RewardDesign2(target=50, offset_param1=250, offset_param2=50),
     RewardDesign3(target=3000, offset_param=1250000),
-    RewardDesign4(target=100, offset_param=750000),
+    RewardDesign4(target=100, offset_param=15000000),
     RewardDesign5(target_bound_low=40, target_bound_high=60, offset_param=100),
     RewardDesign6(target1=30, target2=70, second_peak=0.8, flat_zone=0.5,
                   offset_param1=100, offset_param2=50, offset_param3=50, offset_param4=100)

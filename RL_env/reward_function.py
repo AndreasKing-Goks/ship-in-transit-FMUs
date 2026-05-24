@@ -5,24 +5,24 @@ import numpy as np
 from scipy.stats import truncnorm
 
 # Instantiate Reward Function 4 for nearest distance reward function
-nearest_distance_reward_func = RewardDesign4(target=100, offset_param=750000)
+nearest_distance_reward_func = RewardDesign4(target=100, offset_param=15000000)
 
 def wrap_angle(x):
     # wrap to (-pi, pi]
     return (x + np.pi) % (2*np.pi) - np.pi
 
-def logprior_scope_angle(
-    scope_angle,
-    prev_scope_angle,
-    sigma=15.0,
-    theta=30.0
+def logprior_scope_angle_change(
+    scope_angle_change,
+    mean_change,
+    sigma=5.0,
+    theta=60.0
 ):
     """
-        Truncated normal distribution prior for the sampled scope angle around 
-        the previous scope angle. The idea is that RL agent would ideally keep 
-        it course heading the same as the previous scope angle it used.
-    
-        Truncated normal prior centered at prev_scope_angle.
+        Truncated normal distribution prior for the sampled scope angle change 
+        around the mean 0. The idea is that RL agent would ideally keep  it 
+        course heading the same as the previous scope angle it used. The larger
+        the change of sampled scope angle to the previously sampled scope angle,
+        the more unlikely it is
         
         (a, b) is a measure of how many standard deviations away the lower and
         upper bounds from the mean value.
@@ -36,14 +36,14 @@ def logprior_scope_angle(
     upper = theta
 
     # Normalized
-    a = (lower - prev_scope_angle) / sigma
-    b = (upper - prev_scope_angle) / sigma
+    a = (lower - mean_change) / sigma
+    b = (upper - mean_change) / sigma
 
     return truncnorm.logpdf(
-        scope_angle,
+        scope_angle_change,
         a,
         b,
-        loc=prev_scope_angle,
+        loc=mean_change,
         scale=sigma
     )
     
@@ -59,6 +59,7 @@ def compute_reward(observation, args):
          skip_map_evaluation,
          ts_iw_idx, nearest_dist_dict,
          remaining_requests_bound,
+         max_scope_angles,
          scope_angles, prev_scope_angles) = args
         
         # Initial reward signal
@@ -100,58 +101,58 @@ def compute_reward(observation, args):
 
         ### Termination rewards
         if own_ship_collision:
-            rew     = 2.0
-            reward += rew
-            reward_components["own_ship_collision_rewards"].append(rew)
+            rew_osc = 2.0
+            reward += rew_osc
+            reward_components["own_ship_collision_rewards"].append(rew_osc)
         else:
             reward_components["own_ship_collision_rewards"].append(0.0)
             
         if own_ship_grounding:
-            rew     = 2.0
-            reward += rew
-            reward_components["own_ship_grounding_rewards"].append(rew)
+            rew_osg = 2.0
+            reward += rew_osg
+            reward_components["own_ship_grounding_rewards"].append(rew_osg)
         else:
             reward_components["own_ship_grounding_rewards"].append(0.0)
             
         if own_ship_navigation_failure:
-            rew     = 1.0
-            reward += rew
-            reward_components["own_ship_navigational_failure_rewards"].append(rew)
+            rew_osn = 1.0
+            reward += rew_osn
+            reward_components["own_ship_navigational_failure_rewards"].append(rew_osn)
         else:
             reward_components["own_ship_navigational_failure_rewards"].append(0.0)
             
         if own_ship_reaches_end_waypoint:
-            rew     = -2.0
-            reward += rew
-            reward_components["own_ship_reaches_end_waypoint_rewards"].append(rew)
+            rew_osr = -2.0
+            reward += rew_osr
+            reward_components["own_ship_reaches_end_waypoint_rewards"].append(rew_osr)
         else:
             reward_components["own_ship_reaches_end_waypoint_rewards"].append(0.0)
             
         if tar_ships_collision:
-            rew     = -2.0
-            reward += rew
-            reward_components["tar_ships_collision_rewards"].append(rew)
+            rew_tsc = -2.0
+            reward += rew_tsc
+            reward_components["tar_ships_collision_rewards"].append(rew_tsc)
         else:
             reward_components["tar_ships_collision_rewards"].append(0.0)
             
         if tar_ships_grounding:
-            rew     = -2.0
-            reward += rew
-            reward_components["tar_ships_grounding_rewards"].append(rew)
+            rew_tsg = -2.0
+            reward += rew_tsg
+            reward_components["tar_ships_grounding_rewards"].append(rew_tsg)
         else:
             reward_components["tar_ships_grounding_rewards"].append(0.0)
             
         if tar_ships_navigation_failure:
-            rew     = -1.0
-            reward += rew
-            reward_components["tar_ships_navigation_failure_rewards"].append(rew)
+            rew_tsn = -1.0
+            reward += rew_tsn
+            reward_components["tar_ships_navigation_failure_rewards"].append(rew_tsn)
         else:
             reward_components["tar_ships_navigation_failure_rewards"].append(0.0)
             
         if tar_ships_reaches_end_waypoint:
-            rew     = -1.0
-            reward += rew
-            reward_components["tar_ships_reaches_end_waypoint_rewards"].append(rew)
+            rew_tsr = -1.0
+            reward += rew_tsr
+            reward_components["tar_ships_reaches_end_waypoint_rewards"].append(rew_tsr)
         else:
             reward_components["tar_ships_reaches_end_waypoint_rewards"].append(0.0)
         
@@ -182,34 +183,52 @@ def compute_reward(observation, args):
             dist_list.append(dist)
         
         # Get the nearest distance when RoA
-        rew         = np.mean([nearest_distance_reward_func(dist) for dist in dist_list])
-        reward     += rew
-        reward_components["nearest_distance_roa_rewards"].append(rew)
+        rew_nd_iw   = np.mean([nearest_distance_reward_func(dist) for dist in dist_list])
+        reward     += rew_nd_iw
+        reward_components["nearest_distance_roa_rewards"].append(rew_nd_iw)
         
         ## Nearest distance reward during state-action transition
         dist_list   = list(nearest_dist_dict.values())
-        rew         = np.mean([nearest_distance_reward_func(dist) for dist in dist_list])
-        reward     += rew
-        reward_components["nearest_distance_rewards"].append(rew)
+        rew_nd_ss   = np.mean([nearest_distance_reward_func(dist) for dist in dist_list])
+        reward     += rew_nd_ss
+        reward_components["nearest_distance_rewards"].append(rew_nd_ss)
         
         ## Intermediate waypoint sampling penalty/reward
         iws_count_coeff         = 0.05
         max_remaining_requests  = remaining_requests_bound["max"]
         used_requests           = max_remaining_requests - remaining_requests
         used_to_max_ratio       = used_requests / max_remaining_requests
-        rew                     = -np.sum(used_to_max_ratio) * iws_count_coeff
-        reward                 += rew
-        reward_components["scope_angle_request_done_rewards"].append(rew)
+        rew_iwp                 = -(np.sum(used_to_max_ratio) * iws_count_coeff)
+        reward                 += rew_iwp
+        reward_components["scope_angle_request_done_rewards"].append(rew_iwp)
         
-        # Scope angle log likelihood reward
-        rews                    = []
-        ll_coeff                = 0.2
-        ll_floor                = -2.0
-        for sc, psc in zip(scope_angles, prev_scope_angles):
-            rew                 = max(logprior_scope_angle(scope_angle=sc, prev_scope_angle=psc, sigma=10, theta=30)  * ll_coeff,
-                                         ll_floor)
-            rews.append(rew)
-        reward                 += np.mean(rew)
-        reward_components["scope_angle_log_likelihood_rewards"].append(rew) 
+        # Scope angle change log likelihood reward
+        rews_scc                = []
+        mean_change             = 0.0
+        rew_coeff               = len(ts_iw_idx)        # Linearly dependent to the amount of ts_iw
+        sigma                   = 5.0
+        
+        for sc, psc, msc in zip(scope_angles, prev_scope_angles, max_scope_angles):
+            ll_scc_min              = logprior_scope_angle_change(scope_angle_change=0.0,
+                                                              mean_change=mean_change,
+                                                              sigma=sigma,
+                                                              theta=2*msc)
+            ll_scc_max              = logprior_scope_angle_change(scope_angle_change=2*msc,
+                                                              mean_change=mean_change,
+                                                              sigma=sigma,
+                                                              theta=2*msc)
+            
+            scope_angle_change  = sc - psc
+            ll_scc              = logprior_scope_angle_change(scope_angle_change=scope_angle_change,
+                                                              mean_change=mean_change,
+                                                              sigma=sigma,
+                                                              theta=2*msc)
+            
+            rew                 = ((ll_scc - ll_scc_min) / (ll_scc_min - ll_scc_max)) * rew_coeff
+            
+            rews_scc.append(rew)
+        rew_scc                 = np.mean(rews_scc)
+        reward                 += rew_scc
+        reward_components["scope_angle_change_log_likelihood_rewards"].append(rew_scc) 
 
         return reward
