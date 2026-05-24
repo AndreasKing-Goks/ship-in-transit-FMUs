@@ -148,9 +148,9 @@ class ShipInTransitCoSimulation(CoSimInstance):
         # =========================
         self.ship_with_IW_sampling  = []
         self.IW_sampling_animated   = IW_sampling_animated
+        self.IW_sampling_data       = {}
 
         if self.IW_sampling_animated:
-            self.IW_sampling_anim_data  = {}
             any_IW_sampling_animated    = False
 
         for ship_config in ship_configs:
@@ -186,7 +186,7 @@ class ShipInTransitCoSimulation(CoSimInstance):
             
             frame = int(self.time / self.stepSize)
             setattr(self, f"current_frame_{ship_id}", frame)
-            self.IW_sampling_anim_data[ship_id] = {getattr(self, f"current_frame_{ship_id}") : data}
+            self.IW_sampling_data[ship_id] = {getattr(self, f"current_frame_{ship_id}") : data}
 
         # Turn off animation if no ship actually uses it
         if self.IW_sampling_animated and not any_IW_sampling_animated:
@@ -658,10 +658,10 @@ class ShipInTransitCoSimulation(CoSimInstance):
         }
         if key in zero_mask:
             return 0.0
-
+        
         ## Pattern-based masking for COLAV targets
         # Set to a far away location for all target ship to prevent triggering the collision avoidance
-        if in_slave == "COLAV":
+        if in_slave_base_name == "COLAV":
             if in_var.startswith("tar_") and in_var.endswith("_north"):
                 return 1e9
             if in_var.startswith("tar_") and in_var.endswith("_east"):
@@ -868,15 +868,15 @@ class ShipInTransitCoSimulation(CoSimInstance):
                 prev_frame          = getattr(self, f"current_frame_{ship_id}")
                 
                 # Altered the previous active path
-                prev_active_path    = self.IW_sampling_anim_data[ship_id][prev_frame]["active_path"].copy()
+                prev_active_path    = self.IW_sampling_data[ship_id][prev_frame]["active_path"].copy()
                 prev_active_path.insert(idx, (next_wp_north, next_wp_east))
                 
                 # Altered the intermediate waypoints list
-                prev_inter_wps      = self.IW_sampling_anim_data[ship_id][prev_frame]["sampled_inter_wps"].copy()
+                prev_inter_wps      = self.IW_sampling_data[ship_id][prev_frame]["sampled_inter_wps"].copy()
                 prev_inter_wps.append((next_wp_north, next_wp_east))
                 
                 # Altered the intermediate waypoint projection list
-                prev_inter_wp_projs = self.IW_sampling_anim_data[ship_id][prev_frame]["sampled_inter_wp_projs"].copy()
+                prev_inter_wp_projs = self.IW_sampling_data[ship_id][prev_frame]["sampled_inter_wp_projs"].copy()
                 prev_inter_wp_projs.append((next_wp_proj_north, next_wp_proj_east))
                 
                 data = {
@@ -887,7 +887,7 @@ class ShipInTransitCoSimulation(CoSimInstance):
                 
                 frame = int(self.time / self.stepSize)
                 setattr(self, f"current_frame_{ship_id}", frame)
-                self.IW_sampling_anim_data[ship_id][frame]= data
+                self.IW_sampling_data[ship_id][frame]= data
     
     
     def PostSolverFunctionCall(self):
@@ -2495,7 +2495,7 @@ class ShipInTransitCoSimulation(CoSimInstance):
             Return the latest IW animation snapshot for ship_id whose key <= frame.
             If none exists, return None.
         """
-        ship_hist = getattr(self, "IW_sampling_anim_data", {}).get(ship_id, None)
+        ship_hist = getattr(self, "IW_sampling_data", {}).get(ship_id, None)
         if not ship_hist:
             return None
 

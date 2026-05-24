@@ -25,7 +25,7 @@ x = np.linspace(x_min, x_max, 1000)
 # Instantiate reward functions using parameters that mimic the paper's figure
 designs = [
     RewardDesign1(target=50, offset_param=250),
-    RewardDesign2(target=50, offset_param1=250, offset_param2=50),
+    RewardDesign2(target=1000, offset_param1=10000, offset_param2=10000000),
     RewardDesign3(target=3000, offset_param=1250000),
     RewardDesign4(target=100, offset_param=15000000),
     RewardDesign5(target_bound_low=40, target_bound_high=60, offset_param=100),
@@ -67,7 +67,7 @@ test_2 = False
 test_2 = True
 
 if test_2:
-    design = designs[3]
+    design = designs[1]
 
     y = [design(float(xi)) for xi in x]
     plt.figure(figsize=(7, 6.8))

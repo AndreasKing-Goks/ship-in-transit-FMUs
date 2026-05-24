@@ -5,7 +5,8 @@ import numpy as np
 from scipy.stats import truncnorm
 
 # Instantiate Reward Function 4 for nearest distance reward function
-nearest_distance_reward_func = RewardDesign4(target=100, offset_param=15000000)
+iw_distance_to_os_reward_func   = RewardDesign2(target=1000, offset_param1=10000, offset_param2=10000000)
+nearest_distance_reward_func    = RewardDesign4(target=100, offset_param=15000000)
 
 def wrap_angle(x):
     # wrap to (-pi, pi]
@@ -57,9 +58,9 @@ def compute_reward(observation, args):
          stop_info, n_ts,
          reward_components,
          skip_map_evaluation,
-         ts_iw_idx, nearest_dist_dict,
+         n_ts_iw, nearest_dist_dict,
          remaining_requests_bound,
-         max_scope_angles,
+         max_scope_angles, IW_coordinates,
          scope_angles, prev_scope_angles) = args
         
         # Initial reward signal
@@ -159,42 +160,52 @@ def compute_reward(observation, args):
         ### Non-termination rewards
         ## Unpack the observation:
         own_ship_pos        = observation["own_ship_pos"]
-        tar_ships_pos       = observation["tar_ships_pos"].reshape(n_ts, 3)
+        rel_tar_ships_pos   = observation["rel_tar_ships_pos"].reshape(n_ts, 3)
         remaining_requests  = observation["remaining_requests"]
         
         ## Nearest distance reward when RoA
         own_north       = own_ship_pos[0]
         own_east        = own_ship_pos[1]
         
-        # Compute the distance of each target ship to the own ship when RoA
-        dist_list = []
-        for unshifted_idx in ts_iw_idx:
-            idx             = unshifted_idx - 1
-            
-            tar_ship_pos    = tar_ships_pos[idx]
-            
-            tar_north       = tar_ship_pos[0]
-            tar_east        = tar_ship_pos[1]
-            
-            d_north         = own_north - tar_north
-            d_east          = own_east - tar_east
-            
-            dist            = np.hypot(d_north, d_east)         
-            dist_list.append(dist)
-        
-        # Get the nearest distance when RoA
-        rew_nd_iw   = np.mean([nearest_distance_reward_func(dist) for dist in dist_list])
-        reward     += rew_nd_iw
-        reward_components["nearest_distance_roa_rewards"].append(rew_nd_iw)
-        
         ## Nearest distance reward during state-action transition
-        dist_list   = list(nearest_dist_dict.values())
-        rew_nd_ss   = np.mean([nearest_distance_reward_func(dist) for dist in dist_list])
-        reward     += rew_nd_ss
+        ss_dist_list    = list(nearest_dist_dict.values())
+        rew_nd_ss       = np.mean([nearest_distance_reward_func(dist) for dist in ss_dist_list])
+        reward         += rew_nd_ss
         reward_components["nearest_distance_rewards"].append(rew_nd_ss)
         
+        ## Intermediate waypoint nearest distance to own ship
+        iw_dist_list        = []
+        for IW_coordinate in IW_coordinates:
+            iw_north        = IW_coordinate[0]
+            iw_east         = IW_coordinate[1]
+            
+            d_north         = own_north - iw_north
+            d_east          = own_east  - iw_east
+            
+            dist            = np.hypot(d_north, d_east)
+            iw_dist_list.append(dist)
+            
+        # Get the IW distance to own_ship
+        rew_nd_iw      = np.mean([iw_distance_to_os_reward_func(dist) for dist in iw_dist_list])
+        reward          += rew_nd_iw
+        reward_components["nearest_distance_iw_rewards"].append(rew_nd_iw)
+        
+        # Compute the distance of each target ship to the own ship when RoA
+        roa_dist_list       = []
+        for rel_tar_ship_pos in rel_tar_ships_pos:
+            rel_tar_north       = rel_tar_ship_pos[0]
+            rel_tar_east        = rel_tar_ship_pos[1]
+            
+            dist            = np.hypot(rel_tar_north, rel_tar_east)         
+            roa_dist_list.append(dist)
+        
+        # Get the nearest distance when RoA
+        rew_nd_roa          = np.mean([nearest_distance_reward_func(dist) for dist in roa_dist_list])
+        reward             += rew_nd_roa
+        reward_components["nearest_distance_roa_rewards"].append(rew_nd_roa)
+        
         ## Intermediate waypoint sampling penalty/reward
-        iws_count_coeff         = 0.05
+        iws_count_coeff         = 0.5
         max_remaining_requests  = remaining_requests_bound["max"]
         used_requests           = max_remaining_requests - remaining_requests
         used_to_max_ratio       = used_requests / max_remaining_requests
@@ -205,7 +216,7 @@ def compute_reward(observation, args):
         # Scope angle change log likelihood reward
         rews_scc                = []
         mean_change             = 0.0
-        rew_coeff               = len(ts_iw_idx)        # Linearly dependent to the amount of ts_iw
+        rew_coeff               = n_ts_iw        # Linearly dependent to the amount of ts_iw
         sigma                   = 5.0
         
         for sc, psc, msc in zip(scope_angles, prev_scope_angles, max_scope_angles):

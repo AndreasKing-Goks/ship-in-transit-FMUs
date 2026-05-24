@@ -115,7 +115,7 @@ class EBASTv2Env(gym.Env):
             max_scope_angle     = self.ship_configs[idx]["fmu_params"]["MISSION_MANAGER"]["scope_angle_max_deg"]
             self.max_scope_angles.append(max_scope_angle)
             min_scope_angle     = -max_scope_angle
-            max_scope_length    = 5000
+            max_scope_length    = 10000
             min_scope_length    = 1000
             
             data = {
@@ -136,7 +136,7 @@ class EBASTv2Env(gym.Env):
         self.action_space = Box(
             low=-1.0,
             high=1.0,
-            shape=(len(action_low),),
+            shape=(2*self.n_ts_iw,),
             dtype=np.float32
         )
         
@@ -254,7 +254,7 @@ class EBASTv2Env(gym.Env):
                 "own_ship_throttle": Box(-1.0, 1.0, shape=(1,), dtype=np.float32),
                 "own_ship_forward_speed": Box(-1.0, 1.0, shape=(1,), dtype=np.float32),
 
-                "tar_ships_pos": Box(-1.0, 1.0, shape=(3*self.n_ts,), dtype=np.float32),
+                "rel_tar_ships_pos": Box(-1.0, 1.0, shape=(3*self.n_ts,), dtype=np.float32),
                 "tar_ships_forward_speed": Box(-1.0, 1.0, shape=(self.n_ts,), dtype=np.float32),
 
                 "action_masks": Box(low=0.0, high=1.0, shape=(self.n_ts_iw,), dtype=np.float32),
@@ -288,23 +288,34 @@ class EBASTv2Env(gym.Env):
     
     def _normalize_action(self, action):
         action = np.asarray(action, dtype=np.float32)
+
+        assert action.shape == self.action_low.shape, \
+            f"Expected action shape {self.action_low.shape}, got {action.shape}"
+
         action_norm = self._normalize(
             action,
             self.action_low,
             self.action_high
         )
-        action_norm = self._safe_clip(action_norm, -1.0, 1.0)
-        return action_norm   
+
+        return self._safe_clip(action_norm, -1.0, 1.0)
     
     
     def _denormalize_action(self, action_norm):
         action_norm = np.asarray(action_norm, dtype=np.float32)
+
+        assert action_norm.shape == self.action_low.shape, \
+            f"Expected action_norm shape {self.action_low.shape}, got {action_norm.shape}"
+
+        action_norm = self._safe_clip(action_norm, -1.0, 1.0)
+
         action = self._denormalize(
             action_norm,
             self.action_low,
             self.action_high
         )
-        return action  
+
+        return action
     
     def _normalize_observation(self, observation):
         """
@@ -317,7 +328,7 @@ class EBASTv2Env(gym.Env):
             "own_ship_rud_ang": self._normalize(observation["own_ship_rud_ang"], self.own_ship_rudder_angle_bound["min"], self.own_ship_rudder_angle_bound["max"]),
             "own_ship_throttle": self._normalize(observation["own_ship_throttle"], self.own_ship_throttle_bound["min"], self.own_ship_throttle_bound["max"]),
             "own_ship_forward_speed": self._normalize(observation["own_ship_forward_speed"], self.own_ship_forward_speed_bound["min"], self.own_ship_forward_speed_bound["max"]),
-            "tar_ships_pos": self._normalize(observation["tar_ships_pos"], self.tar_ships_pos_bound["min"], self.tar_ships_pos_bound["max"]),
+            "rel_tar_ships_pos": self._normalize(observation["rel_tar_ships_pos"], self.tar_ships_pos_bound["min"], self.tar_ships_pos_bound["max"]),
             "tar_ships_forward_speed": self._normalize(observation["tar_ships_forward_speed"], self.tar_ships_forward_speed_bound["min"], self.tar_ships_forward_speed_bound["max"]),
 
             "action_masks": (np.asarray(observation["action_masks"], dtype=np.float32) > 0.5).astype(np.float32),
@@ -339,7 +350,7 @@ class EBASTv2Env(gym.Env):
             "own_ship_rud_ang": self._denormalize(observation_norm["own_ship_rud_ang"], self.own_ship_rudder_angle_bound["min"], self.own_ship_rudder_angle_bound["max"]),
             "own_ship_throttle": self._denormalize(observation_norm["own_ship_throttle"], self.own_ship_throttle_bound["min"], self.own_ship_throttle_bound["max"]),
             "own_ship_forward_speed": self._denormalize(observation_norm["own_ship_forward_speed"], self.own_ship_forward_speed_bound["min"], self.own_ship_forward_speed_bound["max"]),
-            "tar_ships_pos": self._denormalize(observation_norm["tar_ships_pos"], self.tar_ships_pos_bound["min"], self.tar_ships_pos_bound["max"]),
+            "rel_tar_ships_pos": self._denormalize(observation_norm["rel_tar_ships_pos"], self.tar_ships_pos_bound["min"], self.tar_ships_pos_bound["max"]),
             "tar_ships_forward_speed": self._denormalize(observation_norm["tar_ships_forward_speed"], self.tar_ships_forward_speed_bound["min"], self.tar_ships_forward_speed_bound["max"]),
 
             "action_masks": (np.asarray(observation_norm["action_masks"], dtype=np.float32) > 0.5).astype(np.float32),
@@ -440,7 +451,7 @@ class EBASTv2Env(gym.Env):
         own_ship_rud_ang             = np.array([own_rud_ang], dtype=np.float32)
         own_ship_throttle            = np.array([own_throttle], dtype=np.float32)
         own_ship_forward_speed       = np.array([own_forward_speed], dtype=np.float32)
-        tar_ships_pos                = np.array(tar_ship_pos_list, dtype=np.float32)
+        rel_tar_ships_pos            = np.array(tar_ship_pos_list, dtype=np.float32)
         tar_ships_forward_speed      = np.array(tar_ship_forward_speed_list, dtype=np.float32)
         
         action_masks                 = np.asarray(action_masks_list, dtype=np.float32)
@@ -457,7 +468,7 @@ class EBASTv2Env(gym.Env):
                 "own_ship_rud_ang": own_ship_rud_ang,
                 "own_ship_throttle": own_ship_throttle,
                 "own_ship_forward_speed": own_ship_forward_speed,
-                "tar_ships_pos": tar_ships_pos,                         # Relative to own ship
+                "rel_tar_ships_pos": rel_tar_ships_pos,                         # Relative to own ship
                 "tar_ships_forward_speed": tar_ships_forward_speed,
                 "action_masks": action_masks,
                 "remaining_requests": remaining_requests
@@ -645,15 +656,18 @@ class EBASTv2Env(gym.Env):
         # Reward computation
         scope_angles            = [act[0] for act in action]
         prev_scope_angles       = self.prev_scope_angels
+        IW_sampling_data        = [self.instance.IW_sampling_data[sid] for sid in self.ts_iw_id]
+        last_frame              = [next(reversed(datum)) for datum in IW_sampling_data]
+        IW_coordinates          = [datum[frame]["sampled_inter_wps"][-1] for datum, frame in zip(IW_sampling_data, last_frame)]
         args                    = (self.os_id, self.ts_id, 
                                    self.instance.stop_info, self.n_ts,
                                    self.reward_components,
                                    self.skip_map_evaluation,
-                                   self.ts_iw_idx, self.nearest_dist_dict,
+                                   self.n_ts_iw , self.nearest_dist_dict,
                                    self.remaining_requests_bound,
-                                   self.max_scope_angles,
+                                   self.max_scope_angles, IW_coordinates,
                                    scope_angles, prev_scope_angles)
-        reward                  = compute_reward(self._get_obs(normalized=False), args)     # Use denormalized observation
+        reward                  = compute_reward(self._denormalize_observation(observation), args)     # Use denormalized observation
         
         # Assign the currently sampled scope angle to the previous scope angle holder variable
         self.prev_scope_angels  = scope_angles
@@ -733,8 +747,9 @@ class EBASTv2Env(gym.Env):
                 "tar_ships_grounding_rewards"               : [],
                 "tar_ships_navigation_failure_rewards"      : [],
                 "tar_ships_reaches_end_waypoint_rewards"    : [],
-                "nearest_distance_roa_rewards"              : [],
                 "nearest_distance_rewards"                  : [],
+                "nearest_distance_iw_rewards"               : [],
+                "nearest_distance_roa_rewards"              : [],
                 "scope_angle_request_done_rewards"          : [],
                 "scope_angle_change_log_likelihood_rewards" : [],  
             }

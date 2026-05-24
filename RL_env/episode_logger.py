@@ -102,8 +102,9 @@ def format_episode_recap(env: EBASTv2Env, episode_name="Episode Recap", time_dec
         tar_ships_navigation_failure_reward = env.reward_components["tar_ships_navigation_failure_rewards"][k]
         tar_ships_reaches_end_waypoint_reward = env.reward_components["tar_ships_reaches_end_waypoint_rewards"][k]
 
-        nearest_distance_roa_reward = env.reward_components["nearest_distance_roa_rewards"][k]
         nearest_distance_reward = env.reward_components["nearest_distance_rewards"][k]
+        nearest_distance_iw_reward = env.reward_components["nearest_distance_iw_rewards"][k]
+        nearest_distance_roa_reward = env.reward_components["nearest_distance_roa_rewards"][k]
 
         scope_angle_request_done_reward = env.reward_components["scope_angle_request_done_rewards"][k]
         scope_angle_change_log_likelihood_reward = env.reward_components["scope_angle_change_log_likelihood_rewards"][k]
@@ -131,8 +132,9 @@ def format_episode_recap(env: EBASTv2Env, episode_name="Episode Recap", time_dec
         lines.append(f"  - Target Ships Navigation Failure      : {tar_ships_navigation_failure_reward}")
         lines.append(f"  - Target Ships Reaches End Waypoint    : {tar_ships_reaches_end_waypoint_reward}")
 
-        lines.append(f"  - Nearest Distance ROA                 : {nearest_distance_roa_reward}")
         lines.append(f"  - Nearest Distance                     : {nearest_distance_reward}")
+        lines.append(f"  - Nearest Distance IW                  : {nearest_distance_iw_reward}")
+        lines.append(f"  - Nearest Distance ROA                 : {nearest_distance_roa_reward}")
 
         lines.append(f"  - Scope Angle Request Done             : {scope_angle_request_done_reward:.4f}")
         lines.append(f"  - Scope Angle Change Log Likelihood    : {scope_angle_change_log_likelihood_reward}")
@@ -208,12 +210,18 @@ def _append_observation_recap(lines, env, obs):
     )
     lines.append("")
 
-    tar_pos_flat = _arr(obs["tar_ships_pos"])
-    tar_speed = _arr(obs["tar_ships_forward_speed"])
+    # Conver relative positions to own ship into real positions
+    rel_tar_pos_flat    = _arr(obs["rel_tar_ships_pos"])
+    rel_tar_pos         = rel_tar_pos_flat.reshape(-1,3)    # reshape into n row x 3 column again
+    tar_pos             = rel_tar_pos.copy()
+    tar_pos[:, :2]     += own_pos[:2]                       # convert rel_north and rel_east into north and east
+    tar_pos_flat        = tar_pos.reshape(-1)               # flatten the altered  array again
+    
+    tar_speed           = _arr(obs["tar_ships_forward_speed"])
 
     lines.append("Target ships")
     for i, sid in enumerate(env.ts_id):
-        pos_i = tar_pos_flat[3 * i: 3 * i + 3]
+        pos_i   = tar_pos_flat[3 * i: 3 * i + 3]
         speed_i = tar_speed[i]
 
         lines.append(f"  Target ship [{sid}]")

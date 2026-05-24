@@ -181,11 +181,11 @@ while instance.time <= instance.stopTime:
     else:
         break
 
-for key in instance.IW_sampling_anim_data["OS0"].keys():
+for key in instance.IW_sampling_data["OS0"].keys():
     print(f"===== frame:{key}")
-    print("active_path            :", instance.IW_sampling_anim_data["OS0"][key]["active_path"])
-    print("sampled_inter_wps      :", instance.IW_sampling_anim_data["OS0"][key]["sampled_inter_wps"])
-    print("sampled_inter_wp_projs :", instance.IW_sampling_anim_data["OS0"][key]["sampled_inter_wp_projs"])
+    print("active_path            :", instance.IW_sampling_data["OS0"][key]["active_path"])
+    print("sampled_inter_wps      :", instance.IW_sampling_data["OS0"][key]["sampled_inter_wps"])
+    print("sampled_inter_wp_projs :", instance.IW_sampling_data["OS0"][key]["sampled_inter_wp_projs"])
     print("=====")
 
 # =========================

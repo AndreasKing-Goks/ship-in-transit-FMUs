@@ -19,7 +19,7 @@ from orchestrator.scenario_config import generate_spawn_request_bank, load_spawn
 # Load the Configuration
 # =========================
 # Get the config path
-config_path = ROOT / "test_run" / "ast_test" / "test_ast.yaml"
+config_path = ROOT / "test_run" / "ast_test" / "test_ast_2.yaml"
 
 # Get the save path for animation
 save_path = ROOT / "saved_animation" / "test_env_action.gif"
@@ -57,24 +57,11 @@ env.set_for_evaluation()
 
 obs, info   = env.reset(seed=250)
 
-# action_list = [[30,2500],
-#                [30,2000],
-#                [-30,2000],
-#                [-30,2000],
-#                [-30,2000]]
-
-action_list = [[30,4500],
-            #    [30,2000],
-               [-30,6000],
-               [0,2000],
-               [0,2000]]
-
-n_sample = len(action_list)
+n_sample = 20
 
 i = 0
 while i < n_sample:
-    # action = env.action_space.sample()
-    action  = env._normalize_action(action_list[i])
+    action = env.action_space.sample()
     env.step(action)
     i += 1
 
