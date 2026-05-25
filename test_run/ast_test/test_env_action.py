@@ -37,7 +37,8 @@ spawn_requests_bank_path = ROOT / "test_run" / "ast_test" / "spawn_request_bank.
 # Instantiate the environment wrapper
 # =========================
 # Generates/collect spawn requests
-spawn_requests_bank_path    = generate_spawn_request_bank(config_path=config_path,
+spawn_requests_bank_path    = generate_spawn_request_bank(ROOT=ROOT,
+                                                          config_path=config_path,
                                                           encounter_settings_path=encounter_settings_path,
                                                           spawn_requests_bank_path=spawn_requests_bank_path,
                                                           n_cases=100,
@@ -57,17 +58,11 @@ env.set_for_evaluation()
 
 obs, info   = env.reset(seed=250)
 
-# action_list = [[30,2500],
-#                [30,2000],
-#                [-30,2000],
-#                [-30,2000],
-#                [-30,2000]]
-
-action_list = [[30,4500],
-            #    [30,2000],
-               [-30,6000],
-               [0,2000],
-               [0,2000]]
+action_list = [[30,2500],
+               [30,2000],
+               [-30,2000],
+               [-30,2000],
+               [-30,2000]]
 
 n_sample = len(action_list)
 

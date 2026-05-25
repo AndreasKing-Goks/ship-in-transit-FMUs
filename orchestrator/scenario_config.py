@@ -595,6 +595,7 @@ def nice_bounds(bound, round_step=5000):
         return [nice_min, nice_max]
 
 def generate_spawn_request_bank(
+    ROOT,
     config_path,
     encounter_settings_path,
     spawn_requests_bank_path,
@@ -605,6 +606,7 @@ def generate_spawn_request_bank(
     round_step=5000
 ):
     spawn_requests_bank_path = Path(spawn_requests_bank_path)
+    srb_relative_path        = spawn_requests_bank_path.relative_to(ROOT)
 
     if spawn_requests_bank_path.exists() and not overwrite:
         print(f"Spawn request bank already exists: {spawn_requests_bank_path}")
@@ -669,7 +671,7 @@ def generate_spawn_request_bank(
         start_eval_case_id  = n_train_cases
         
         bank = {
-            "path":str(spawn_requests_bank_path),
+            "path":str(srb_relative_path),
             "n_cases": len(cases),
             "start_eval_case_id": start_eval_case_id,
             "cases": cases,
@@ -680,7 +682,7 @@ def generate_spawn_request_bank(
         }
     else:
         bank = {
-            "path":str(spawn_requests_bank_path),
+            "path":str(srb_relative_path),
             "n_cases": len(cases),
             "cases": cases,
             "north_bound": north_bound,

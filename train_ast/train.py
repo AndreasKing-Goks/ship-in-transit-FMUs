@@ -52,7 +52,8 @@ model_name                      = "AST_train"
 # Instantiate the environment wrapper
 # =========================
 # Generates/collect spawn requests
-spawn_requests_bank_path        = generate_spawn_request_bank(config_path=config_path,
+spawn_requests_bank_path        = generate_spawn_request_bank(ROOT=ROOT,
+                                                              config_path=config_path,
                                                               encounter_settings_path=encounter_settings_path,
                                                               spawn_requests_bank_path=spawn_requests_bank_path,
                                                               n_cases=100,
@@ -129,7 +130,7 @@ recurrent_ppo_model = RecurrentPPO(policy="MultiInputLstmPolicy",
 # =========================
 # Train while counting the timer
 start_time      = time.time()
-recurrent_ppo_model.learn(total_timesteps=10)
+recurrent_ppo_model.learn(total_timesteps=5)
 elapsed_time    = time.time() - start_time
 
 # Convert the elapsed time to hours, minutes, seconds

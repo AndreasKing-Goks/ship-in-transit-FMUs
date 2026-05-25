@@ -47,8 +47,7 @@ class EBASTv2Env(gym.Env):
         self.n_spawn_cases              = self.spawn_requests_bank["n_cases"]
         self.start_eval_case_id         = self.spawn_requests_bank["start_eval_case_id"]
         self.spawn_cases                = self.spawn_requests_bank["cases"]
-        srb_path                        = Path(self.spawn_requests_bank["path"])
-        self.srb_relative_path          = srb_path.relative_to(self.ROOT)
+        self.srb_rel_path               = Path(self.spawn_requests_bank["path"])
         
         # Save the base configuration for the Ship in Transit Co-simulation
         config_base         = load_base_config(config_path)
