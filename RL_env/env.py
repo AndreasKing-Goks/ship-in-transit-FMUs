@@ -1,6 +1,8 @@
 """ 
 This module provides classes for EB-ASTv2-compliant environment wrapper
 """
+from pathlib import Path
+
 from typing import Optional
 
 import gymnasium as gym
@@ -29,12 +31,6 @@ class EBASTv2Env(gym.Env):
                  spawn_requests_bank,
                  skip_map_evaluation: bool=True,
                  custom_pos_bound: dict=None):
-        # Store the spawn requests to generate finite encounter cases
-        self.spawn_requests_bank        = spawn_requests_bank
-        self.n_spawn_cases              = self.spawn_requests_bank["n_cases"]
-        self.start_eval_case_id         = self.spawn_requests_bank["start_eval_case_id"]
-        self.spawn_cases                = self.spawn_requests_bank["cases"]
-        
         # Initially set the environment for training
         self.for_training               = True
         
@@ -45,6 +41,14 @@ class EBASTv2Env(gym.Env):
         self.ROOT                       = ROOT
         self.config_path                = config_path
         self.encounter_settings_path    = encounter_settings_path
+        
+        # Store the spawn requests to generate finite encounter cases
+        self.spawn_requests_bank        = spawn_requests_bank
+        self.n_spawn_cases              = self.spawn_requests_bank["n_cases"]
+        self.start_eval_case_id         = self.spawn_requests_bank["start_eval_case_id"]
+        self.spawn_cases                = self.spawn_requests_bank["cases"]
+        srb_path                        = Path(self.spawn_requests_bank["path"])
+        self.srb_relative_path          = srb_path.relative_to(self.ROOT)
         
         # Save the base configuration for the Ship in Transit Co-simulation
         config_base         = load_base_config(config_path)

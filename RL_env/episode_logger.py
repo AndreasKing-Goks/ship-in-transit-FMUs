@@ -22,8 +22,7 @@ def format_episode_recap(env: EBASTv2Env, episode_name="Episode Recap", time_dec
     lines.append(f"Number of recorded transitions           : {n_transitions}")
     lines.append("")
     
-    path                        = Path(env.spawn_requests_bank["path"])
-    relative_path               = path.relative_to(env.ROOT)
+    relative_path               = env.srb_relative_path
     n_cases                     = env.spawn_requests_bank["n_cases"]
     n_training_cases            = env.spawn_requests_bank["start_eval_case_id"]
     n_evaluation_cases          = n_cases - n_training_cases
