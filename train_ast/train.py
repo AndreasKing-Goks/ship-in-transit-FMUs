@@ -129,7 +129,7 @@ recurrent_ppo_model = RecurrentPPO(policy="MultiInputLstmPolicy",
 # =========================
 # Train while counting the timer
 start_time      = time.time()
-recurrent_ppo_model.learn(total_timesteps=5)
+recurrent_ppo_model.learn(total_timesteps=10)
 elapsed_time    = time.time() - start_time
 
 # Convert the elapsed time to hours, minutes, seconds

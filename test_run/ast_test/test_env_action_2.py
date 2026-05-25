@@ -57,13 +57,14 @@ env.set_for_evaluation()
 
 obs, info   = env.reset(seed=250)
 
-n_sample = 20
-
-i = 0
-while i < n_sample:
-    action = env.action_space.sample()
-    env.step(action)
-    i += 1
+term = False
+while not term:
+    obs = env._get_obs()
+    do_action_sampling = any(obs["action_masks"])
+    
+    if do_action_sampling:
+        action = env.action_space.sample()
+        obs, rew, term, trun, inf = env.step(action)
 
 # =========================
 # Log the episode

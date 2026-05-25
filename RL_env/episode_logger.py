@@ -144,9 +144,10 @@ def format_episode_recap(env: EBASTv2Env, episode_name="Episode Recap", time_dec
         _append_observation_recap(lines, env, obs_before)
 
         lines.append("[ACTION]")
+        lines.append("A single action consists of [scope angle, scope length] * number of target ships with IW sampler enabled.")
         lines.append("")
         lines.append(f"Raw normalized action vector             : {action_norm.tolist()}")
-        lines.append(f"Denormalized action vector               : {action_phys.tolist()} [deg, m]")
+        lines.append(f"Denormalized action vector               : {action_phys.tolist()}")
         lines.append("")
 
         for i, sid in enumerate(env.ts_iw_id):
@@ -182,7 +183,7 @@ def _append_observation_recap(lines, env, obs):
     )
     lines.append(
         f"Action masks                             : "
-        f"{', '.join(str(int(x)) for x in _arr(obs['action_masks']))}"
+        f"[{', '.join(str(int(x)) for x in _arr(obs['action_masks']))}]"
     )
     lines.append("")
 

@@ -72,11 +72,15 @@ action_list = [[30,4500],
 n_sample = len(action_list)
 
 i = 0
-while i < n_sample:
-    # action = env.action_space.sample()
-    action  = env._normalize_action(action_list[i])
-    env.step(action)
-    i += 1
+term = False
+while not term:
+    obs = env._get_obs()
+    do_action_sampling = any(obs["action_masks"])
+    
+    if do_action_sampling:
+        action  = env._normalize_action(action_list[i])
+        obs, rew, term, trun, inf = env.step(action)
+        i += 1
 
 # =========================
 # Log the episode
