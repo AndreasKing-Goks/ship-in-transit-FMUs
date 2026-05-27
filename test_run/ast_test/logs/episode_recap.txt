@@ -59,7 +59,7 @@ Simulation time before action            : 255.0 s
 Simulation time after action             : 690.0 s
 Terminated                               : False
 Truncated                                : False
-Total Reward                             : -0.18581406786590673
+Total Reward                             : -0.2858140693560228
   - Own Ship Collision                   : 0.0
   - Own Ship Grounding                   : 0.0
   - Own Ship Navigational Failure        : 0.0
@@ -71,7 +71,7 @@ Total Reward                             : -0.18581406786590673
   - Nearest Distance                     : 0.08209295487709709
   - Nearest Distance IW                  : 6.868667856707589e-10
   - Nearest Distance ROA                 : 0.08209297806024551
-  - Scope Angle Request Done             : -0.1000
+  - Scope Angle Request Done             : -0.2000
   - Scope Angle Change Log Likelihood    : -0.25
 
 [OBSERVATION BEFORE ACTION - DENORMALIZED]
@@ -143,7 +143,7 @@ Simulation time before action            : 690.0 s
 Simulation time after action             : 1080.0 s
 Terminated                               : False
 Truncated                                : False
-Total Reward                             : 0.14077908121156574
+Total Reward                             : -0.0592209217686665
   - Own Ship Collision                   : 0.0
   - Own Ship Grounding                   : 0.0
   - Own Ship Navigational Failure        : 0.0
@@ -155,7 +155,7 @@ Total Reward                             : 0.14077908121156574
   - Nearest Distance                     : 0.17038699797625517
   - Nearest Distance IW                  : 5.041666554461699e-06
   - Nearest Distance ROA                 : 0.17038704454898834
-  - Scope Angle Request Done             : -0.2000
+  - Scope Angle Request Done             : -0.4000
   - Scope Angle Change Log Likelihood    : 0.0
 
 [OBSERVATION BEFORE ACTION - DENORMALIZED]
@@ -227,7 +227,7 @@ Simulation time before action            : 1080.0 s
 Simulation time after action             : 1495.0 s
 Terminated                               : False
 Truncated                                : False
-Total Reward                             : -0.8031930122216332
+Total Reward                             : -1.1031930241425623
   - Own Ship Collision                   : 0.0
   - Own Ship Grounding                   : 0.0
   - Own Ship Navigational Failure        : 0.0
@@ -239,7 +239,7 @@ Total Reward                             : -0.8031930122216332
   - Nearest Distance                     : 0.24524001687121513
   - Nearest Distance IW                  : 0.0063270991668105125
   - Nearest Distance ROA                 : 0.24523988366127014
-  - Scope Angle Request Done             : -0.3000
+  - Scope Angle Request Done             : -0.6000
   - Scope Angle Change Log Likelihood    : -1.0
 
 [OBSERVATION BEFORE ACTION - DENORMALIZED]
@@ -311,7 +311,7 @@ Simulation time before action            : 1495.0 s
 Simulation time after action             : 1895.0 s
 Terminated                               : False
 Truncated                                : False
-Total Reward                             : 0.6896816552532385
+Total Reward                             : 0.28968164929277407
   - Own Ship Collision                   : 0.0
   - Own Ship Grounding                   : 0.0
   - Own Ship Navigational Failure        : 0.0
@@ -323,7 +323,7 @@ Total Reward                             : 0.6896816552532385
   - Nearest Distance                     : 0.38382110604173636
   - Nearest Distance IW                  : 0.34292733669281006
   - Nearest Distance ROA                 : 0.3629332184791565
-  - Scope Angle Request Done             : -0.4000
+  - Scope Angle Request Done             : -0.8000
   - Scope Angle Change Log Likelihood    : 0.0
 
 [OBSERVATION BEFORE ACTION - DENORMALIZED]
@@ -392,22 +392,22 @@ Target ships
 TRANSITION 4
 ----------------------------------------------------------------------------------------------------
 Simulation time before action            : 1895.0 s
-Simulation time after action             : 3635.0 s
+Simulation time after action             : 2360.0 s
 Terminated                               : True
 Truncated                                : False
-Total Reward                             : -1.7017142822535636
-  - Own Ship Collision                   : 0.0
+Total Reward                             : 5.347315034471458
+  - Own Ship Collision                   : 5.0
   - Own Ship Grounding                   : 0.0
   - Own Ship Navigational Failure        : 0.0
-  - Own Ship Reaches End Waypoint        : -2.0
+  - Own Ship Reaches End Waypoint        : 0.0
   - Target Ships Collision               : 0.0
   - Target Ships Grounding               : 0.0
   - Target Ships Navigation Failure      : 0.0
   - Target Ships Reaches End Waypoint    : 0.0
-  - Nearest Distance                     : 0.7263831977231501
-  - Nearest Distance IW                  : 0.06985712051391602
-  - Nearest Distance ROA                 : 0.002045399509370327
-  - Scope Angle Request Done             : -0.5000
+  - Nearest Distance                     : 0.7263860987648426
+  - Nearest Distance IW                  : 8.310957168996879e-26
+  - Nearest Distance ROA                 : 0.6209289357066154
+  - Scope Angle Request Done             : -1.0000
   - Scope Angle Change Log Likelihood    : 0.0
 
 [OBSERVATION BEFORE ACTION - DENORMALIZED]
@@ -437,37 +437,37 @@ Target ships
 [ACTION]
 A single action consists of [scope angle, scope length] * number of target ships with IW sampler enabled.
 
-Raw normalized action vector             : [-1.0, -0.7777777910232544]
-Denormalized action vector               : [-30.0, 2000.0]
+Raw normalized action vector             : [-1.0, -0.800000011920929]
+Denormalized action vector               : [-30.0, 1900.0]
 
 IW action for target ship [TS2]
   Normalized scope angle                 : -1.0
-  Normalized scope length                : -0.7777777910232544
+  Normalized scope length                : -0.800000011920929
   Scope angle deg                        : -30.0
-  Scope length m                         : 2000.0
+  Scope length m                         : 1900.0
   Scope angle bounds deg                 : [-30, 30]
   Scope length bounds m                  : [1000, 10000]
 
 [OBSERVATION AFTER ACTION - DENORMALIZED]
 
-COLAV states                             : [0.23389798, 1.9184666] [%, deg]
+COLAV states                             : [0.17651796, -6.0] [%, deg]
 Action masks                             : [0]
 
 Own ship [OS0]
-  Position/state vector                  : [17139.0, -4612.4, -0.3] [m, m, deg]
-  Cross-track error                      : -19.3 [m]
-  Rudder angle                           : 1.7 [deg]
-  Throttle                               : 0.232872 [%]
-  Forward speed                          : 5.024589 [m/s]
+  Position/state vector                  : [11148.8, -2643.7, 0.0] [m, m, deg]
+  Cross-track error                      : 325.4 [m]
+  Rudder angle                           : 30.0 [deg]
+  Throttle                               : 0.331917 [%]
+  Forward speed                          : 5.293315 [m/s]
 
 Target ships
   Target ship [TS1]
-    Position/state vector                : [9061.4, -8991.6, -1.2] [m, m, deg]
-    Forward speed                        : 5.004267 [m/s]
+    Position/state vector                : [6463.8, -3167.7, -1.2] [m, m, deg]
+    Forward speed                        : 4.996421 [m/s]
     IW-enabled                           : False
   Target ship [TS2]
-    Position/state vector                : [5005.9, -1240.2, 2.9] [m, m, deg]
-    Forward speed                        : 4.992070 [m/s]
+    Position/state vector                : [11214.0, -2582.5, 2.9] [m, m, deg]
+    Forward speed                        : 4.975445 [m/s]
     IW-enabled                           : True
     Action mask                          : 0
     Remaining requests                   : 0

@@ -61,7 +61,8 @@ def compute_reward(observation, args):
          n_ts_iw, nearest_dist_dict,
          remaining_requests_bound,
          max_scope_angles, IW_coordinates,
-         scope_angles, prev_scope_angles) = args
+         scope_angles, prev_scope_angles,
+         previous_action_masks) = args
         
         # Initial reward signal
         reward      = 0.0
@@ -102,21 +103,21 @@ def compute_reward(observation, args):
 
         ### Termination rewards
         if own_ship_collision:
-            rew_osc = 2.0
+            rew_osc = 5.0
             reward += rew_osc
             reward_components["own_ship_collision_rewards"].append(rew_osc)
         else:
             reward_components["own_ship_collision_rewards"].append(0.0)
             
         if own_ship_grounding:
-            rew_osg = 2.0
+            rew_osg = 5.0
             reward += rew_osg
             reward_components["own_ship_grounding_rewards"].append(rew_osg)
         else:
             reward_components["own_ship_grounding_rewards"].append(0.0)
             
         if own_ship_navigation_failure:
-            rew_osn = 1.0
+            rew_osn = 3.0
             reward += rew_osn
             reward_components["own_ship_navigational_failure_rewards"].append(rew_osn)
         else:
@@ -205,7 +206,7 @@ def compute_reward(observation, args):
         reward_components["nearest_distance_roa_rewards"].append(rew_nd_roa)
         
         ## Intermediate waypoint sampling penalty/reward
-        iws_count_coeff         = 0.5
+        iws_count_coeff         = 1.0
         max_remaining_requests  = remaining_requests_bound["max"]
         used_requests           = max_remaining_requests - remaining_requests
         used_to_max_ratio       = used_requests / max_remaining_requests
@@ -219,7 +220,12 @@ def compute_reward(observation, args):
         rew_coeff               = n_ts_iw        # Linearly dependent to the amount of ts_iw
         sigma                   = 5.0
         
-        for sc, psc, msc in zip(scope_angles, prev_scope_angles, max_scope_angles):
+        # Next time should include the masks here
+        for sc, psc, am, msc in zip(scope_angles, prev_scope_angles, previous_action_masks, max_scope_angles):
+            # Skip it if the action is masked
+            if bool(am) != True:
+                continue
+            
             ll_scc_min              = logprior_scope_angle_change(scope_angle_change=0.0,
                                                               mean_change=mean_change,
                                                               sigma=sigma,

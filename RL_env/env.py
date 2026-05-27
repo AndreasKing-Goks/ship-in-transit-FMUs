@@ -669,7 +669,8 @@ class EBASTv2Env(gym.Env):
                                    self.n_ts_iw , self.nearest_dist_dict,
                                    self.remaining_requests_bound,
                                    self.max_scope_angles, IW_coordinates,
-                                   scope_angles, prev_scope_angles)
+                                   scope_angles, prev_scope_angles,
+                                   action_masks)
         reward                  = compute_reward(self._denormalize_observation(observation), args)     # Use denormalized observation
         
         # Assign the currently sampled scope angle to the previous scope angle holder variable
