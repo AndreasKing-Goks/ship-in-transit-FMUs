@@ -31,6 +31,12 @@ This setup is sufficient to run the simulator immediately. No additional install
 ### Enabling animation visualization
 This simulator also supports animation visualization. However it requires `FFmpeg` module to **save** the animation as a file with video extension. Specifically on Windows, please refer to this [WikiHow](https://www.wikihow.com/Install-FFmpeg-on-Windows) page for the `FFmpeg` installation guide.
 
+### Traffic Generator
+We also use `traffic generator` as a tool for generating a structured set of encounters for verifying automatic collision and grounding avoidance systems. This works is developed by DNV and, the original work can be found in *dnv-opensource* repo, [here](https://github.com/dnv-opensource/ship-traffic-generator.git). To install `traffic generator`, run this command in your terminal:
+```bash
+pip install trafficgen
+```
+
 ## Dependencies for Adaptive Stress Testing (Optional)
 
 Only when you care about doing reinforcement learning-based process. Recommended to do these steps in order.
@@ -75,12 +81,6 @@ pip3 uninstall torch torchvision
  This model is developed on Windows OS, using CUDA 12.6-compliant NVIDA GPU. Install this package by running:
 ```bash
 pip3 install torch torchvision --index-url https://download.pytorch.org/whl/cu126
-```
-
-### Traffic Generator
-We also use `traffic generator` as a tool for generating a structured set of encounters for verifying automatic collision and grounding avoidance systems. This works is developed by DNV and, the original work can be found in *dnv-opensource* repo, [here](https://github.com/dnv-opensource/ship-traffic-generator.git). To install `traffic generator`, run this command in your terminal:
-```bash
-pip install trafficgen
 ```
 
 ---
@@ -333,7 +333,7 @@ The **map import system** is designed to integrate OSM-based geographic data wit
    - **Docks**: Show dock
    - **Harbour**: Show harbour
 
-## 3. Delayed Start
+## 3. Delayed Start (Inactive Ship)
 The **Delayed Start** mechanism allows a target ship to begin its simulation **at a time later than `t = 0`**. This is useful when modeling scenarios where vessels **enter the simulation domain after the simulation has already started**, such as:
 -   ships entering a traffic lane later
 -   encounter scenarios generated during optimization
@@ -378,6 +378,8 @@ Conceptually:
     else:
         apply real inputs to ship FMUs
 
+Consequently, the same protocol is applied when a ship reaches its final waypoint. Upon reaching the end waypoint, **the simulator masks all actuating forces applied to the ship asset**, causing the vessel to gradually decelerate and eventually come to a stop.
+
 | No Delayed Start                                       | Delayed Start                                  |
 |--------------------------------------------------------|------------------------------------------------|
 | ![non_delayed_start](0_docs/ani/non_delayed_start.gif) | ![delayed_start](0_docs/ani/delayed_start.gif) |
@@ -396,7 +398,7 @@ As a result, even though the FMUs are stepped, the ship **remains effectively in
 The masking protocol is implemented through the helper function:
 
 ```python
-get_masked_input_val_for_delayed_ship()
+get_masked_input_val_for_inactive_ship()
 ```
 
 This function determines the appropriate masked input values that should be applied to each FMU input variable when the ship is still in its delayed start phase. Once the simulation time exceeds the delayed start threshold, the masking is removed and the FMUs begin receiving their normal inputs, allowing the ship to evolve dynamically within the simulation. 
@@ -707,3 +709,101 @@ config, spawn_requests = prepare_config_and_spawn_requests_with_traffic_gen(
     encounter_settings_path=encounter_settings_path,
 )
 ```
+
+### Spawn Request Bank
+
+The **Spawn Request Bank** is a pre-generated collection of encounter scenarios intended primarily for **EB-ASTv2**, but can also be used for other purposes as well. It provides a fixed repository of spawn requests that can be reused across experiments, enabling deterministic case selection, random sampling, and consistent benchmarking.
+
+The bank is serialized as a Python **pickle (`.pkl`) file** and can be loaded using:
+
+```python
+spawn_requests_bank = load_spawn_requests_bank_path(
+    spawn_requests_bank_path
+)
+```
+
+A new bank can be generated using:
+
+```python
+spawn_requests_bank_path = generate_spawn_request_bank(
+    ROOT=ROOT,
+    config_path=config_path,
+    encounter_settings_path=encounter_settings_path,
+    spawn_requests_bank_path=spawn_requests_bank_path,
+    n_cases=100,
+    training_case_ratio=0.8,
+    overwrite=False
+)
+```
+
+During generation, valid encounter scenarios are repeatedly produced via `get_spawn_requests(...)` until the requested number of cases (`n_cases`) has been collected. Each generated case is assigned a unique `case_id` and stored in the bank.
+
+#### Data Structure
+
+The loaded spawn request bank is a dictionary with the following structure:
+
+```python
+{
+    "path": str,
+    "n_cases": int,
+    "cases": list,
+    "north_bound": [float, float],
+    "east_bound": [float, float],
+    "rounded_north_bound": [float, float],
+    "rounded_east_bound": [float, float],
+
+    # Optional
+    "start_eval_case_id": int,
+}
+```
+
+| Field | Description |
+|---------|-------------|
+| `path` | Relative path to the bank file. |
+| `n_cases` | Total number of generated cases. |
+| `cases` | List containing all generated encounter cases. |
+| `north_bound` | Minimum and maximum north coordinates across all generated routes. |
+| `east_bound` | Minimum and maximum east coordinates across all generated routes. |
+| `rounded_north_bound` | Rounded version of `north_bound`, useful for plotting and visualization. |
+| `rounded_east_bound` | Rounded version of `east_bound`, useful for plotting and visualization. |
+| `start_eval_case_id` | Optional split index separating training and evaluation cases. Present only when `training_case_ratio` is specified. |
+
+Each element of `cases` has the structure:
+
+```python
+{
+    "case_id": int,
+    "spawn_requests": dict,
+    "own_ship_initial": dict,
+    "encounters": dict,
+}
+```
+
+| Field | Description |
+|---------|-------------|
+| `case_id` | Unique identifier for the generated scenario. |
+| `spawn_requests` | Dictionary containing vessel spawn requests generated for the scenario. |
+| `own_ship_initial` | Initial state of the own ship. |
+| `encounters` | Encounter configuration and metadata associated with the scenario. |
+
+When `training_case_ratio` is provided, the bank additionally stores:
+
+```python
+start_eval_case_id
+```
+
+which defines the first evaluation case. Consequently:
+
+```text
+cases[0:start_eval_case_id]
+```
+
+correspond to training cases, while
+
+```text
+cases[start_eval_case_id:]
+```
+
+correspond to evaluation cases.
+
+The Spawn Request Bank allows users to access specific encounter cases or randomly select from a fixed scenario pool while maintaining reproducibility across experiments.
