@@ -12,6 +12,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
 from orchestrator.sit_cosim import ShipInTransitCoSimulation
+from orchestrator.scenario_config import load_base_config
 
 # =========================
 # Load the Configuration
@@ -21,14 +22,13 @@ import yaml
 ## Get the config path
 config_path = ROOT / "test_run" / "singapore_strait" / "singapore_strait.yaml"
 
-# Get the configs
-with config_path.open("r", encoding="utf-8") as f:
-    config = yaml.safe_load(f)
+## Get the configs
+config      = load_base_config(config_path)
 
 # =========================
 # Spawn Requests
 # =========================
-# Spawn requests (Singapore Strait)
+# Spawn requests (Singapore Strait)  
 own_ship = {
     "start_time"        : 0.0,
     "speed_setpoints"   : [0, 6, 9, 9, 8, 8, 7, 7]
@@ -56,7 +56,13 @@ spawn_requests = {
 # Instantiate Co-simulation Wrapper
 # =========================
 # Instantiate
-instance = ShipInTransitCoSimulation(config=config, ROOT=ROOT, spawn_requests=spawn_requests)
+instance = ShipInTransitCoSimulation(config=config, ROOT=ROOT, 
+                                     spawn_requests=spawn_requests,
+                                     skip_map_evaluation=True)
+# WARNING!
+# Setting "skip_map_evaluation" to False enables grounding and outside_map_horizon checking, 
+# however this will increase the runtime by A LOT. As default, the value is set to True. 
+# Set the value to False when you need it: you WILL know it when you really need it!
 
 # =========================
 # Simulate

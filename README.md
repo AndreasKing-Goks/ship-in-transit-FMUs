@@ -31,9 +31,22 @@ This setup is sufficient to run the simulator immediately. No additional install
 ### Enabling animation visualization
 This simulator also supports animation visualization. However it requires `FFmpeg` module to **save** the animation as a file with video extension. Specifically on Windows, please refer to this [WikiHow](https://www.wikihow.com/Install-FFmpeg-on-Windows) page for the `FFmpeg` installation guide.
 
+### Traffic Generator
+We also use `traffic generator` as a tool for generating a structured set of encounters for verifying automatic collision and grounding avoidance systems. This works is developed by DNV and, the original work can be found in *dnv-opensource* repo, [here](https://github.com/dnv-opensource/ship-traffic-generator.git). To install `traffic generator`, run this command in your terminal:
+```bash
+pip install trafficgen
+```
+
 ## Dependencies for Adaptive Stress Testing (Optional)
 
 Only when you care about doing reinforcement learning-based process. Recommended to do these steps in order.
+
+### Scipy
+`SciPy` is used specifically for Adaptive Stress Testing algorithm because `SciPy` includes a probability distribution `Truncated Normal` that is used for the reward function computation. Run this command to install the package:
+
+```bash
+pip install scipy
+```
 
 ### Gymnasium
 First, we need to install `gymnasium` to define the RL observation and action space, and wraps our custom RL-environment wrapper to comply with `stable-baselines3` package. Install this package by running:
@@ -42,9 +55,9 @@ pip install gymnasium
 ```
 
 ### Stable-Baselines 3
-We also use `stable-baselines3`, which is a `pytorch`-compliant version for RL algorithms implementation. This package will be used as the core for our AST algorithm. Install this package by running:
+We also use `stable-baselines3`, which is a `pytorch`-compliant version for RL algorithms implementation. We will also use `sb3-contrib` for the Recurrect PPO implementation method. This package will be used as the core for our AST algorithm. Install this package by running:
 ```bash
-pip install 'stable-baselines3[extra]'
+pip install stable-baselines3 sb3-contrib
 ```
 To view the training process, `stable-baselines3` uses `tensorboard` using the `events.out.tfevents.*` file stored inside `<log_path>\tb`, commonly `trained_model\AST-train*\tb`. If not installed, we first need to install `tensorboard` by running:
 ```bash
@@ -126,7 +139,7 @@ where the initial conditions must vary between simulation runs.
 
 
 ## 4. Instantiate the Co-Simulation Orchestrator
-Create the main simulator instance using `ShipInTransitCosimulation`. Direct link to the script is [here](orchestrator/sit_cosim.py). The detailed behavior of the `ShipInTransitCosimulation` is documented [here](orchestrator/README.md).  This class acts as the **central orchestrator** responsible for:
+Create the main simulator instance using `ShipInTransitCosimulation`. Direct link to the script is [here](orchestrator/sit_cosim.py). The detailed behavior of the `ShipInTransitCosimulation` class is documented [here](orchestrator/README.md).  This class acts as the **central orchestrator** responsible for:
 -   initializing ship subsystems
 -   coordinating FMU components
 -   managing simulation time progression
@@ -141,9 +154,26 @@ To execute a single simulation run
     
 The simulation runs until the configured stop condition is reached.
 
+## 6. Custom Simulation Run
+You could also do a custom simulation run instead of running `instance.Simulate()`. Below is the rough skecth of it:
 
-## 6. Visualize the Results
-After the simulation completes, several visualization tools areavailable.
+```python
+while instance.time <= instance.stopTime:
+
+    ## <<< INSERT LOGIC HERE
+
+    instance.step()
+
+    ## <<< OR INSERT LOGIC HERE
+
+    if not instance.stop:
+        instance.time += instance.stepSize
+    else:
+        break
+```
+
+## 7. Visualize the Results
+After the simulation completes, several visualization tools are available.
 
 ### Fleet Animation
 To generate an animated playback of ship motion run 
@@ -182,7 +212,40 @@ The typical process for running the simulator:
 ---
 
 # Ship in Transit Co-simulation Features
-## 1. Importing Route and Map from Open Street Map
+## 1. Ship Condition Evaluation
+
+During simulation, ship conditions are continuously evaluated using the `evaluate_ship_condition()` method implemented in the `ShipInTransitCoSimulation` class. The`evaluate_ship_condition()` calls condition checking function `orchestrator/check_condition.py` to asses the condition, then outputs the boolean flag according to these assesments.
+
+These conditions are used to detect important events that occur during simulation runtime. Some of these conditions are classified as **termination conditions**, meaning that when triggered, the simulation will **stop**.
+
+
+### Condition Overview
+
+| Condition Name        | Description | Evaluation Function (Inputs) | Termination |
+|----------------------|------------|------------------------------|-------------|
+| `grounding` | When a circular region based on `ship_length` around the ship position intersects with any land polygon in the map | `check_condition.is_grounding(land_poly, pos, ship_length)` | `True` (all ships) |
+| `outside_horizon` | When a circular region based on `ship_length` around the ship position intersects with the map frame boundary | `check_condition.is_ship_outside_horizon(frame_poly, pos, ship_length)` | `True` (Own Ship), `False` (Target Ships) |
+| `navigational_failure` | Triggered when the ship remains in a `navigational_warning` state for a certain time. Warning occurs when *cross-track error* exceeds threshold. Timer resets if ship recovers | `check_condition.is_ship_navigation_warning(e_ct, e_tol)` | `True` (all ships) |
+| `reaches_end_waypoint` | When the ship enters the *Radius of Acceptance (RoA)* of the final waypoint | Implemented inside `MISSION_MANAGER` `FMU` | `True` (Own Ship), `False` (Target Ships) |
+| `colav_active` | Activated when another ship is within proximity of a ship equipped with COLAV | Implemented inside `COLAV` `FMU` | `False` (all ships) |
+| `collision` | When distance between two ships is smaller than the minimum allowed distance | `check_condition.is_ship_collision(own_pos, tar_pos, minimum_ship_distance)` | `True` (all ships) |
+
+> ⚠️ **MAP EVALUATION IS COMPUTATIONALLY HEAVY!**  
+>
+> Checking `grounding` and `outside_horizon` is computationally heavy because it involves geometric intersection checks with `Shapely` polygon data from map files. Disable this process by setting `skip_map_evaluation=True` when instantiating the simulation if you are confident that ship assets will not run aground. This is already the default behavior. **You will know it when you really need it!**
+
+### Example
+
+```python
+instance = ShipInTransitCoSimulation(
+    config=config,
+    ROOT=ROOT,
+    spawn_requests=spawn_requests,
+    skip_map_evaluation=True            # <- Set to False if you want to enable map evaluation process!
+)
+```
+
+## 2. Importing Route and Map from Open Street Map
 
 The repository provides utilities for importing and visualizing **real-world maps** from [OpenStreetMap (OSM)](https://www.openstreetmap.org/). These are primarily used to define simulation areas and plan ship routes within realistic maritime environments.
 
@@ -270,7 +333,7 @@ The **map import system** is designed to integrate OSM-based geographic data wit
    - **Docks**: Show dock
    - **Harbour**: Show harbour
 
-## 2. Delayed Start
+## 3. Delayed Start (Inactive Ship)
 The **Delayed Start** mechanism allows a target ship to begin its simulation **at a time later than `t = 0`**. This is useful when modeling scenarios where vessels **enter the simulation domain after the simulation has already started**, such as:
 -   ships entering a traffic lane later
 -   encounter scenarios generated during optimization
@@ -315,9 +378,12 @@ Conceptually:
     else:
         apply real inputs to ship FMUs
 
+Consequently, the same protocol is applied when a ship reaches its final waypoint. Upon reaching the end waypoint, **the simulator masks all actuating forces applied to the ship asset**, causing the vessel to gradually decelerate and eventually come to a stop.
+
 | No Delayed Start                                       | Delayed Start                                  |
 |--------------------------------------------------------|------------------------------------------------|
 | ![non_delayed_start](0_docs/ani/non_delayed_start.gif) | ![delayed_start](0_docs/ani/delayed_start.gif) |
+
 
 ### Masking Behavior
 The masking typically enforces conditions such as:
@@ -331,12 +397,413 @@ As a result, even though the FMUs are stepped, the ship **remains effectively in
 ### Implementation
 The masking protocol is implemented through the helper function:
 
-    get_masked_input_val_for_delayed_ship()
+```python
+get_masked_input_val_for_inactive_ship()
+```
 
-This function determines the appropriate masked input values that should be applied to each FMU input variable when the ship is still in its delayed start phase.
+This function determines the appropriate masked input values that should be applied to each FMU input variable when the ship is still in its delayed start phase. Once the simulation time exceeds the delayed start threshold, the masking is removed and the FMUs begin receiving their normal inputs, allowing the ship to evolve dynamically within the simulation. 
 
-Once the simulation time exceeds the delayed start threshold, the masking is removed and the FMUs begin receiving their normal inputs,
-allowing the ship to evolve dynamically within the simulation. 
+## 4. Spawn Requests
 
-## 3. FMU Reset
-TBD
+In some scenarios, a static YAML configuration is too limiting, especially when using episodic optimization, reinforcement learning, or other dynamic initialization strategies. To address this, the **Spawn Requests** mechanism allows you to override ship initialization programmatically.
+
+### How It Works
+
+After the YAML configuration is parsed, the simulation configuration dictionary is **overwritten** using a `spawn_requests` dictionary. This removes the need to define spawn and route fields in YAML.
+
+Each ship is defined by a dictionary of parameters:
+
+```python
+spawn_requests = {
+    "OS0": {
+        "start_time": float,
+        "north": list[float],                       # optional
+        "east": list[float],                        # optional
+        "yaw_angle_deg": float,                     # optional
+        "speed_setpoints": list[float] or float
+    },
+    "TS1": {
+        ...
+    }
+}
+```
+
+These spawn requests are internally handled by `AddShipSpawn` and `GetShipSpawn` method within the `ShipInTransitCoSimulation` class.
+
+### Important Notes
+
+- **Missing position or heading**
+  - If `north`, `east`, or `yaw_angle_deg` are not provided:
+    - The ship will spawn at the *first waypoint*
+    - Heading is automatically computed from *waypoint 1 – waypoint 2*
+
+- **Initial speed behavior**
+  - The **first entry** in `speed_setpoints` is used as initial forward speed
+
+- **Single value speed input**
+  - If `speed_setpoints` is a single float:
+    - It is automatically expanded into a list matching `north` and `east` lists.
+    - The first value is forced to 0
+  - If you need a specific initial speed, provide a full list when setting the `speed_setpoints`
+
+### Example: Minimal Spawn Request Setup
+
+```python
+own_ship = {
+    "start_time": 0.0,
+    "speed_setpoints": [0, 6, 9, 9, 8, 8, 7, 7]
+}
+
+target_ship_1 = {
+    "start_time": 250.0,
+    "speed_setpoints": [0, 5, 5, 6, 9, 9, 4, 2]
+}
+
+spawn_requests = {
+    "OS0": own_ship,
+    "TS1": target_ship_1,
+}
+```
+
+### Simulation Instantiation
+
+```python	
+instance = ShipInTransitCoSimulation(
+    config=config,
+    ROOT=ROOT,
+    spawn_requests=spawn_requests,
+    skip_map_evaluation=True
+)
+```
+
+### When to Use Spawn Requests
+
+Use this approach when:
+
+- You need dynamic scenarios
+- Running batch simulations
+- Integrating with AI or algorithms
+- Avoiding rigid YAML
+
+## 5. Ship Traffic Generator
+
+**Ship Traffic Generator** (STG) is a tool developed by DNV to generate a structured set of encounter scenarios for verifying automatic collision and grounding avoidance systems. The original implementation can be found in https://github.com/dnv-opensource/ship-traffic-generator. The version implemented in this simulator is simplified to be compatible with the Ship in Transit Co-simulation algorithm.
+
+![Animation](0_docs/ani/ship_traffic_generator.gif)
+
+Special thanks to **Melih Akdağ** (melih.akdag@dnv.com) for providing implementation examples.
+
+> ⚠️ **NOT THOROUGHLY TESTED!**  
+>
+> This feature is still unstable and needs more improvement. At the moment, only works with simulation cases without OSM map.
+
+### How It Works
+
+Using the function:
+
+```python
+prepare_config_and_spawn_requests_with_traffic_gen()
+```
+
+located in:
+
+```text
+orchestrator/scenario_config.py
+```
+
+we generate two outputs:
+
+- `config`
+- `spawn_requests`
+
+These are the fundamental inputs required by `ShipInTransitCoSimulation`.
+
+#### Workflow Comparison
+
+**Before:**
+
+```text
+spawn_requests + config -> simulation
+```
+
+**Now:**
+
+```text
+STG -> spawn_requests (encounter scenario)
+spawn_requests + config -> simulation
+```
+
+This enables automatic generation of encounter scenarios instead of manually crafting `spawn_requests`.
+
+### Important Notes
+
+Because spawn requests are generated automatically, the config YAML does **not** need to include:
+
+- `route_filename`
+- `route`
+- `spawn`
+
+For the Own Ship, the following fields can optionally be specified:
+
+- `sogMax`
+- `mmsi`
+- `shipType`
+
+If these fields are not specified, default values will be used.
+
+Please consult [`config/README.md`](config/README.md) for more details on the required Ship Traffic Generator config YAML fields.
+
+### Function Inputs
+
+`prepare_config_and_spawn_requests_with_traffic_gen()` requires four inputs:
+
+a. `own_ship_initial`
+b. `encounters`
+c. `config_path`
+d. `encounter_settings_path`
+
+#### a. `own_ship_initial`
+
+`own_ship_initial` defines the initial condition of the Own Ship.
+
+In this simulator, the Own Ship is always the object of interest, or the system under stress, where the testing revolves around the Own Ship.
+
+```python
+own_ship_initial = {
+    "position": {
+        "north": 0.0,
+        "east": 0.0,
+    },
+    "sog": 10.0,    # m/s
+    "cog": 0.0,
+    "heading": 0.0,
+    "navStatus": "Under way using engine",
+}
+```
+
+##### Field Description
+
+| Field | Description |
+|---|---|
+| `position.north` | Initial north position of the Own Ship. |
+| `position.east` | Initial east position of the Own Ship. |
+| `sog` | Speed over ground in m/s. |
+| `cog` | Course over ground in degrees. |
+| `heading` | Ship heading in degrees. |
+| `navStatus` | Navigation status of the Own Ship. |
+
+##### Available `navStatus` Values
+
+- `"Under way using engine"`
+- `"At anchor"`
+- `"Not under command"`
+- `"Restricted maneuverability"`
+- `"Constrained by draft"`
+- `"Moored"`
+- `"Aground"`
+- `"Engaged in fishing"`
+- `"Under way sailing"`
+- `"Reserved for future use"`
+
+#### b. `encounters`
+
+`encounters` defines the type of encounter associated with each Target Ship.
+
+Example:
+
+```python
+encounters = {
+    "TS1": {
+        "desiredEncounterType": encounter_type_TS1,
+        "vectorTime": 25.0,
+        "beta": 2.0,
+        "relativeSpeed": 1.2,
+    },
+    "TS2": {
+        "desiredEncounterType": encounter_type_TS2,
+        "vectorTime": 25.0,
+        "beta": -3.0,
+        "relativeSpeed": 1.2,
+    },
+}
+```
+
+##### Available `desiredEncounterType` Values
+
+- `"head-on"`
+- `"overtaking-give-way"`
+- `"overtaking-stand-on"`
+- `"crossing-give-way"`
+- `"crossing-stand-on"`
+
+##### Encounter Parameter Description
+
+| Parameter | Description |
+|---|---|
+| `desiredEncounterType` | Type of encounter to generate for the Target Ship. |
+| `vectorTime` | Time in minutes for the situation to evolve. This is the time from the start of the situation until the Target Ship is within a specific range of the Own Ship. |
+| `beta` | Relative bearing between the Own Ship and the Target Ship, as seen from the Own Ship, in degrees. |
+| `relativeSpeed` | Relative speed between the Own Ship and the Target Ship, as seen from the Own Ship. A value of `1.2` means the Target Ship speed is 20% higher than the Own Ship speed. |
+
+#### c. `config_path`
+
+`config_path` is the path to the configuration YAML file.
+
+#### d. `encounter_settings_path`
+
+`encounter_settings_path` is the path to `encounter_settings.json`. A default value is already provided to simplify this process. The recommended content for `encounter_settings.json` is:
+
+```json
+{
+    "classification": {
+        "theta13Criteria": 67.5,
+        "theta14Criteria": 5.0,
+        "theta15Criteria": 5.0,
+        "theta15": [112.5, 247.5]
+    },
+    "relativeSpeed": {
+        "overtakingStandOn": [1.5, 2.0],
+        "overtakingGiveWay": [0.25, 0.75],
+        "headOn": [0.5, 1.5],
+        "crossingGiveWay": [0.5, 1.5],
+        "crossingStandOn": [0.5, 1.5]
+    },
+    "vectorRange": [10.0, 30.0],
+    "situationLength": 30.0,
+    "maxMeetingDistance": 2.0,
+    "commonVector": 5.0,
+    "situationDevelopTime": 2.0,
+    "disableLandCheck": true
+}
+```
+
+### Example Usage
+
+```python
+from orchestrator.scenario_config import prepare_config_and_spawn_requests_with_traffic_gen
+
+own_ship_initial = {
+    "position": {
+        "north": 0.0,
+        "east": 0.0,
+    },
+    "sog": 10.0,
+    "cog": 0.0,
+    "heading": 0.0,
+    "navStatus": "Under way using engine",
+}
+
+encounters = {
+    "TS1": {
+        "desiredEncounterType": "head-on",
+        "vectorTime": 25.0,
+        "beta": 2.0,
+        "relativeSpeed": 1.2,
+    }
+}
+
+config, spawn_requests = prepare_config_and_spawn_requests_with_traffic_gen(
+    own_ship_initial=own_ship_initial,
+    encounters=encounters,
+    config_path=config_path,
+    encounter_settings_path=encounter_settings_path,
+)
+```
+
+### Spawn Request Bank
+
+The **Spawn Request Bank** is a pre-generated collection of encounter scenarios intended primarily for **EB-ASTv2**, but can also be used for other purposes as well. It provides a fixed repository of spawn requests that can be reused across experiments, enabling deterministic case selection, random sampling, and consistent benchmarking.
+
+The bank is serialized as a Python **pickle (`.pkl`) file** and can be loaded using:
+
+```python
+spawn_requests_bank = load_spawn_requests_bank_path(
+    spawn_requests_bank_path
+)
+```
+
+A new bank can be generated using:
+
+```python
+spawn_requests_bank_path = generate_spawn_request_bank(
+    ROOT=ROOT,
+    config_path=config_path,
+    encounter_settings_path=encounter_settings_path,
+    spawn_requests_bank_path=spawn_requests_bank_path,
+    n_cases=100,
+    training_case_ratio=0.8,
+    overwrite=False
+)
+```
+
+During generation, valid encounter scenarios are repeatedly produced via `get_spawn_requests(...)` until the requested number of cases (`n_cases`) has been collected. Each generated case is assigned a unique `case_id` and stored in the bank.
+
+#### Data Structure
+
+The loaded spawn request bank is a dictionary with the following structure:
+
+```python
+{
+    "path": str,
+    "n_cases": int,
+    "cases": list,
+    "north_bound": [float, float],
+    "east_bound": [float, float],
+    "rounded_north_bound": [float, float],
+    "rounded_east_bound": [float, float],
+
+    # Optional
+    "start_eval_case_id": int,
+}
+```
+
+| Field | Description |
+|---------|-------------|
+| `path` | Relative path to the bank file. |
+| `n_cases` | Total number of generated cases. |
+| `cases` | List containing all generated encounter cases. |
+| `north_bound` | Minimum and maximum north coordinates across all generated routes. |
+| `east_bound` | Minimum and maximum east coordinates across all generated routes. |
+| `rounded_north_bound` | Rounded version of `north_bound`, useful for plotting and visualization. |
+| `rounded_east_bound` | Rounded version of `east_bound`, useful for plotting and visualization. |
+| `start_eval_case_id` | Optional split index separating training and evaluation cases. Present only when `training_case_ratio` is specified. |
+
+Each element of `cases` has the structure:
+
+```python
+{
+    "case_id": int,
+    "spawn_requests": dict,
+    "own_ship_initial": dict,
+    "encounters": dict,
+}
+```
+
+| Field | Description |
+|---------|-------------|
+| `case_id` | Unique identifier for the generated scenario. |
+| `spawn_requests` | Dictionary containing vessel spawn requests generated for the scenario. |
+| `own_ship_initial` | Initial state of the own ship. |
+| `encounters` | Encounter configuration and metadata associated with the scenario. |
+
+When `training_case_ratio` is provided, the bank additionally stores:
+
+```python
+start_eval_case_id
+```
+
+which defines the first evaluation case. Consequently:
+
+```text
+cases[0:start_eval_case_id]
+```
+
+correspond to training cases, while
+
+```text
+cases[start_eval_case_id:]
+```
+
+correspond to evaluation cases.
+
+The Spawn Request Bank allows users to access specific encounter cases or randomly select from a fixed scenario pool while maintaining reproducibility across experiments.

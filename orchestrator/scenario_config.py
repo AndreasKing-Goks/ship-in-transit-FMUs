@@ -1,0 +1,698 @@
+"""Scenario configuration: generic helpers for direct-spawn and trafficgen target-ship setups."""
+
+import copy
+import json
+import math
+import tempfile
+import random
+import yaml
+import numpy as np
+from pathlib import Path
+import pickle
+
+# trafficgen imports are optional — only required for the trafficgen approach
+try:
+    from trafficgen.ship_traffic_generator import generate_traffic_situations
+    from trafficgen.marine_system_simulator import llh2flat, flat2llh
+    from trafficgen.utils import knot_2_m_pr_s
+    _HAS_TRAFFICGEN = True
+except ImportError:
+    _HAS_TRAFFICGEN = False
+
+# Shared helpers
+def load_base_config(config_path):
+    """Load a baseline YAML scenario config."""
+    with Path(config_path).open("r", encoding="utf-8") as f:
+        return yaml.safe_load(f)
+
+
+def get_target_ship_ids(config):
+    """Return the list of target ship IDs from the config (everything except OS*)."""
+    return [s["id"] for s in config["ships"] if not s["id"].startswith("OS")]
+
+def load_encounter_settings(encounter_settings_path):
+    """Load a encounter settings json file."""
+    with Path(encounter_settings_path).open("r", encoding="utf-8") as f:
+        return json.load(f)
+
+# Direct-spawn approach
+def apply_trial_parameters_direct(config, parameterization, target_ship_ids):
+    """Apply Ax trial parameters to all target-ship spawns and routes (direct spawn)."""
+    for ts_id in target_ship_ids:
+        prefix = ts_id.lower()
+        ts_cfg = next(ship for ship in config["ships"] if ship["id"] == ts_id)
+
+        spawn_north = float(parameterization[f"{prefix}_spawn_north"])
+        spawn_east = float(parameterization[f"{prefix}_spawn_east"])
+        spawn_yaw = float(parameterization[f"{prefix}_spawn_yaw_angle_deg"])
+        spawn_speed = float(parameterization[f"{prefix}_spawn_forward_speed"])
+        wp_count = int(parameterization[f"{prefix}_wp_count"])
+
+        ts_cfg["spawn"]["north"] = spawn_north
+        ts_cfg["spawn"]["east"] = spawn_east
+        ts_cfg["spawn"]["yaw_angle_deg"] = spawn_yaw
+        ts_cfg["spawn"]["forward_speed"] = spawn_speed
+
+        route_north = [spawn_north]
+        route_east = [spawn_east]
+        route_speed = []
+
+        for i in range(1, wp_count + 1):
+            route_north.append(float(parameterization[f"{prefix}_wp_{i}_north"]))
+            route_east.append(float(parameterization[f"{prefix}_wp_{i}_east"]))
+            route_speed.append(float(parameterization[f"{prefix}_leg_speed_{i}"]))
+
+        route_north.append(float(parameterization[f"{prefix}_end_north"]))
+        route_east.append(float(parameterization[f"{prefix}_end_east"]))
+        route_speed.append(float(parameterization[f"{prefix}_leg_speed_{wp_count + 1}"]))
+
+        ts_cfg["route"] = {
+            "north": route_north,
+            "east": route_east,
+            "speed": route_speed,
+        }
+
+    return config
+
+
+def prepare_trial_config_direct(parameterization, config_path, target_ship_ids):
+    """Load config → deep-copy → apply direct-spawn trial parameters."""
+    config = copy.deepcopy(load_base_config(config_path))
+    apply_trial_parameters_direct(config, parameterization, target_ship_ids)
+    return config
+
+
+# Trafficgen approach
+ENCOUNTER_TYPE_TO_KEY = {
+    "head-on":             "headOn",
+    "overtaking-stand-on": "overtakingStandOn",
+    "overtaking-give-way": "overtakingGiveWay",
+    "crossing-give-way":   "crossingGiveWay",
+    "crossing-stand-on":   "crossingStandOn",
+}
+
+
+def _require_trafficgen():
+    if not _HAS_TRAFFICGEN:
+        raise ImportError(
+            "trafficgen is not installed. Install it to use the trafficgen approach."
+        )
+
+
+def load_encounter_settings(settings_path):
+    """Load the encounter settings JSON."""
+    with Path(settings_path).open("r", encoding="utf-8") as f:
+        return json.load(f)
+    
+
+def load_spawn_requests_bank_path(spawn_requests_bank_path):
+    """Load the spawn requests bank pickle file."""
+    with open(spawn_requests_bank_path, "rb") as f:
+        return pickle.load(f)
+
+
+def build_situation_input_dict(encounters, own_ship_initial):
+    """
+        Build a trafficgen situation-input dict from encounter parameters.
+    """
+    enc_list = []
+
+    for ts_id, enc in encounters.items():
+        enc_list.append({
+            "desiredEncounterType": enc["desiredEncounterType"],
+            "relativeSpeed": float(enc["relativeSpeed"]),
+            "vectorTime": float(enc["vectorTime"]),
+            # optional:
+            **({"beta": float(enc["beta"])} if "beta" in enc else {})
+        })
+
+    return {
+        "title": "GENERATED_ENCOUNTER",
+        "description": f"Generated encounter ({len(enc_list)} TS)",
+        "ownShip": {"initial": own_ship_initial},
+        "encounters": enc_list,
+    }
+    
+def generate_traffic_gen_situation(
+    encounters,
+    own_ship_initial,
+    own_ship_desc,
+    target_ships_desc,
+    encounter_settings_path,
+    max_retries=25,
+):
+    """Call trafficgen to produce a TrafficSituation from encounter parameters.
+
+    trafficgen uses internal randomness (random future position for the target
+    ship, random beta when unset, etc.).  The same parameters can therefore
+    fail on one draw but succeed on the next.  We retry up to *max_retries*
+    times before giving up.
+    """
+    _require_trafficgen()
+    
+    for attempt in range (1, max_retries + 1):
+    
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_dir = Path(tmp)
+
+            situations_dir = tmp_dir / "situations"
+            target_dir = tmp_dir / "target_ships"
+            situations_dir.mkdir()
+            target_dir.mkdir()
+
+            own_ship_file = tmp_dir / "own_ship.json"
+
+            situation_file = situations_dir / "situation.json"
+            situation_data = build_situation_input_dict(encounters, own_ship_initial)
+
+            with open(situation_file, "w", encoding="utf-8") as f:
+                json.dump(situation_data, f, indent=4)
+
+            with open(own_ship_file, "w", encoding="utf-8") as f:
+                json.dump(own_ship_desc, f, indent=4)
+
+            for i, target_desc in enumerate(target_ships_desc):
+                target_file = target_dir / f"target_ship_{i}.json"
+                with open(target_file, "w", encoding="utf-8") as f:
+                    json.dump(target_desc, f, indent=4)
+
+            situations = generate_traffic_situations(
+                situations_data=situations_dir,
+                own_ship_data=own_ship_file,
+                target_ships_data=target_dir,
+                settings_data=Path(encounter_settings_path),
+            )
+            
+        if not situations:
+            raise RuntimeError("trafficgen produced no traffic situations")
+        
+        situation = situations[0]
+
+        num_encounters = len(encounters)
+        if situation.target_ships and len(situation.target_ships) >= num_encounters:
+            return situation
+        
+        if attempt < max_retries:
+            print(
+                f"  trafficgen attempt {attempt}/{max_retries} produced "
+                f"{len(situation.target_ships) if situation.target_ships else 0}"
+                f"/{num_encounters} target ships — retrying..."
+            )
+
+    raise RuntimeError(
+        f"trafficgen failed after {max_retries} attempts. "
+        f"Could not generate {len(encounters)} target ships."
+    )
+
+def get_own_ship_description(own_ship_config):
+    # Get the own ship descriptions
+    length      = own_ship_config["fmu_params"]["SHIP_MODEL"]["length_of_ship"]
+    width       = own_ship_config["fmu_params"]["SHIP_MODEL"]["width_of_ship"]
+    height      = own_ship_config["fmu_params"]["SHIP_MODEL"]["front_above_water_height"]
+    
+    sogMax      = own_ship_config.get("sogMax", 13.0)       # If not specified, assume max speed of ground is 13 m/s
+    mmsi        = own_ship_config.get("mmsi", 100000001)    # If not specified, assume mmsi as 100000001
+    name        = own_ship_config.get("id")
+    shipType    = own_ship_config.get("shipType", "Cargo")  # If not specified, assume ship type as Cargo
+    
+    own_ship_desc       = {
+        "dimensions":
+            {
+                "length":length,
+                "width":width,
+                "height":height,
+            },
+        "sogMax":sogMax*1.94384449,   # Convert m/s to knot
+        "mmsi":mmsi,
+        "name":name,
+        "shipType":shipType
+    }
+    return own_ship_desc
+
+def get_target_ships_description(target_ship_configs):
+    target_ships_desc = []
+    
+    for ts_config in target_ship_configs:
+        length      = ts_config["fmu_params"]["SHIP_MODEL"]["length_of_ship"]
+        width       = ts_config["fmu_params"]["SHIP_MODEL"]["width_of_ship"]
+        height      = ts_config["fmu_params"]["SHIP_MODEL"]["front_above_water_height"]
+        shipType    = ts_config.get("shipType", "Cargo")  # If not specified, assume ship type as Cargo
+        sogMax      = ts_config.get("sogMax", 13.0)       # If not specified, assume max speed over ground is 13 m/s
+        
+        data = {
+            "dimensions":
+                {
+                    "length":length,
+                    "width":width,
+                    "height":height,
+                },
+            "sogMax":sogMax*1.94384449,   # Convert m/s to knot
+            "shipType":shipType
+            }
+        
+        target_ships_desc.append(data)
+    
+    return target_ships_desc
+
+def convert_own_ship_initial_ned_to_llh(own_ship_initial_ned, origin_lat_deg=58.763449, origin_lon_deg=10.490654):
+    """
+        Convert own ship initial (NED coordinates) to lat/lon radians and velocity unit from m/s to knot.
+    """
+    north   = float(own_ship_initial_ned["position"]["north"])
+    east    = float(own_ship_initial_ned["position"]["east"])
+    sog     = float(own_ship_initial_ned["sog"])
+
+    lat0_rad = math.radians(origin_lat_deg)
+    lon0_rad = math.radians(origin_lon_deg)
+
+    lat_rad, lon_rad, _ = flat2llh(
+        north,
+        east,
+        0.0,
+        lat0_rad,
+        lon0_rad,
+    )
+
+    own_ship_initial_llh = copy.deepcopy(own_ship_initial_ned)
+    own_ship_initial_llh["position"] = {
+        "lat": math.degrees(lat_rad),
+        "lon": math.degrees(lon_rad),
+    }
+    own_ship_initial_llh["sog"] = sog * 1.94384449  # Convert m/s to knot
+
+    return own_ship_initial_llh
+
+def convert_trafficgen_to_ned(traffic_situations, encounters):
+    """
+        Convert trafficgen output (lat/lon radians) to NED coordinates.
+    """
+    _require_trafficgen()
+    
+    situations_ned = {}
+    
+    ## Own Ship
+    # Get origin latitude and longitude
+    os_wp0 = traffic_situations.own_ship.waypoints[0]
+    lat_0 = os_wp0.position.lat                         # already radians
+    lon_0 = os_wp0.position.lon                         # already radians
+    
+    # Own Ship waypoints
+    os_wps = []
+    for wp in traffic_situations.own_ship.waypoints:
+        north, east, _ = llh2flat(
+            wp.position.lat,
+            wp.position.lon,
+            lat_0, lon_0,
+        )
+        sog_ms = (
+            wp.leg.sog
+            if (wp.leg is not None and wp.leg.sog is not None)
+            else 0.0
+        )
+        os_wps.append({
+            "north": float(north),
+            "east": float(east),
+            "speed_ms": float(sog_ms),
+        })
+    os_hdg_rad = (
+            float(traffic_situations.own_ship.initial.heading)
+            if (traffic_situations.own_ship.initial and traffic_situations.own_ship.initial.heading is not None)
+            else 0.0
+        )
+    
+    # Update the situation for Own Ship
+    os_situation            = {
+        "heading_deg": float(math.degrees(os_hdg_rad)),
+        "waypoints": os_wps,
+    }
+    situations_ned["OS0"]   = os_situation
+
+    ## Target Ships
+    # Initial index
+    idx     = 0
+    ts_ids  = list(encounters.keys())
+    for ts in traffic_situations.target_ships:
+        # Target Ships' waypoints
+        ts_wps = []
+        for wp in ts.waypoints:
+            north, east, _ = llh2flat(
+                wp.position.lat,
+                wp.position.lon,
+                lat_0, lon_0,
+            )
+            sog_ms = (
+                wp.leg.sog
+                if (wp.leg is not None and wp.leg.sog is not None)
+                else 0.0
+            )
+            ts_wps.append({
+                "north": float(north),
+                "east": float(east),
+                "speed_ms": float(sog_ms),
+            })
+        
+        # Target Ships' heading
+        ts_hdg_rad = (
+            float(ts.initial.heading)
+            if (ts.initial and ts.initial.heading is not None)
+            else 0.0
+        )
+        
+        # Compute the Target Ships' situation
+        ts_situation        = {
+            "heading_deg": float(math.degrees(ts_hdg_rad)),
+            "waypoints": ts_wps,
+        }
+        
+        # Increment the target ship index
+        ts_id               = ts_ids[idx]
+        idx                += 1
+        
+        # Update the situation based on the index
+        situations_ned[ts_id]   = ts_situation
+    
+    return situations_ned
+
+def apply_trial_parameters_trafficgen(situations_ned):
+    """Set ship asset spawn & route from trafficgen output + intermediate WPs."""
+    
+    # Initial containers
+    spawn_requests  = {}
+    
+    for ship_id in situations_ned.keys():
+        # Compute the spawn items
+        situation   = situations_ned[ship_id]
+
+        start       = situation["waypoints"][0]
+        end         = situation["waypoints"][-1]
+
+        route_north = [start["north"], end["north"]]
+        route_east  = [start["east"], end["east"]]
+        route_speed = [0.0, end["speed_ms"]]
+        # route_speed = [start["speed_ms"], end["speed_ms"]]
+        
+        # Get the spawn requests
+        spawn = {
+            "start_time": 0.0,
+            "north_route": route_north,
+            "east_route": route_east,
+            "yaw_angle_deg": situation["heading_deg"],
+            "speed_setpoint": route_speed
+        }
+        
+        # Update the spawn request
+        spawn_requests[ship_id]   = spawn
+
+    return spawn_requests
+
+def prepare_spawn_requests_with_traffic_gen(
+    own_ship_initial_ned,
+    encounters,
+    config_path,
+    encounter_settings_path,
+):
+    """Generate situation → convert to NED → populate config (end-to-end)."""
+    # First get the initial config
+    temp_config         = load_base_config(config_path)
+        
+    # Upack the config file
+    ship_configs        = temp_config["ships"]
+    own_ship_config     = ship_configs[0]
+    target_ship_configs = ship_configs[1:]
+    
+    # Get the own ship and target ships descriptions
+    own_ship_desc       = get_own_ship_description(own_ship_config)
+    target_ships_desc   = get_target_ships_description(target_ship_configs)
+    
+    # Convert the own ship initial information from NED to latitude-longitude
+    own_ship_initial    = convert_own_ship_initial_ned_to_llh(own_ship_initial_ned)
+    
+    # Get the situation and convert it again to NED situation
+    traffic_situations = generate_traffic_gen_situation(
+        encounters, own_ship_initial, own_ship_desc, target_ships_desc, encounter_settings_path,
+    )
+    situations_ned = convert_trafficgen_to_ned(traffic_situations, encounters)
+    
+    # Compute the config and spawn requests
+    spawn_requests      = apply_trial_parameters_trafficgen(situations_ned)
+    
+    return spawn_requests
+
+def sample_beta_and_rel_speed_given_encounter_settings(encounter_type, encounter_settings_path, margin=2.0, rng=None):
+    """
+        Sample relative bearing beta and realtive speed for the target ship 
+        encounter details given the desired enccounter_type
+    """
+    def uniform(low, high):
+        if rng is not None:
+            return rng.uniform(low, high)
+        return random.uniform(low, high)
+
+    def rand():
+        if rng is not None:
+            return rng.random()
+        return random.random()
+    
+    # Load encounters
+    encounter_settings = load_encounter_settings(encounter_settings_path)
+    
+    # Beta sampling
+    theta_params = encounter_settings.get("classification")
+    
+    theta13     = theta_params.get("theta13Criteria")
+    theta14     = theta_params.get("theta14Criteria")
+    theta15crit = theta_params.get("theta15Criteria")
+    theta15min  = theta_params.get("theta15")[0]
+    theta15max  = theta_params.get("theta15")[1]
+    
+    if encounter_type == "head-on":
+        beta = uniform(-theta14 + margin, theta14 - margin)
+
+    elif encounter_type == "overtaking-give-way":
+        beta = uniform(-theta13 + margin, theta13 - margin)
+
+    elif encounter_type == "overtaking-stand-on":
+        if rand() < 0.5:
+            beta = uniform(theta15min + margin, 180.0 - margin)
+        else:
+            beta = uniform(-180.0 + margin, -theta15min - margin)
+    elif encounter_type == "crossing-give-way": 
+        # Target on starboard side
+        if rng is not None: 
+            beta = uniform(theta15crit + margin, theta15min - margin) 
+        else: 
+            beta = uniform(theta15crit + margin, theta15min - margin) 
+    elif encounter_type == "crossing-stand-on": 
+        # Target on port side 
+        if rng is not None: 
+            beta = uniform(-theta15min + margin, -theta15crit - margin) 
+        else: 
+            beta = uniform(-theta15min + margin, -theta15crit - margin)
+    
+    else:
+        raise ValueError(f"Unknown encounter type: {encounter_type}")
+    
+    # Relative speed sampling
+    rel_speed_params    = encounter_settings.get("relativeSpeed")
+    
+    key_map = {
+        "head-on": "headOn",
+        "overtaking-give-way": "overtakingGiveWay",
+        "overtaking-stand-on": "overtakingStandOn",
+        "crossing-give-way": "crossingGiveWay",
+        "crossing-stand-on": "crossingStandOn",
+    }
+    
+    key = key_map[encounter_type]
+    low, high = rel_speed_params[key]
+    rel_speed = uniform(low, high)
+    
+    return beta, rel_speed
+
+def get_spawn_requests(config_path, 
+                       encounter_settings_path, 
+                       own_ship_initial=None):
+    
+    # Save the base configuration for the Ship in Transit Co-simulation
+    config_base     = load_base_config(config_path)
+    ship_configs    = config_base["ships"]
+
+    # Generate ship traffic generator's spawn requests
+    availableNavStatus      = [
+        "Under way using engine",
+        "At anchor",
+        "Not under command",
+        "Restricted maneuverability",
+        "Constrained by draft",
+        "Moored",
+        "Aground",
+        "Engaged in fishing",
+        "Under way sailing",
+        "Reserved for future use"
+    ]
+    availableEncounterTypes = [
+        "head-on", 
+        # "overtaking-give-way",
+        # "overtaking-stand-on",
+        "crossing-give-way",
+        "crossing-stand-on"
+    ]
+    
+    initial_own_ship_cog_and_heading    = np.arange(0.0, 360.0, 15.0)
+    os_init_heading                     = random.choice(initial_own_ship_cog_and_heading)
+    
+    if own_ship_initial is None:
+        own_ship_initial        = {
+            "position": {
+                "north": 0.0,
+                "east": 0.0,
+            },
+            "sog": 10.0,    # m/s
+            "cog": os_init_heading,
+            "heading": os_init_heading,
+            "navStatus": "Under way using engine",
+        }
+    
+    # Sample encounters
+    # vectorTime      = [15, 20, 25, 30, 35]
+    # vector_time     = random.choice(vectorTime)
+    vector_time     = 15
+    
+    # Generate encounter for target ships only
+    encounters      = {}
+    for ship_config in ship_configs[1:]:
+        # Ship ID
+        ship_id = ship_config["id"]
+        
+        # Sample encounter type, then sample relative bearing and relative speed based on it
+        encounter_type = random.choice(availableEncounterTypes)
+        beta, rel_speed = sample_beta_and_rel_speed_given_encounter_settings(encounter_type,
+                                                                             encounter_settings_path)
+        
+        encounter = {
+            "desiredEncounterType": encounter_type,
+            "vectorTime": vector_time,
+            "beta": beta,
+            "relativeSpeed": rel_speed,
+        }
+        
+        encounters[ship_id] = encounter
+    
+    # Get the config and spawn requests based on the Ship Traffic Generator
+    spawn_requests = prepare_spawn_requests_with_traffic_gen(own_ship_initial, 
+                                                             encounters, 
+                                                             config_path, 
+                                                             encounter_settings_path)
+    return spawn_requests, own_ship_initial, encounters
+
+def nice_bounds(bound, round_step=5000):
+        min_val = bound[0]
+        max_val = bound[1]
+
+        nice_min = math.floor(min_val / round_step) * round_step
+        nice_max = math.ceil(max_val / round_step) * round_step
+
+        return [nice_min, nice_max]
+
+def generate_spawn_request_bank(
+    ROOT,
+    config_path,
+    encounter_settings_path,
+    spawn_requests_bank_path,
+    n_cases=100,
+    training_case_ratio:float=None,
+    overwrite=False,
+    max_total_attempts=1000,
+    round_step=5000
+):
+    spawn_requests_bank_path = Path(spawn_requests_bank_path)
+    srb_relative_path        = spawn_requests_bank_path.relative_to(ROOT)
+
+    if spawn_requests_bank_path.exists() and not overwrite:
+        print(f"Spawn request bank already exists: {spawn_requests_bank_path}")
+        print("Skipping generation.")
+        return spawn_requests_bank_path
+
+    spawn_requests_bank_path.parent.mkdir(parents=True, exist_ok=True)
+
+    cases = []
+    total_attempts = 0
+
+    while len(cases) < n_cases and total_attempts < max_total_attempts:
+        total_attempts += 1
+
+        try:
+            spawn_requests, own_ship_initial, encounters = get_spawn_requests(
+                config_path=config_path,
+                encounter_settings_path=encounter_settings_path,
+            )
+
+            case = {
+                "case_id": len(cases),
+                "spawn_requests": spawn_requests,
+                "own_ship_initial": own_ship_initial,
+                "encounters": encounters,
+            }
+
+            cases.append(case)
+            print(f"Generated case {len(cases)}/{n_cases}")
+
+        except RuntimeError as e:
+            print(f"Bank generation attempt {total_attempts} failed: {e}")
+            continue
+
+    if len(cases) < n_cases:
+        raise RuntimeError(
+            f"Only generated {len(cases)}/{n_cases} cases "
+            f"after {total_attempts} attempts."
+        )
+
+    north_values    = []
+    east_values     = []
+    
+    for case in cases:
+        for req in case["spawn_requests"].values():
+            north_values.extend(req["north_route"])
+            east_values.extend(req["east_route"])
+    
+    # True bound
+    north_bound_min, north_bound_max = min(north_values), max(north_values)
+    east_bound_min, east_bound_max   = min(east_values), max(east_values)
+    
+    north_bound         = [north_bound_min, north_bound_max]
+    east_bound          = [east_bound_min, east_bound_max]
+    
+    # Rounded bound
+    rounded_north_bound = nice_bounds(north_bound, round_step=round_step)
+    rounded_east_bound  = nice_bounds(east_bound, round_step=round_step)
+
+    if training_case_ratio is not None:
+        n_train_cases       = math.ceil(len(cases) * training_case_ratio)
+        start_eval_case_id  = n_train_cases
+        
+        bank = {
+            "path":str(srb_relative_path),
+            "n_cases": len(cases),
+            "start_eval_case_id": start_eval_case_id,
+            "cases": cases,
+            "north_bound": north_bound,
+            "east_bound": east_bound,
+            "rounded_north_bound": rounded_north_bound,
+            "rounded_east_bound": rounded_east_bound,
+        }
+    else:
+        bank = {
+            "path":str(srb_relative_path),
+            "n_cases": len(cases),
+            "cases": cases,
+            "north_bound": north_bound,
+            "east_bound": east_bound,
+            "rounded_north_bound": rounded_north_bound,
+            "rounded_east_bound": rounded_east_bound,
+        }
+
+    with open(spawn_requests_bank_path, "wb") as f:
+        pickle.dump(bank, f)
+
+    print(f"Saved spawn request bank to: {spawn_requests_bank_path}")
+    return spawn_requests_bank_path
