@@ -237,14 +237,14 @@ def compute_reward(observation, args):
             reward_components["tar_ships_reaches_end_waypoint_rewards"].append(0.0)
         
         ### Non-termination rewards
-        ## Unpack the observation:
+        # Unpack the observation:
         own_ship_pos        = observation["own_ship_pos"]
         own_ship_speed      = observation["own_ship_forward_speed"]
         rel_tar_ships_pos   = observation["rel_tar_ships_pos"].reshape(n_ts, 3)
         tar_ships_speed     = observation["tar_ships_forward_speed"]
         remaining_requests  = observation["remaining_requests"]
         
-        ## Nearest distance reward when RoA
+        # Unpack own ship position
         own_north       = own_ship_pos[0]
         own_east        = own_ship_pos[1]
         
@@ -280,7 +280,7 @@ def compute_reward(observation, args):
             dist            = np.hypot(rel_tar_north, rel_tar_east)         
             roa_dist_list.append(dist)
         
-        # Get the nearest distance when RoA
+        ## Nearest distance reward when RoA
         rew_nd_roa          = np.mean([nearest_distance_reward_func(dist) for dist in roa_dist_list])
         reward             += rew_nd_roa
         reward_components["nearest_distance_roa_rewards"].append(rew_nd_roa)
@@ -294,7 +294,7 @@ def compute_reward(observation, args):
         reward                 += rew_iwp
         reward_components["scope_angle_request_done_rewards"].append(rew_iwp)
         
-        # Scope angle change log likelihood reward
+        ## Scope angle change log likelihood reward
         rews_scc                = []
         mean_change             = 0.0
         rew_coeff               = n_ts_iw        # Linearly dependent to the amount of ts_iw
@@ -327,7 +327,7 @@ def compute_reward(observation, args):
         reward                 += rew_scc
         reward_components["scope_angle_change_log_likelihood_rewards"].append(rew_scc) 
         
-        # Interception scope angle reward
+        ## Interception scope angle reward
         rews_isa            = []
         for idx, sc, r_cog in zip(ts_iw_idx, scope_angles, routes_cog_ned_deg):
             ts_idx              = idx - 1
@@ -339,7 +339,6 @@ def compute_reward(observation, args):
             pos_tar             = tar_ship_pos[:2]
             
             yaw_own             = own_ship_pos[2]
-            yaw_tar             = tar_ship_pos[2]
             
             vel_own             = own_ship_speed * np.array([np.cos(yaw_own), np.sin(yaw_own)])
             speed_tar           = tar_ship_speed
@@ -356,12 +355,6 @@ def compute_reward(observation, args):
                 
                 # Compute reward
                 rew_isa     = intercept_angle_reward_func(error)
-                
-                print(interception_angle_deg)
-                print(desired_angle_deg)
-                print(error)
-                print(rew_isa)
-                print("##")
                 
             else:
                 # No reward when no collision is forseeable

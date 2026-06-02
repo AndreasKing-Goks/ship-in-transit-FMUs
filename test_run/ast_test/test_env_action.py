@@ -56,19 +56,19 @@ env = EBASTv2Env(
 
 env.set_for_evaluation()
 
-obs, info   = env.reset(seed=251)
+obs, info   = env.reset(seed=250)
 
-# action_list = [[30,2500],
-#                [30,2000],
-#                [-30,2000],
-#                [-30,2000],
-#                [-30,1900]] # for 250
+action_list = [[30,2500],
+               [30,2000],
+               [-30,2000],
+               [-30,2000],
+               [-30,1900]] # for 250
 
-action_list = [[-20,3700],
-               [-20,2000],
-               [-20,2000],
-               [-20,2200],
-               [-20,2000]] # for 251
+# action_list = [[-20,3700],
+#                [-20,2000],
+#                [-20,2000],
+#                [-20,2200],
+#                [-20,2000]] # for 251
 
 n_sample = len(action_list)
 
@@ -108,7 +108,7 @@ env.instance.AnimateFleetTrajectory(
         margin_frac=0.08,
         equal_aspect=True,
         interval_ms=20,
-        frame_step=10,
+        frame_step=1,
         trail_len=50,
         plot_routes=True,
         plot_waypoints=True,
