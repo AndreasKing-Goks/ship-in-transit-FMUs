@@ -4,7 +4,8 @@ from RL_env.reward_designs import (RewardDesign1, RewardDesign2, RewardDesign3,
 import numpy as np
 from scipy.stats import truncnorm
 
-# Instantiate Reward Function 4 for nearest distance reward function
+# Instantiate Reward Design function
+intercept_angle_reward_func     = RewardDesign1(target=0, offset_param=500)
 iw_distance_to_os_reward_func   = RewardDesign2(target=1000, offset_param1=10000, offset_param2=10000000)
 nearest_distance_reward_func    = RewardDesign4(target=100, offset_param=15000000)
 
@@ -48,13 +49,90 @@ def logprior_scope_angle_change(
         scale=sigma
     )
     
+def find_collision_heading(pos_own, vel_own, pos_tar, speed_tar):
+    """
+    Find target heading that would make target collide with own ship.
+
+    pos_own   : [north, east]
+    vel_own   : [v_north, v_east]
+    pos_tar   : [north, east]
+    speed_tar : scalar target speed magnitude
+
+    Returns
+    -------
+    heading_rad : heading angle in radians, measured from north-east coordinate using atan2(east, north)
+    heading_deg : heading angle in degrees
+    t_collision : collision time
+    direction   : unit direction vector [north, east]
+    """
+
+    p_o = np.asarray(pos_own, dtype=float)
+    v_o = np.asarray(vel_own, dtype=float)
+    p_t = np.asarray(pos_tar, dtype=float)
+
+    # Relative position from target to own ship
+    r = p_o - p_t
+
+    # Quadratic coefficients
+    A = np.dot(v_o, v_o) - speed_tar**2
+    B = 2 * np.dot(r, v_o)
+    C = np.dot(r, r)
+
+    eps = 1e-12
+
+    times = []
+
+    # When A is close to zero, own ship velocity is close to the tar ship velocity
+    if abs(A) < eps:
+        # Linear case: B t + C = 0
+        if abs(B) < eps:
+            return None
+        t = -C / B
+        if t > 0:
+            times.append(t)
+    else:
+        disc = B**2 - 4*A*C
+
+        # If discriminant < 0, no feasible solution for t_collision
+        if disc < 0:
+            return None
+
+        sqrt_disc = np.sqrt(disc)
+
+        # All feasible solution
+        t1 = (-B + sqrt_disc) / (2*A)
+        t2 = (-B - sqrt_disc) / (2*A)
+
+        for t in [t1, t2]:
+            if t > 0:
+                times.append(t)
+    
+    # If A and B is both close to zero, no feasible solution for t_collision
+    if not times:
+        return None
+
+    # Usually choose the earliest future collision
+    t_collision = min(times)
+
+    # Required target velocity vector
+    vel_tar_required = (p_o + v_o * t_collision - p_t) / t_collision
+
+    # Unit heading direction
+    direction = vel_tar_required / np.linalg.norm(vel_tar_required)
+
+    # Heading angle: atan2(east, north)
+    heading_rad = np.arctan2(direction[1], direction[0])
+    heading_deg = np.degrees(heading_rad)
+
+    return heading_rad, heading_deg, t_collision, direction
+    
 def compute_reward(observation, args):
         """
             Compute reward after the environment transitions to the next state.
             Observation needs to be denormalized first
         """
         # Unpack args
-        (os_id, ts_id, 
+        (os_id, ts_id, ts_iw_idx,
          stop_info, n_ts,
          reward_components,
          skip_map_evaluation,
@@ -62,7 +140,7 @@ def compute_reward(observation, args):
          remaining_requests_bound,
          max_scope_angles, IW_coordinates,
          scope_angles, prev_scope_angles,
-         previous_action_masks) = args
+         previous_action_masks, routes_cog_ned_deg) = args
         
         # Initial reward signal
         reward      = 0.0
@@ -159,12 +237,14 @@ def compute_reward(observation, args):
             reward_components["tar_ships_reaches_end_waypoint_rewards"].append(0.0)
         
         ### Non-termination rewards
-        ## Unpack the observation:
+        # Unpack the observation:
         own_ship_pos        = observation["own_ship_pos"]
+        own_ship_speed      = observation["own_ship_forward_speed"]
         rel_tar_ships_pos   = observation["rel_tar_ships_pos"].reshape(n_ts, 3)
+        tar_ships_speed     = observation["tar_ships_forward_speed"]
         remaining_requests  = observation["remaining_requests"]
         
-        ## Nearest distance reward when RoA
+        # Unpack own ship position
         own_north       = own_ship_pos[0]
         own_east        = own_ship_pos[1]
         
@@ -200,7 +280,7 @@ def compute_reward(observation, args):
             dist            = np.hypot(rel_tar_north, rel_tar_east)         
             roa_dist_list.append(dist)
         
-        # Get the nearest distance when RoA
+        ## Nearest distance reward when RoA
         rew_nd_roa          = np.mean([nearest_distance_reward_func(dist) for dist in roa_dist_list])
         reward             += rew_nd_roa
         reward_components["nearest_distance_roa_rewards"].append(rew_nd_roa)
@@ -214,13 +294,12 @@ def compute_reward(observation, args):
         reward                 += rew_iwp
         reward_components["scope_angle_request_done_rewards"].append(rew_iwp)
         
-        # Scope angle change log likelihood reward
+        ## Scope angle change log likelihood reward
         rews_scc                = []
         mean_change             = 0.0
         rew_coeff               = n_ts_iw        # Linearly dependent to the amount of ts_iw
         sigma                   = 5.0
         
-        # Next time should include the masks here
         for sc, psc, am, msc in zip(scope_angles, prev_scope_angles, previous_action_masks, max_scope_angles):
             # Skip it if the action is masked
             if bool(am) != True:
@@ -247,5 +326,43 @@ def compute_reward(observation, args):
         rew_scc                 = np.mean(rews_scc)
         reward                 += rew_scc
         reward_components["scope_angle_change_log_likelihood_rewards"].append(rew_scc) 
-
+        
+        ## Interception scope angle reward
+        rews_isa            = []
+        for idx, sc, r_cog in zip(ts_iw_idx, scope_angles, routes_cog_ned_deg):
+            ts_idx              = idx - 1
+            tar_ship_pos        = rel_tar_ships_pos[ts_idx] + own_ship_pos
+            tar_ship_speed      = tar_ships_speed[ts_idx]
+            
+            # Prepare args for find_collision_heading function
+            pos_own             = own_ship_pos[:2]
+            pos_tar             = tar_ship_pos[:2]
+            
+            yaw_own             = own_ship_pos[2]
+            
+            vel_own             = own_ship_speed * np.array([np.cos(yaw_own), np.sin(yaw_own)])
+            speed_tar           = tar_ship_speed
+            
+            return_val          = find_collision_heading(pos_own, vel_own, pos_tar, speed_tar)
+            
+            if return_val is not None:
+                # When collision is feasible
+                _, interception_angle_deg, _, _ = return_val
+                desired_angle_deg               = sc + r_cog
+                
+                # Compute the error between the desired and the interception angle
+                error   = desired_angle_deg - interception_angle_deg
+                
+                # Compute reward
+                rew_isa     = intercept_angle_reward_func(error)
+                
+            else:
+                # No reward when no collision is forseeable
+                rew_isa     = 0.0
+            rews_isa.append(rew_isa)
+            
+        rew_isa             = np.mean(rews_isa)
+        reward             += rew_isa
+        reward_components["intercept_scope_angle_rewards"].append(rew_isa)
+            
         return reward

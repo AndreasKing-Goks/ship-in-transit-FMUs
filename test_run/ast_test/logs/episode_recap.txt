@@ -53,13 +53,13 @@ Positional observation space bound [min, max]:
  - EAST  BOUND: ['-21255.00', '22119.12'] --rounded to-> ['-25000.00', '25000.00']
 
 ----------------------------------------------------------------------------------------------------
-TRANSITION 0
+TRANSITION 1
 ----------------------------------------------------------------------------------------------------
 Simulation time before action            : 255.0 s
 Simulation time after action             : 690.0 s
 Terminated                               : False
 Truncated                                : False
-Total Reward                             : -0.2858140693560228
+Total Reward                             : -0.24595014873547022
   - Own Ship Collision                   : 0.0
   - Own Ship Grounding                   : 0.0
   - Own Ship Navigational Failure        : 0.0
@@ -73,6 +73,7 @@ Total Reward                             : -0.2858140693560228
   - Nearest Distance ROA                 : 0.08209297806024551
   - Scope Angle Request Done             : -0.2000
   - Scope Angle Change Log Likelihood    : -0.25
+  - Intercepting Scope Angle             : 0.03986392062055261
 
 [OBSERVATION BEFORE ACTION - DENORMALIZED]
 
@@ -137,13 +138,13 @@ Target ships
     Remaining requests                   : 4
 
 ----------------------------------------------------------------------------------------------------
-TRANSITION 1
+TRANSITION 2
 ----------------------------------------------------------------------------------------------------
 Simulation time before action            : 690.0 s
 Simulation time after action             : 1080.0 s
 Terminated                               : False
 Truncated                                : False
-Total Reward                             : -0.0592209217686665
+Total Reward                             : -0.05598912290610261
   - Own Ship Collision                   : 0.0
   - Own Ship Grounding                   : 0.0
   - Own Ship Navigational Failure        : 0.0
@@ -157,6 +158,7 @@ Total Reward                             : -0.0592209217686665
   - Nearest Distance ROA                 : 0.17038704454898834
   - Scope Angle Request Done             : -0.4000
   - Scope Angle Change Log Likelihood    : 0.0
+  - Intercepting Scope Angle             : 0.003231798862563889
 
 [OBSERVATION BEFORE ACTION - DENORMALIZED]
 
@@ -221,13 +223,13 @@ Target ships
     Remaining requests                   : 3
 
 ----------------------------------------------------------------------------------------------------
-TRANSITION 2
+TRANSITION 3
 ----------------------------------------------------------------------------------------------------
 Simulation time before action            : 1080.0 s
 Simulation time after action             : 1495.0 s
 Terminated                               : False
 Truncated                                : False
-Total Reward                             : -1.1031930241425623
+Total Reward                             : -0.18639796285374644
   - Own Ship Collision                   : 0.0
   - Own Ship Grounding                   : 0.0
   - Own Ship Navigational Failure        : 0.0
@@ -241,6 +243,7 @@ Total Reward                             : -1.1031930241425623
   - Nearest Distance ROA                 : 0.24523988366127014
   - Scope Angle Request Done             : -0.6000
   - Scope Angle Change Log Likelihood    : -1.0
+  - Intercepting Scope Angle             : 0.9167950612888158
 
 [OBSERVATION BEFORE ACTION - DENORMALIZED]
 
@@ -305,13 +308,13 @@ Target ships
     Remaining requests                   : 2
 
 ----------------------------------------------------------------------------------------------------
-TRANSITION 3
+TRANSITION 4
 ----------------------------------------------------------------------------------------------------
 Simulation time before action            : 1495.0 s
 Simulation time after action             : 1895.0 s
 Terminated                               : False
 Truncated                                : False
-Total Reward                             : 0.28968164929277407
+Total Reward                             : 1.2599200020827181
   - Own Ship Collision                   : 0.0
   - Own Ship Grounding                   : 0.0
   - Own Ship Navigational Failure        : 0.0
@@ -325,6 +328,7 @@ Total Reward                             : 0.28968164929277407
   - Nearest Distance ROA                 : 0.3629332184791565
   - Scope Angle Request Done             : -0.8000
   - Scope Angle Change Log Likelihood    : 0.0
+  - Intercepting Scope Angle             : 0.9702383527899442
 
 [OBSERVATION BEFORE ACTION - DENORMALIZED]
 
@@ -389,7 +393,7 @@ Target ships
     Remaining requests                   : 1
 
 ----------------------------------------------------------------------------------------------------
-TRANSITION 4
+TRANSITION 5
 ----------------------------------------------------------------------------------------------------
 Simulation time before action            : 1895.0 s
 Simulation time after action             : 2360.0 s
@@ -409,6 +413,7 @@ Total Reward                             : 5.347315034471458
   - Nearest Distance ROA                 : 0.6209289357066154
   - Scope Angle Request Done             : -1.0000
   - Scope Angle Change Log Likelihood    : 0.0
+  - Intercepting Scope Angle             : 3.557150286521488e-45
 
 [OBSERVATION BEFORE ACTION - DENORMALIZED]
 

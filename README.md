@@ -32,7 +32,7 @@ This setup is sufficient to run the simulator immediately. No additional install
 This simulator also supports animation visualization. However it requires `FFmpeg` module to **save** the animation as a file with video extension. Specifically on Windows, please refer to this [WikiHow](https://www.wikihow.com/Install-FFmpeg-on-Windows) page for the `FFmpeg` installation guide.
 
 ### Traffic Generator
-We also use `traffic generator` as a tool for generating a structured set of encounters for verifying automatic collision and grounding avoidance systems. This works is developed by DNV and, the original work can be found in *dnv-opensource* repo, [here](https://github.com/dnv-opensource/ship-traffic-generator.git). To install `traffic generator`, run this command in your terminal:
+We also use `traffic generator` as a tool for generating a structured set of encounters for verifying automatic collision and grounding avoidance systems. This works is developed by DNV and, the original work can be found in *dnv-opensource* Github repository, [here](https://github.com/dnv-opensource/ship-traffic-generator.git). To install `traffic generator`, run this command in your terminal:
 ```bash
 pip install trafficgen
 ```
@@ -230,6 +230,14 @@ These conditions are used to detect important events that occur during simulatio
 | `colav_active` | Activated when another ship is within proximity of a ship equipped with COLAV | Implemented inside `COLAV` `FMU` | `False` (all ships) |
 | `collision` | When distance between two ships is smaller than the minimum allowed distance | `check_condition.is_ship_collision(own_pos, tar_pos, minimum_ship_distance)` | `True` (all ships) |
 
+Status panels for the Own Ship can be shown in the animation by setting the `show_status_panel`as `True` (which is already already set as default) when  using `AnimateFleetTrajectory` method. These panels are useful, particularly for Adaptive Stress Testing, when one want to learn how the the Own Ship approaching unsafe operational regions. Located at the bottom part of the animation window, the status panels when enabled will look like the picture below:
+
+![status_panel](0_docs/img/status_panel.jpg)
+
+> ⚠️ **STATUS PANEL LIMITATION!**  
+>
+> Status panels display own-ship states using simulation-frame data. In the other hand, `AnimateFleetTrajectory` supports frame skipping through the `frame_step` parameter to improve playback performance. When `frame_step` > 1, intermediate simulation frames are not evaluated by the status panel. As a result, short-duration events (e.g., collision, COLAV activation, navigation warnings, grounding) may be missed or displayed inaccurately due to **temporal undersampling (aliasing)** caused by skipped simulation frames. Hence, status panels will be automatically disabled when frame skipping feature is enabled.
+
 > ⚠️ **MAP EVALUATION IS COMPUTATIONALLY HEAVY!**  
 >
 > Checking `grounding` and `outside_horizon` is computationally heavy because it involves geometric intersection checks with `Shapely` polygon data from map files. Disable this process by setting `skip_map_evaluation=True` when instantiating the simulation if you are confident that ship assets will not run aground. This is already the default behavior. **You will know it when you really need it!**
@@ -378,7 +386,7 @@ Conceptually:
     else:
         apply real inputs to ship FMUs
 
-Consequently, the same protocol is applied when a ship reaches its final waypoint. Upon reaching the end waypoint, **the simulator masks all actuating forces applied to the ship asset**, causing the vessel to gradually decelerate and eventually come to a stop.
+Additionally, the same protocol is applied when a ship reaches its final waypoint. Upon reaching the end waypoint, **the simulator masks all actuating forces applied to the ship asset**, causing the vessel to gradually decelerate and eventually come to a stop.
 
 | No Delayed Start                                       | Delayed Start                                  |
 |--------------------------------------------------------|------------------------------------------------|
@@ -493,9 +501,9 @@ Use this approach when:
 
 Special thanks to **Melih Akdağ** (melih.akdag@dnv.com) for providing implementation examples.
 
-> ⚠️ **NOT THOROUGHLY TESTED!**  
+> ⚠️ **CAUTION!**  
 >
-> This feature is still unstable and needs more improvement. At the moment, only works with simulation cases without OSM map.
+> At the moment, STG only works with simulation cases without OSM map.
 
 ### How It Works
 
@@ -717,6 +725,8 @@ The **Spawn Request Bank** is a pre-generated collection of encounter scenarios 
 The bank is serialized as a Python **pickle (`.pkl`) file** and can be loaded using:
 
 ```python
+from orchestrator.scenario_config import load_spawn_requests_bank_path
+
 spawn_requests_bank = load_spawn_requests_bank_path(
     spawn_requests_bank_path
 )
@@ -725,6 +735,8 @@ spawn_requests_bank = load_spawn_requests_bank_path(
 A new bank can be generated using:
 
 ```python
+from orchestrator.scenario_config import generate_spawn_request_bank
+
 spawn_requests_bank_path = generate_spawn_request_bank(
     ROOT=ROOT,
     config_path=config_path,
@@ -805,5 +817,3 @@ cases[start_eval_case_id:]
 ```
 
 correspond to evaluation cases.
-
-The Spawn Request Bank allows users to access specific encounter cases or randomly select from a fixed scenario pool while maintaining reproducibility across experiments.

@@ -136,7 +136,7 @@ env.instance.AnimateFleetTrajectory(
         plot_inter_wp_proj=False,
         with_labels=True,
         precompute_ship_outlines=True,
-        save_path=saved_animation_path,
+        # save_path=saved_animation_path,
         writer_fps=20,
         palette=None,
         blit=True,

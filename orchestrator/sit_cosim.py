@@ -2068,7 +2068,7 @@ class ShipInTransitCoSimulation(CoSimInstance):
         if self.skip_map_evaluation:
             grounding = False   # No grounding evaluation when skip map evaluation. Hence always output False
         else:
-            self.get_frame_value(stop_info["grounding"], i)
+            grounding = self.get_frame_value(stop_info["grounding"], i)
 
         return {
             "colav_active": colav_status,
@@ -2340,6 +2340,123 @@ class ShipInTransitCoSimulation(CoSimInstance):
         return artists
     
     
+    def init_status_panel_disabled_artist(self, ax_status, mode="quick", status_panel_mode="AUTOMATICALLY_DISABLED", own_ship_id="OS0"):
+        style = self.get_plot_style(mode)
+
+        C_EDGE = "0.35"
+
+        y_bot = 0.12
+        y_mid = 0.52
+
+        artists = {
+            "time_patch": None,
+            "time_text": None,
+            "frame_patch": None,
+            "frame_text": None,
+            "disabled_patch": None,
+            "disabled_text": None,
+            "dynamic_list": []
+        }
+
+        # ------------------------------------------------------------------
+        # Time + frame stacked boxes at left
+        # ------------------------------------------------------------------
+        time_frame_x = 0.02
+        time_frame_w = 0.14
+        time_box_h = 0.32
+        frame_box_h = 0.32
+
+        time_patch = patches.Rectangle(
+            (time_frame_x, y_mid), time_frame_w, time_box_h,
+            transform=ax_status.transAxes,
+            facecolor="white",
+            edgecolor=C_EDGE,
+            linewidth=1.0
+        )
+        ax_status.add_patch(time_patch)
+
+        time_txt = ax_status.text(
+            time_frame_x + time_frame_w / 2,
+            y_mid + time_box_h / 2,
+            "",
+            transform=ax_status.transAxes,
+            ha="center",
+            va="center",
+            fontsize=style["status_fs"] * 0.8,
+            weight="bold"
+        )
+
+        frame_patch = patches.Rectangle(
+            (time_frame_x, y_bot), time_frame_w, frame_box_h,
+            transform=ax_status.transAxes,
+            facecolor="white",
+            edgecolor=C_EDGE,
+            linewidth=1.0
+        )
+        ax_status.add_patch(frame_patch)
+
+        frame_txt = ax_status.text(
+            time_frame_x + time_frame_w / 2,
+            y_bot + frame_box_h / 2,
+            "",
+            transform=ax_status.transAxes,
+            ha="center",
+            va="center",
+            fontsize=style["status_fs"] * 0.8,
+            weight="bold"
+        )
+
+        artists["time_patch"] = time_patch
+        artists["time_text"] = time_txt
+        artists["frame_patch"] = frame_patch
+        artists["frame_text"] = frame_txt
+        artists["dynamic_list"].extend([time_patch, time_txt, frame_patch, frame_txt])
+
+        # ------------------------------------------------------------------
+        # Disabled message box
+        # ------------------------------------------------------------------
+        msg_x = 0.18
+        msg_y = 0.12
+        msg_w = 0.80
+        msg_h = 0.72
+
+        patch = patches.Rectangle(
+            (msg_x, msg_y), msg_w, msg_h,
+            transform=ax_status.transAxes,
+            facecolor="white",
+            edgecolor=C_EDGE,
+            linewidth=1.0
+        )
+        ax_status.add_patch(patch)
+
+        if status_panel_mode == "AUTOMATICALLY_DISABLED":
+            message = (
+                f"STATUS PANEL FOR {own_ship_id} IS AUTOMATICALLY DISABLED\n"
+                "Set frame_step = 1 to enable status monitoring"
+            )
+        elif status_panel_mode == "DISABLED":
+            message = "STATUS PANEL FOR {own_ship_id} IS DISABLED"
+        else:
+            message = "STATUS PANEL FOR {own_ship_id} IS DISABLED"
+
+        txt = ax_status.text(
+            msg_x + msg_w / 2,
+            msg_y + msg_h / 2,
+            message,
+            transform=ax_status.transAxes,
+            ha="center",
+            va="center",
+            fontsize=style["status_fs"],
+            weight="bold"
+        )
+
+        artists["disabled_patch"] = patch
+        artists["disabled_text"] = txt
+        artists["dynamic_list"].extend([patch, txt])
+
+        return artists
+    
+    
     def update_status_panel(self, i, artists, mode="quick", own_ship_id="OS0"):
         """
             Update the persistent status panel artists for own ship.
@@ -2439,6 +2556,15 @@ class ShipInTransitCoSimulation(CoSimInstance):
             artists["ground_patch"].set_facecolor(C_GREEN)
             artists["ground_text"].set_text("OWN SHIP GROUNDING\nNO")
     
+    
+    def update_disabled_status_panel(self, i, artists):
+        """
+        Update time/frame boxes for disabled status panel.
+        """
+        t_sec = i * self.stepSize / 1e9
+        artists["time_text"].set_text(f"TIME\n{int(round(t_sec))} s")
+        artists["frame_text"].set_text(f"FRAME\n{i}")
+        
     
     ### HELPER FUNCTION FOR INTERMEDIATE WAPYOINT DATA HANDLING
     def points_to_xy(self, points):
@@ -2639,7 +2765,7 @@ class ShipInTransitCoSimulation(CoSimInstance):
     ######
     
     
-    def init_dynamic_artists(self, ax_map, ax_status, ship_ids, mode="quick", palette=None, with_labels=True):
+    def init_dynamic_artists(self, ax_map, ax_status, ship_ids, mode="quick", palette=None, with_labels=True, enable_status_panel=True, status_panel_mode="ENABLED"):
         """
         Dynamic artists: trajectory trail, ship outline, ship id label, status text.
         """
@@ -2747,7 +2873,18 @@ class ShipInTransitCoSimulation(CoSimInstance):
                 # Colort
                 artists["color"][sid] = color
 
-        status_panel = self.init_status_panel_artists(ax_status=ax_status, mode=mode)
+        if enable_status_panel:
+            status_panel = self.init_status_panel_artists(
+                ax_status=ax_status,
+                mode=mode
+            )
+        else:
+            status_panel = self.init_status_panel_disabled_artist(
+                ax_status=ax_status,
+                mode=mode,
+                status_panel_mode=status_panel_mode
+            )
+
         artists["status_panel"] = status_panel
         artists["dynamic_list"].extend(status_panel["dynamic_list"])
 
@@ -2765,17 +2902,24 @@ class ShipInTransitCoSimulation(CoSimInstance):
         ship_scale=1.0,
         mode="quick",
         plot_inter_wp_roa=True,
-        plot_inter_wp_proj=True
+        plot_inter_wp_proj=True,
+        enable_status_panel=True
     ):
         returned_artists = list(artists["dynamic_list"])
         
         if artists.get("status_panel", None) is not None:
-            self.update_status_panel(
-                i=i,
-                artists=artists["status_panel"],
-                mode=mode,
-                own_ship_id="OS0"
-            )
+            if enable_status_panel:
+                self.update_status_panel(
+                    i=i,
+                    artists=artists["status_panel"],
+                    mode=mode,
+                    own_ship_id="OS0"
+                )
+            else:
+                self.update_disabled_status_panel(
+                    i=i,
+                    artists=artists["status_panel"]
+                )
 
         for sid in ship_ids:
             east  = data[sid]["east"]
@@ -2823,6 +2967,7 @@ class ShipInTransitCoSimulation(CoSimInstance):
         equal_aspect=True,
         interval_ms=20,
         frame_step=1,
+        show_status_panel=True,
         trail_len=300,
         plot_routes=True,
         plot_waypoints=True,
@@ -2986,21 +3131,32 @@ class ShipInTransitCoSimulation(CoSimInstance):
             )
             leg.get_frame().set_linewidth(0.6)
 
+        frame_step = max(1, int(frame_step))
+        frames = range(0, n_frames, frame_step)
+        
+        if show_status_panel and frame_step == 1:
+            status_panel_mode = "ENABLED"
+        elif show_status_panel and frame_step != 1:
+            status_panel_mode = "AUTOMATICALLY_DISABLED"
+        else:
+            status_panel_mode = "DISABLED"
+            
+        status_panel_enabled = status_panel_mode == "ENABLED"
+        
         artists = self.init_dynamic_artists(
             ax_map=ax_map,
             ax_status=ax_status,
             ship_ids=ship_ids,
             mode=mode,
             palette=palette,
-            with_labels=with_labels
+            with_labels=with_labels,
+            enable_status_panel=status_panel_enabled,
+            status_panel_mode=status_panel_mode
         )
 
         outlines = None
         if precompute_ship_outlines:
             outlines = self.precompute_outlines(data, ship_ids, n_frames, ship_scale)
-
-        frame_step = max(1, int(frame_step))
-        frames = range(0, n_frames, frame_step)
 
         def update(i):
             return self.update_dynamic(
@@ -3013,7 +3169,8 @@ class ShipInTransitCoSimulation(CoSimInstance):
                 ship_scale=ship_scale,
                 mode=mode,
                 plot_inter_wp_roa=plot_inter_wp_roa,
-                plot_inter_wp_proj=plot_inter_wp_proj
+                plot_inter_wp_proj=plot_inter_wp_proj,
+                enable_status_panel=status_panel_enabled
             )
 
         self.ani = FuncAnimation(

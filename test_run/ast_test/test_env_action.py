@@ -22,7 +22,7 @@ from orchestrator.scenario_config import generate_spawn_request_bank, load_spawn
 config_path = ROOT / "test_run" / "ast_test" / "test_ast.yaml"
 
 # Get the save path for animation
-save_path = ROOT / "saved_animation" / "test_env_action.gif"
+save_path = ROOT / "saved_animation" / "test_env_action_250.mp4"
 
 # Get the encounter settings path
 encounter_settings_path = ROOT / "test_run" / "ast_test" / "encounter_settings.json"
@@ -62,7 +62,13 @@ action_list = [[30,2500],
                [30,2000],
                [-30,2000],
                [-30,2000],
-               [-30,1900]]
+               [-30,1900]] # for 250
+
+# action_list = [[-20,3700],
+#                [-20,2000],
+#                [-20,2000],
+#                [-20,2200],
+#                [-20,2000]] # for 251
 
 n_sample = len(action_list)
 
@@ -102,7 +108,7 @@ env.instance.AnimateFleetTrajectory(
         margin_frac=0.08,
         equal_aspect=True,
         interval_ms=20,
-        frame_step=10,
+        frame_step=1,
         trail_len=50,
         plot_routes=True,
         plot_waypoints=True,
@@ -121,3 +127,30 @@ env.instance.AnimateFleetTrajectory(
 
 # Plot Trajectory
 env.instance.PlotFleetTrajectory(mode="quick", ship_scale=1.0)
+
+# Plot Simulation Results
+key_group_list = [
+    ## Own Ship
+    # Base results
+    ["OS0.north"],
+    ["OS0.east"],
+    ["OS0.forward_speed", "OS0.next_wp_speed", "OS0.total_ship_speed"],
+    ["OS0.yaw_angle_rad", "OS0.yaw_angle_ref_rad"],
+    ["OS0.rudder_angle_deg"],
+    ["OS0.e_ct"],
+    ["OS0.shaft_speed_rpm", "OS0.shaft_speed_cmd_rpm"],
+    ["OS0.throttle_cmd"],
+    
+    ## Target Ship(s)
+    # Base results
+    ["TS2.north"],
+    ["TS2.east"],
+    ["TS2.forward_speed", "TS2.next_wp_speed", "TS2.total_ship_speed"],
+    ["TS2.yaw_angle_rad", "TS2.yaw_angle_ref_rad"],
+    ["TS2.rudder_angle_deg"],
+    ["TS2.e_ct"],
+    ["TS2.thrust_force"]
+]
+
+# Plot Time Series
+# env.instance.JoinPlotTimeSeries(list(reversed(key_group_list)),  create_title= False, legend= True, show_instance_name=False, show=True)

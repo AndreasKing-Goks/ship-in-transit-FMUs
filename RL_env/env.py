@@ -371,6 +371,10 @@ class EBASTv2Env(gym.Env):
         x = np.nan_to_num(x, nan=0.0, posinf=high, neginf=low)
         return np.clip(x, low, high).astype(np.float32)
     
+    def _wrap_angle(self, x):
+        # wrap to (-pi, pi]
+        return (x + np.pi) % (2*np.pi) - np.pi
+    
     
     def _get_obs(self, normalized=True):
         """
@@ -662,7 +666,7 @@ class EBASTv2Env(gym.Env):
         IW_sampling_data        = [self.instance.IW_sampling_data[sid] for sid in self.ts_iw_id]
         last_frame              = [next(reversed(datum)) for datum in IW_sampling_data]
         IW_coordinates          = [datum[frame]["sampled_inter_wps"][-1] for datum, frame in zip(IW_sampling_data, last_frame)]
-        args                    = (self.os_id, self.ts_id, 
+        args                    = (self.os_id, self.ts_id, self.ts_iw_idx,
                                    self.instance.stop_info, self.n_ts,
                                    self.reward_components,
                                    self.skip_map_evaluation,
@@ -670,7 +674,7 @@ class EBASTv2Env(gym.Env):
                                    self.remaining_requests_bound,
                                    self.max_scope_angles, IW_coordinates,
                                    scope_angles, prev_scope_angles,
-                                   action_masks)
+                                   action_masks, self.routes_cog_ned_deg)
         reward                  = compute_reward(self._denormalize_observation(observation), args)     # Use denormalized observation
         
         # Assign the currently sampled scope angle to the previous scope angle holder variable
@@ -692,6 +696,10 @@ class EBASTv2Env(gym.Env):
         """
             Reset the environment all together
         """
+        # First empty the instance if it exists already
+        if getattr(self, "instance", None) is not None:
+            self.instance = None
+        
         # IMPORTANT: Seed the random number generator
         super().reset(seed=seed)
         self.np_random, _ = gym.utils.seeding.np_random(seed)
@@ -722,6 +730,21 @@ class EBASTv2Env(gym.Env):
             self.spawn_requests     = spawn_requests
             self.own_ship_initial   = own_ship_initial
             self.encounters         = encounters 
+            
+            # Spawn request
+            self.routes_cog_ned_deg = []
+            
+            for ts_id in self.ts_iw_id:
+                north_route         = spawn_requests[ts_id]["north_route"]
+                east_route          = spawn_requests[ts_id]["east_route"]
+                
+                d_north             = north_route[1] - north_route[0]
+                d_east              = east_route[1]  - east_route[0]
+                
+                route_cog_ned_deg   = np.rad2deg(np.atan2(d_east, d_north))
+                
+                self.routes_cog_ned_deg.append(route_cog_ned_deg)
+                
 
             # Instantiate the ShipInTransitCoSimulation
             self.instance = ShipInTransitCoSimulation(
@@ -756,6 +779,7 @@ class EBASTv2Env(gym.Env):
                 "nearest_distance_roa_rewards"              : [],
                 "scope_angle_request_done_rewards"          : [],
                 "scope_angle_change_log_likelihood_rewards" : [],  
+                "intercept_scope_angle_rewards"             : [],
             }
             
             # Prev_action recorder (initiated at 0.0 degree)

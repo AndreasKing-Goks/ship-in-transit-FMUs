@@ -108,13 +108,15 @@ def format_episode_recap(env: EBASTv2Env, episode_name="Episode Recap", time_dec
         scope_angle_request_done_reward = env.reward_components["scope_angle_request_done_rewards"][k]
         scope_angle_change_log_likelihood_reward = env.reward_components["scope_angle_change_log_likelihood_rewards"][k]
         
+        intercept_scope_angle_reward = env.reward_components["intercept_scope_angle_rewards"][k]
+        
         timestamp_before = round(env.event_timestamp_list[k] * 1e-9, time_decimals)
         timestamp_after = round(env.event_timestamp_list[k + 1] * 1e-9, time_decimals)
 
         action_phys = env._denormalize_action(action_norm)
 
         lines.append("-" * 100)
-        lines.append(f"TRANSITION {k}")
+        lines.append(f"TRANSITION {k+1}")
         lines.append("-" * 100)
         lines.append(f"Simulation time before action            : {timestamp_before} s")
         lines.append(f"Simulation time after action             : {timestamp_after} s")
@@ -137,6 +139,8 @@ def format_episode_recap(env: EBASTv2Env, episode_name="Episode Recap", time_dec
 
         lines.append(f"  - Scope Angle Request Done             : {scope_angle_request_done_reward:.4f}")
         lines.append(f"  - Scope Angle Change Log Likelihood    : {scope_angle_change_log_likelihood_reward}")
+        
+        lines.append(f"  - Intercepting Scope Angle             : {intercept_scope_angle_reward}")
         lines.append("")
 
         lines.append("[OBSERVATION BEFORE ACTION - DENORMALIZED]")
