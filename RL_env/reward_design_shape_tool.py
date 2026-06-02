@@ -16,15 +16,18 @@ from RL_env.reward_designs import (
 )
 
 # === Customizable boundaries for X axis ===
-x_min = 0
-x_max = 10000
+# x_min = 0
+# x_max = 10000
+
+x_min = -60
+x_max = 60
 
 # Generate x values
 x = np.linspace(x_min, x_max, 1000)
 
 # Instantiate reward functions using parameters that mimic the paper's figure
 designs = [
-    RewardDesign1(target=50, offset_param=250),
+    RewardDesign1(target=0, offset_param=500),
     RewardDesign2(target=1000, offset_param1=10000, offset_param2=10000000),
     RewardDesign3(target=3000, offset_param=1250000),
     RewardDesign4(target=100, offset_param=15000000),
@@ -67,7 +70,7 @@ test_2 = False
 test_2 = True
 
 if test_2:
-    design = designs[1]
+    design = designs[0]
 
     y = [design(float(xi)) for xi in x]
     plt.figure(figsize=(7, 6.8))
