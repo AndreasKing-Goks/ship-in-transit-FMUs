@@ -1,6 +1,9 @@
 from pathlib import Path
 import numpy as np
-from RL_env.env import EBASTv2Env
+from EBASTv2_core.env import EBASTv2Env
+import os
+import shutil
+from datetime import datetime
 
 
 def _arr(x):
@@ -258,3 +261,27 @@ def log_episode_recap(env, log_path, time_decimals=3):
     log_path.write_text(text, encoding="utf-8")
 
     return log_path
+
+
+def log_training_args(ROOT, args, log_path, save_reward_function=False):
+    exp_dir = os.path.dirname(log_path)
+    os.makedirs(exp_dir, exist_ok=True)
+
+    # Save args
+    with open(log_path, "w") as f:
+        f.write(f"Training Run: {datetime.now()}\n")
+        f.write("=" * 80 + "\n")
+
+        for key, value in sorted(vars(args).items()):
+            f.write(f"{key}: {value}\n")
+
+        f.write("=" * 80 + "\n")
+
+    # Save a copy of the reward function
+    if save_reward_function:
+        reward_function_path = ROOT / "EBASTv2_core" / "reward_function.py"
+        reward_copy_path = os.path.join(
+            exp_dir,
+            os.path.basename(reward_function_path)
+        )
+        shutil.copy2(reward_function_path, reward_copy_path)

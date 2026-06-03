@@ -23,9 +23,9 @@ os.add_dll_directory(str(dll_dir))
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from RL_env.env import EBASTv2Env
-from RL_env.episode_logger import log_episode_recap
-from RL_env.path_utils import get_RL_model_path
+from EBASTv2_core.env import EBASTv2Env
+from EBASTv2_core.episode_logger import log_episode_recap
+from EBASTv2_core.path_utils import get_RL_model_path
 from orchestrator.scenario_config import generate_spawn_request_bank, load_spawn_requests_bank_path
 
 import numpy as np

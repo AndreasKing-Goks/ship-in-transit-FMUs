@@ -1,4 +1,4 @@
-from RL_env.reward_designs import (RewardDesign1, RewardDesign2, RewardDesign3,
+from EBASTv2_core.reward_designs import (RewardDesign1, RewardDesign2, RewardDesign3,
                                    RewardDesign4, RewardDesign5, RewardDesign6)
 
 import numpy as np

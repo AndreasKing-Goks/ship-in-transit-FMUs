@@ -14,7 +14,7 @@ import pandas as pd
 from orchestrator.sit_cosim import ShipInTransitCoSimulation
 from orchestrator.scenario_config import load_base_config
 
-from RL_env.reward_function import compute_reward
+from EBASTv2_core.reward_function import compute_reward
 
 class EBASTv2Env(gym.Env):
     """

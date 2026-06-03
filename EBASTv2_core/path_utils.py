@@ -20,7 +20,7 @@ def get_RL_model_path(root: Path, model_name: str, unique: bool = True, save_ani
         # tb_path    = "...trained_model/AST-train_2025-11-09_18-25-03_ab12/tb"
     """
     # Base directory
-    base_dir = Path(root) / "train_ast" / "trained_model"
+    base_dir = Path(root) / "EBASTv2_train" / "trained_model"
     base_dir.mkdir(parents=True, exist_ok=True)
 
     # Create unique suffix (timestamp + short UUID)
@@ -35,10 +35,14 @@ def get_RL_model_path(root: Path, model_name: str, unique: bool = True, save_ani
     model_dir = base_dir / model_name_unique / "model"
     model_dir.mkdir(parents=True, exist_ok=True)
     model_path = str(model_dir / "model.zip")
+    
+    checkpoint_dir = base_dir / model_name_unique / "checkpoints"
 
     log_dir = base_dir / model_name_unique / "log"
     log_dir.mkdir(parents=True, exist_ok=True)
-    log_path = str(log_dir / "episode_recap.txt")
+    
+    train_args_log_path = str(log_dir / "train_args.txt")
+    episode_log_path    = str(log_dir / "episode_recap.txt")
 
     tb_dir = base_dir / model_name_unique / "tb"
     tb_dir.mkdir(parents=True, exist_ok=True)
@@ -54,4 +58,4 @@ def get_RL_model_path(root: Path, model_name: str, unique: bool = True, save_ani
     else:
         saved_anim_path = None
 
-    return model_path, log_path, tb_path, saved_anim_path
+    return model_path, train_args_log_path, episode_log_path, tb_path, saved_anim_path, checkpoint_dir

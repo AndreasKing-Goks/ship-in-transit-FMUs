@@ -10,7 +10,7 @@ import numpy as np
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from RL_env.reward_designs import (
+from EBASTv2_core.reward_designs import (
     RewardDesign1, RewardDesign2, RewardDesign3,
     RewardDesign4, RewardDesign5, RewardDesign6
 )
