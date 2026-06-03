@@ -35,22 +35,22 @@ import time
 # Handle paths
 # =========================
 # Get the config path
-config_path                     = ROOT / "train_ast" / "train_ast.yaml"
+config_path                     = ROOT / "EBASTv2_train" / "EBASTv2_train.yaml"
 
 # Log path
-log_path                        = ROOT / "train_ast" / "simulated_trained_model" / "episode_recap.txt"
+log_path                        = ROOT / "EBASTv2_train" / "simulated_trained_model" / "episode_recap.txt"
 
 # Get the save path for animation
-saved_animation_path            = ROOT / "train_ast" / "simulated_trained_model" / "simulated_trained_model.gif"
+saved_animation_path            = ROOT / "EBASTv2_train" / "simulated_trained_model" / "simulated_trained_model.gif"
 
 # Get the encounter settings path
-encounter_settings_path         = ROOT / "train_ast" / "encounter_settings.json"
+encounter_settings_path         = ROOT / "EBASTv2_train" / "encounter_settings.json"
 
 # Spawn requests bank path
-spawn_requests_bank_path        = ROOT / "train_ast" / "spawn_request_bank.pkl"
+spawn_requests_bank_path        = ROOT / "EBASTv2_train" / "spawn_request_bank.pkl"
 
 # Get the trianed model
-model_path                      = ROOT / "train_ast" / "trained_model" / "AST_train_2026-05-26_12-49-25_067f" / "model" / "model.zip"
+model_path                      = ROOT / "EBASTv2_train" / "trained_model" / "AST_train_2026-05-31_14-27-50_d547" / "model" / "model.zip"
 
 # =========================
 # Instantiate the environment wrapper

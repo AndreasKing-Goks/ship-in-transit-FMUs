@@ -268,9 +268,6 @@ def main():
             encounter_settings_path=args.encounter_settings_path,
             spawn_requests_bank=spawn_requests_bank,
         )
-        
-        # Use evaluation encounter cases
-        eval_env.set_for_evaluation()
 
         obs, info = eval_env.reset()
         lstm_states = None
