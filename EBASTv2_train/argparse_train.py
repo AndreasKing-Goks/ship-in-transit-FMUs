@@ -71,7 +71,7 @@ def parse_cli_args():
                         help="ENV: ratio of cases used for training in RL env (default: 0.8)")
     parser.add_argument("--overwrite_spawn_bank", type=str2bool, default=False, metavar="OVERWRITE_SPAWN_BANK",
                         help="ENV: whether to overwrite existing spawn request bank (default: False)")
-    parser.add_argument("--try_check_env", type=str2bool, default=False, metavar="TRY_CHECK_ENV",
+    parser.add_argument("--try_check_env", type=str2bool, default=True, metavar="TRY_CHECK_ENV",
                         help="ENV: run gymnasium check_env before training (default: True)")
 
     # RecurrentPPO core
