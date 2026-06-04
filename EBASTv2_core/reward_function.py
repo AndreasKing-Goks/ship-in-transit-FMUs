@@ -251,7 +251,6 @@ def compute_reward(observation, args):
         ## Nearest distance reward during state-action transition
         ss_dist_list    = list(nearest_dist_dict.values())
         rew_nd_ss       = np.mean([nearest_distance_reward_func(dist) for dist in ss_dist_list])
-        reward         += rew_nd_ss
         reward_components["nearest_distance_rewards"].append(rew_nd_ss)
         
         ## Intermediate waypoint nearest distance to own ship
@@ -268,7 +267,6 @@ def compute_reward(observation, args):
             
         # Get the IW distance to own_ship
         rew_nd_iw      = np.mean([iw_distance_to_os_reward_func(dist) for dist in iw_dist_list])
-        reward          += rew_nd_iw
         reward_components["nearest_distance_iw_rewards"].append(rew_nd_iw)
         
         # Compute the distance of each target ship to the own ship when RoA
@@ -282,15 +280,19 @@ def compute_reward(observation, args):
         
         ## Nearest distance reward when RoA
         rew_nd_roa          = np.mean([nearest_distance_reward_func(dist) for dist in roa_dist_list])
-        reward             += rew_nd_roa
         reward_components["nearest_distance_roa_rewards"].append(rew_nd_roa)
         
+        ## TOTAL DISTANCE REWARD
+        rew_dist            = (rew_nd_ss + rew_nd_iw + rew_nd_roa)/3
+        reward_components["total_distance_rewards"].append(rew_dist)
+        reward             += rew_dist
+        
         ## Intermediate waypoint sampling penalty/reward
-        iws_count_coeff         = 1.0
+        iws_count_coeff         = 0.2
         max_remaining_requests  = remaining_requests_bound["max"]
         used_requests           = max_remaining_requests - remaining_requests
         used_to_max_ratio       = used_requests / max_remaining_requests
-        rew_iwp                 = -(np.sum(used_to_max_ratio) * iws_count_coeff)
+        rew_iwp                 = -(np.mean(used_to_max_ratio) * iws_count_coeff)
         reward                 += rew_iwp
         reward_components["scope_angle_request_done_rewards"].append(rew_iwp)
         

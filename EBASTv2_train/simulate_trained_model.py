@@ -41,7 +41,7 @@ config_path                     = ROOT / "EBASTv2_train" / "EBASTv2_train.yaml"
 log_path                        = ROOT / "EBASTv2_train" / "simulated_trained_model" / "episode_recap.txt"
 
 # Get the save path for animation
-saved_animation_path            = ROOT / "EBASTv2_train" / "simulated_trained_model" / "simulated_trained_model.gif"
+saved_animation_path            = ROOT / "EBASTv2_train" / "simulated_trained_model" / "simulated_trained_model_meet5.gif"
 
 # Get the encounter settings path
 encounter_settings_path         = ROOT / "EBASTv2_train" / "encounter_settings.json"
@@ -136,7 +136,7 @@ env.instance.AnimateFleetTrajectory(
         plot_inter_wp_proj=False,
         with_labels=True,
         precompute_ship_outlines=True,
-        # save_path=saved_animation_path,
+        save_path=saved_animation_path,
         writer_fps=20,
         palette=None,
         blit=True,

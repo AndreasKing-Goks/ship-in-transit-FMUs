@@ -104,6 +104,7 @@ def format_episode_recap(env: EBASTv2Env, episode_name="Episode Recap", time_dec
         tar_ships_navigation_failure_reward = env.reward_components["tar_ships_navigation_failure_rewards"][k]
         tar_ships_reaches_end_waypoint_reward = env.reward_components["tar_ships_reaches_end_waypoint_rewards"][k]
 
+        close_proximity_reward = env.reward_components["total_distance_rewards"][k]
         nearest_distance_reward = env.reward_components["nearest_distance_rewards"][k]
         nearest_distance_iw_reward = env.reward_components["nearest_distance_iw_rewards"][k]
         nearest_distance_roa_reward = env.reward_components["nearest_distance_roa_rewards"][k]
@@ -126,24 +127,28 @@ def format_episode_recap(env: EBASTv2Env, episode_name="Episode Recap", time_dec
         lines.append(f"Terminated                               : {terminated}")
         lines.append(f"Truncated                                : {truncated}")
         lines.append(f"Total Reward                             : {reward}")
-        lines.append(f"  - Own Ship Collision                   : {own_ship_collision_reward}")
-        lines.append(f"  - Own Ship Grounding                   : {own_ship_grounding_reward}")
-        lines.append(f"  - Own Ship Navigational Failure        : {own_ship_navigational_failure_reward}")
-        lines.append(f"  - Own Ship Reaches End Waypoint        : {own_ship_reaches_end_waypoint_reward}")
+        lines.append("  > Termination Rewards")
+        lines.append(f"    - Own Ship Collision                 : {own_ship_collision_reward}")
+        lines.append(f"    - Own Ship Grounding                 : {own_ship_grounding_reward}")
+        lines.append(f"    - Own Ship Navigational Failure      : {own_ship_navigational_failure_reward}")
+        lines.append(f"    - Own Ship Reaches End Waypoint      : {own_ship_reaches_end_waypoint_reward}")
+        lines.append(f"    - Target Ships Collision             : {tar_ships_collision_reward}")
+        lines.append(f"    - Target Ships Grounding             : {tar_ships_grounding_reward}")
+        lines.append(f"    - Target Ships Navigation Failure    : {tar_ships_navigation_failure_reward}")
+        lines.append(f"    - Target Ships Reaches End Waypoint  : {tar_ships_reaches_end_waypoint_reward}")
 
-        lines.append(f"  - Target Ships Collision               : {tar_ships_collision_reward}")
-        lines.append(f"  - Target Ships Grounding               : {tar_ships_grounding_reward}")
-        lines.append(f"  - Target Ships Navigation Failure      : {tar_ships_navigation_failure_reward}")
-        lines.append(f"  - Target Ships Reaches End Waypoint    : {tar_ships_reaches_end_waypoint_reward}")
-
-        lines.append(f"  - Nearest Distance                     : {nearest_distance_reward}")
-        lines.append(f"  - Nearest Distance IW                  : {nearest_distance_iw_reward}")
-        lines.append(f"  - Nearest Distance ROA                 : {nearest_distance_roa_reward}")
-
-        lines.append(f"  - Scope Angle Request Done             : {scope_angle_request_done_reward:.4f}")
-        lines.append(f"  - Scope Angle Change Log Likelihood    : {scope_angle_change_log_likelihood_reward}")
-        
-        lines.append(f"  - Intercepting Scope Angle             : {intercept_scope_angle_reward}")
+        lines.append("  > Non-termination Rewards")
+        lines.append(f"    - Scope Angle Request Done           : {scope_angle_request_done_reward:.4f}")
+        lines.append(f"    - Scope Angle Change Log Likelihood  : {scope_angle_change_log_likelihood_reward}")
+        lines.append(f"    - Intercepting Scope Angle           : {intercept_scope_angle_reward}")
+        lines.append(f"    - Proximity based                    : {close_proximity_reward}")
+        lines.append("      Average of three reward components")
+        lines.append("      > Nearest Distance")
+        lines.append(f"        {nearest_distance_reward}")
+        lines.append("      > Nearest Distance IW")
+        lines.append(f"        {nearest_distance_iw_reward}")
+        lines.append("      > Nearest Distance ROA")
+        lines.append(f"        {nearest_distance_roa_reward}")
         lines.append("")
 
         lines.append("[OBSERVATION BEFORE ACTION - DENORMALIZED]")

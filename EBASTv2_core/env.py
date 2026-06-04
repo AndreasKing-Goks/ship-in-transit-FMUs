@@ -118,7 +118,7 @@ class EBASTv2Env(gym.Env):
             max_scope_angle     = self.ship_configs[idx]["fmu_params"]["MISSION_MANAGER"]["scope_angle_max_deg"]
             self.max_scope_angles.append(max_scope_angle)
             min_scope_angle     = -max_scope_angle
-            max_scope_length    = 10000
+            max_scope_length    = 5000
             min_scope_length    = 1000
             
             data = {
@@ -777,6 +777,7 @@ class EBASTv2Env(gym.Env):
                 "nearest_distance_rewards"                  : [],
                 "nearest_distance_iw_rewards"               : [],
                 "nearest_distance_roa_rewards"              : [],
+                "total_distance_rewards"                    : [],
                 "scope_angle_request_done_rewards"          : [],
                 "scope_angle_change_log_likelihood_rewards" : [],  
                 "intercept_scope_angle_rewards"             : [],
