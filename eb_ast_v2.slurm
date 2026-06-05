@@ -23,6 +23,9 @@ cd /cluster/work/arsitoru/projects/ship-in-transit-FMUs
 which python
 python --version
 
+echo "GPU INFO:"
+nvidia-smi
+
 echo "Starting training..."
 
 python -u EBAST_v2_train/argparse_train_vec.py --run_trained_episode=False --animate=False --plot=False --animation_show=False --animation_block=False
