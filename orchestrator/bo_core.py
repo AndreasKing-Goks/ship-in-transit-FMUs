@@ -10,6 +10,13 @@ import pandas as pd
 from ax.service.ax_client import AxClient, ObjectiveProperties
 
 from orchestrator.sit_cosim import ShipInTransitCoSimulation
+from RL_env.reward_designs import RewardDesign4
+
+# Nearest-distance shaping function, identical to the one used by the AST reward
+# (RL_env/reward_function.py: nearest_distance_reward_func). Reused here so that
+# the BO/MC danger score and the AST terminal reward share the exact same
+# near-miss shaping curve.
+_nearest_distance_reward_func = RewardDesign4(target=100, offset_param=15_000_000)
 
 
 # ═════════════════════════════════════════════════════════════
@@ -40,7 +47,115 @@ def _capped_margin(value, threshold):
 
 
 def compute_trial_metrics(instance, num_target_ships):
-    """Extract safety-based trial metrics and combine them into one BO objective.
+    """AST-aligned danger score used as the BO/MC objective.
+
+    Mirrors the *terminal* reward of the AST adversary
+    (RL_env/reward_function.py): own-ship outcome bonuses
+    (collision/grounding/navigation-failure/reach-end) plus target-ship
+    validity penalties, plus a nearest-distance shaping term computed with the
+    same shape function (``RewardDesign4``) and parameters as the AST reward.
+
+    A higher danger score means a more dangerous scenario. Since Ax minimizes,
+    the reported ``objective`` is the negation of the danger score.
+
+    The same function is used by Monte Carlo sampling so that all three methods
+    (AST, BO, MC) share one definition of "danger".
+    """
+    # Ship ids in spawn order: own ship is first, the rest are target ships
+    ship_ids = [cfg["id"] for cfg in instance.ship_configs]
+    os_id = ship_ids[0]
+    ts_ids = ship_ids[1:]
+
+    stop_info = instance.stop_info
+
+    def _last(seq, default=False):
+        return seq[-1] if seq else default
+
+    # --- Own-ship terminal outcomes ---------------------------------------
+    os_info = stop_info[os_id]
+    own_ship_collision = bool(_last(os_info["collision"]["status"]))
+    own_ship_grounding = bool(_last(os_info["grounding"]))
+    own_ship_navigation_failure = bool(_last(os_info["navigation_failure"]))
+    own_ship_reaches_end_waypoint = bool(_last(os_info["reaches_end_waypoint"]))
+
+    # --- Target-ship validity outcomes ------------------------------------
+    tar_ships_collision = False
+    tar_ships_grounding = False
+    tar_ships_navigation_failure = False
+    tar_ships_reaches_end_waypoint = False
+
+    for ts_id in ts_ids:
+        ts_info = stop_info[ts_id]
+        ts_collision = bool(_last(ts_info["collision"]["status"]))
+        ts_colliders = _last(ts_info["collision"]["colliders"], default=None)
+
+        # Invalid target collision: target ship collides with anything but own ship
+        if ts_collision and (ts_colliders is None or os_id not in ts_colliders):
+            tar_ships_collision = True
+        if _last(ts_info["grounding"]):
+            tar_ships_grounding = True
+        if _last(ts_info["navigation_failure"]):
+            tar_ships_navigation_failure = True
+        if _last(ts_info["reaches_end_waypoint"]):
+            tar_ships_reaches_end_waypoint = True
+
+    # --- Nearest-distance shaping (worst case across all target ships) -----
+    all_min_dist = []
+    for k in range(1, num_target_ships + 1):
+        _, _, dist_k = instance.get_ship_timeseries(os_id, f"dist_own_to_tar_{k}")
+        dist_k = np.asarray(dist_k, dtype=float)
+        all_min_dist.append(float(np.min(dist_k)) if dist_k.size else np.inf)
+
+    min_dist = min(all_min_dist) if all_min_dist else np.inf
+    nearest_distance_shaping = float(_nearest_distance_reward_func(min_dist))
+
+    # --- Danger score (same weights and signs as AST terminal reward) -----
+    danger_score = 0.0
+    danger_score += 5.0 * own_ship_collision
+    danger_score += 5.0 * own_ship_grounding
+    danger_score += 3.0 * own_ship_navigation_failure
+    danger_score -= 2.0 * own_ship_reaches_end_waypoint
+    danger_score -= 2.0 * tar_ships_collision
+    danger_score -= 2.0 * tar_ships_grounding
+    danger_score -= 1.0 * tar_ships_navigation_failure
+    danger_score -= 1.0 * tar_ships_reaches_end_waypoint
+    danger_score += nearest_distance_shaping
+
+    metrics = {
+        # Own-ship terminal outcomes
+        "own_ship_collision": own_ship_collision,
+        "own_ship_grounding": own_ship_grounding,
+        "own_ship_navigation_failure": own_ship_navigation_failure,
+        "own_ship_reaches_end_waypoint": own_ship_reaches_end_waypoint,
+        # Target-ship validity outcomes
+        "tar_ships_collision": tar_ships_collision,
+        "tar_ships_grounding": tar_ships_grounding,
+        "tar_ships_navigation_failure": tar_ships_navigation_failure,
+        "tar_ships_reaches_end_waypoint": tar_ships_reaches_end_waypoint,
+        # Near-miss shaping
+        "min_dist": min_dist,
+        "nearest_distance_shaping": nearest_distance_shaping,
+        # Aggregate
+        "danger_score": float(danger_score),
+        "objective": float(-danger_score),
+    }
+
+    # Per-target nearest-distance detail
+    for k in range(num_target_ships):
+        metrics[f"min_dist_tar_{k + 1}"] = all_min_dist[k]
+
+    return metrics
+
+
+# ─────────────────────────────────────────────────────────────
+# Legacy objective (kept for reference; not wired into the BO loop)
+# ─────────────────────────────────────────────────────────────
+def compute_trial_metrics_legacy(instance, num_target_ships):
+    """DEPRECATED. Original CPA/fuel/path-error based BO objective.
+
+    Superseded by the AST-aligned ``compute_trial_metrics``. Retained only as a
+    historical reference and is intentionally not used anywhere in the BO/MC
+    pipeline.
 
     Generalised to N target ships: loops over each target, takes worst-case
     margins, and records per-target detail keys.

@@ -90,7 +90,10 @@ def main():
 
     if replay_best:
         replay_best_trial(
-            config_preparer_fn=lambda p: prepare_trial_config_direct(p, CONFIG_PATH, target_ship_ids),
+            scenario_preparer_fn=lambda p: (
+                prepare_trial_config_direct(p, CONFIG_PATH, target_ship_ids),
+                None,
+            ),
             target_ship_ids=target_ship_ids,
             best_parameters=best_parameters,
             root=ROOT,
