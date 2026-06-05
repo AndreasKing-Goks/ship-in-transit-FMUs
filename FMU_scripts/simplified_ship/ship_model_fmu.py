@@ -357,7 +357,11 @@ class ShipModel(Fmi2Slave):
         d_yaw_rate = dx[2]
         
         return d_forward_speed, d_sideways_speed, d_yaw_rate
-        
+    
+    
+    def _wrap_to_pi(self, a):
+        return (a + np.pi) % (2*np.pi) - np.pi
+    
 
     def do_step(self, current_time: float, step_size: float) -> bool:
         try:
@@ -435,7 +439,7 @@ class ShipModel(Fmi2Slave):
             # Integrate d_x (Euler integration)
             self.north                          = north          + step_size * d_north
             self.east                           = east           + step_size * d_east
-            self.yaw_angle_rad                  = yaw_angle_rad  + step_size * d_yaw_angle_rad
+            self.yaw_angle_rad                  = self._wrap_to_pi(yaw_angle_rad  + step_size * d_yaw_angle_rad)
             self.forward_speed                  = forward_speed  + step_size * d_forward_speed
             self.sideways_speed                 = sideways_speed + step_size * d_sideways_speed
             self.yaw_rate                       = yaw_rate       + step_size * d_yaw_rate

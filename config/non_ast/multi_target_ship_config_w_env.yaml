@@ -270,7 +270,7 @@ ships:
   - id: TS1
 
     spawn:
-      start_time: 0.0
+      start_time: 250.0
       north: 10000.0
       east: 0.0
       yaw_angle_deg: 135.0
@@ -447,7 +447,7 @@ ships:
   - id: TS2
 
     spawn:
-      start_time: 0.0
+      start_time: 300.0
       north: 10000.0
       east: 5000.0
       yaw_angle_deg: 180.0
@@ -624,7 +624,7 @@ ships:
   - id: TS3
 
     spawn:
-      start_time: 0.0
+      start_time: 500.0
       north: 5000.0
       east: 10000.0
       yaw_angle_deg: -90.0
