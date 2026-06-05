@@ -1120,7 +1120,7 @@ class ShipInTransitCoSimulation(CoSimInstance):
             collision = bool(colliders)
             push_flag(ship_id=ship_id, flag_name="collision", value=collision, detail=(colliders if colliders else None))
             if collision:
-                print(f"{ship_id} collides with {", ".join(colliders)}")
+                print(f"{ship_id} collides with {', '.join(colliders)}")
             
             # Get the colav active sign
             colav_active, candidate_idx = self.update_colav_active_flag(ship_id)

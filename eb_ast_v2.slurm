@@ -17,6 +17,7 @@ module purge
 module load Anaconda3/2024.02-1
 source $(conda info --base)/etc/profile.d/conda.sh
 conda activate sit-cosim
+export LD_LIBRARY_PATH=$CONDA_PREFIX/lib:$LD_LIBRARY_PATH
 
 cd /cluster/work/arsitoru/projects/ship-in-transit-FMUs
 
@@ -28,6 +29,6 @@ nvidia-smi
 
 echo "Starting training..."
 
-python -u EBAST_v2_train/argparse_train_vec.py --run_trained_episode=False --animate=False --plot=False --animation_show=False --animation_block=False
+python -u EBASTv2_train/argparse_train_vec.py --run_trained_episode=False --animate=False --plot=False --animation_show=False --animation_block=False
 
 echo "Finished at: $(date)"
