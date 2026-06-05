@@ -1,0 +1,21 @@
+name: sit-cosim
+channels:
+  - conda-forge
+dependencies:
+  - python=3.11
+  - pip
+  - numpy
+  - pandas
+  - matplotlib
+  - pyyaml
+  - pillow
+  - shapely
+  - geopandas
+  - pyproj
+  - osmnx
+  - networkx
+  - requests
+  - tensorboard
+  - pip:
+      - libcosimpy==0.0.5
+      - pythonfmu==0.7.0
