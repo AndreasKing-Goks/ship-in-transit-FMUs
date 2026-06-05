@@ -13,6 +13,7 @@ Date: 2026.04.22
 from pathlib import Path
 import sys
 import os
+import copy
 
 # Ensure libcosim DLL is found
 dll_dir = Path(sys.prefix) / "Lib" / "site-packages" / "libcosimpy" / "libcosimc"
@@ -30,10 +31,9 @@ from orchestrator.bo_core import (
     save_results,
     print_trial_summary_table,
     build_parameter_space_trafficgen,
+    prepare_spawn_requests_trafficgen,
 )
-from orchestrator.scenario_config import (
-    prepare_trial_config_trafficgen,
-)
+from orchestrator.scenario_config import load_base_config
 
 
 # ─── Paths ───────────────────────────────────────────────────
@@ -41,8 +41,6 @@ CONFIG_PATH = Path(__file__).with_name("single_target_ship_ho.yaml")
 SAVE_DIR = ROOT / "saved_animation"
 BEST_ANIM_PATH = SAVE_DIR / "open_sea_one_ts_best_ax.mp4"
 RESULTS_PATH = Path(__file__).with_name("ax_results.json")
-OWN_SHIP_PATH = ROOT / "data" / "ownship" / "ownship.json"
-TARGET_SHIPS_PATH = ROOT / "data" / "targetships"
 ENCOUNTER_SETTINGS_PATH = Path(__file__).with_name("encounter_settings.json")
 
 
@@ -53,7 +51,7 @@ ENCOUNTERS = [
 ]
 
 OS_INITIAL = {
-    "position": {"lat": 58.763449, "lon": 10.490654},
+    "position": {"north": 0.0, "east": 0.0},
     "sog": 10.0,
     "cog": 0.0,
     "heading": 0.0,
@@ -64,18 +62,19 @@ TARGET_SHIP_IDS = [enc["id"] for enc in ENCOUNTERS]
 
 
 # ─── Trial evaluation closure ────────────────────────────────
-def _prepare_config(parameters):
-    """Build a ready-to-run config from BO parameters via trafficgen."""
-    return prepare_trial_config_trafficgen(
-        parameters, CONFIG_PATH, ENCOUNTERS, OS_INITIAL,
-        OWN_SHIP_PATH, TARGET_SHIPS_PATH, ENCOUNTER_SETTINGS_PATH,
+def _prepare_scenario(parameters):
+    """Build (base config, trafficgen spawn requests) from BO parameters."""
+    config = copy.deepcopy(load_base_config(CONFIG_PATH))
+    spawn_requests = prepare_spawn_requests_trafficgen(
+        parameters, ENCOUNTERS, OS_INITIAL, CONFIG_PATH, ENCOUNTER_SETTINGS_PATH,
     )
+    return config, spawn_requests
 
 
 def evaluate_trial(parameters):
-    """Run one Ax trial: generate → convert → simulate → metrics."""
-    config = _prepare_config(parameters)
-    instance = run_simulation(config, ROOT)
+    """Run one Ax trial: generate spawn requests → simulate → metrics."""
+    config, spawn_requests = _prepare_scenario(parameters)
+    instance = run_simulation(config, ROOT, spawn_requests=spawn_requests)
     metrics = compute_trial_metrics(instance, num_target_ships=len(ENCOUNTERS))
     return {"objective": (metrics["objective"], 0.0)}, metrics
 
@@ -86,18 +85,17 @@ def main():
     num_bo_trials = 2
     total_trials = num_sobol_trials + num_bo_trials
     replay_best = True
-    max_intermediate_wps = 1
 
     print(
         f"Running Ax optimization with {num_sobol_trials} Sobol trials "
         f"and {num_bo_trials} BO trials (total={total_trials}), "
-        f"max intermediate waypoints: {max_intermediate_wps}."
+        f"optimizing trafficgen initial conditions for {TARGET_SHIP_IDS}."
     )
 
     ax_client, best_parameters, history = run_ax_optimization(
         experiment_name="open_sea_one_ts_ho_bo_stg",
         parameter_space=build_parameter_space_trafficgen(
-            ENCOUNTERS, ENCOUNTER_SETTINGS_PATH, max_intermediate_wps=max_intermediate_wps,
+            ENCOUNTERS, ENCOUNTER_SETTINGS_PATH,
         ),
         evaluate_fn=evaluate_trial,
         total_trials=total_trials,
@@ -118,7 +116,7 @@ def main():
 
     if replay_best:
         replay_best_trial(
-            config_preparer_fn=_prepare_config,
+            scenario_preparer_fn=_prepare_scenario,
             target_ship_ids=TARGET_SHIP_IDS,
             best_parameters=best_parameters,
             root=ROOT,

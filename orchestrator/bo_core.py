@@ -15,14 +15,14 @@ from orchestrator.sit_cosim import ShipInTransitCoSimulation
 # ═════════════════════════════════════════════════════════════
 # Simulation helpers
 # ═════════════════════════════════════════════════════════════
-def build_instance(config, root):
+def build_instance(config, root, spawn_requests=None):
     """Create one co-simulation instance from a prepared config."""
-    return ShipInTransitCoSimulation(config=config, ROOT=root)
+    return ShipInTransitCoSimulation(config=config, ROOT=root, spawn_requests=spawn_requests)
 
 
-def run_simulation(config, root):
+def run_simulation(config, root, spawn_requests=None):
     """Build and run one simulation trial, then return the instance."""
-    instance = build_instance(config, root)
+    instance = build_instance(config, root, spawn_requests=spawn_requests)
     instance.Simulate()
     return instance
 
@@ -242,11 +242,47 @@ def build_parameter_space_direct(target_ship_ids, max_intermediate_wps=3):
     return parameters
 
 
-def build_parameter_space_trafficgen(encounters, encounter_settings_path, max_intermediate_wps=3):
-    """Ax search space: trafficgen encounter params + intermediate WPs.
+def _beta_bounds_for_encounter(encounter_type, settings, margin=2.0):
+    """Contiguous relative-bearing (beta) bounds for an encounter type.
 
-    Bounds for relativeSpeed and vectorTime are read from encounter_settings.json
-    so they stay aligned automatically.
+    Mirrors the sampling ranges in
+    ``scenario_config.sample_beta_and_rel_speed_given_encounter_settings`` so the
+    BO search space stays consistent with how trafficgen classifies encounters.
+    """
+    classification = settings["classification"]
+    theta13 = classification["theta13Criteria"]
+    theta14 = classification["theta14Criteria"]
+    theta15crit = classification["theta15Criteria"]
+    theta15min = classification["theta15"][0]
+
+    if encounter_type == "head-on":
+        return [-theta14 + margin, theta14 - margin]
+    if encounter_type == "overtaking-give-way":
+        return [-theta13 + margin, theta13 - margin]
+    if encounter_type == "crossing-give-way":
+        return [theta15crit + margin, theta15min - margin]
+    if encounter_type == "crossing-stand-on":
+        return [-theta15min + margin, -theta15crit - margin]
+
+    raise ValueError(
+        f"BO beta bounds are not defined for encounter type '{encounter_type}'. "
+        "Supported types: head-on, overtaking-give-way, crossing-give-way, "
+        "crossing-stand-on."
+    )
+
+
+def build_parameter_space_trafficgen(encounters, encounter_settings_path, beta_margin=2.0):
+    """Ax search space for trafficgen INITIAL scenario conditions only.
+
+    BO optimizes the ship-traffic-generator encounter initial conditions per
+    target ship: relative speed, vector time, and relative bearing (beta).
+    Bounds are read from ``encounter_settings.json`` so they stay aligned
+    automatically.
+
+    Intermediate waypoints are intentionally NOT part of this search space.
+    Perturbing intermediate waypoints along a route during a run is the
+    Adaptive Stress Testing (AST) concern; BO here focuses purely on the
+    initial conditions produced by the traffic generator.
     """
     from orchestrator.scenario_config import load_encounter_settings, ENCOUNTER_TYPE_TO_KEY
 
@@ -257,8 +293,10 @@ def build_parameter_space_trafficgen(encounters, encounter_settings_path, max_in
     parameters = []
     for enc in encounters:
         ts_id = enc["id"].lower()
-        enc_key = ENCOUNTER_TYPE_TO_KEY[enc["encounter_type"]]
+        enc_type = enc["encounter_type"]
+        enc_key = ENCOUNTER_TYPE_TO_KEY[enc_type]
         speed_bounds = rel_speed_map[enc_key]
+        beta_bounds = _beta_bounds_for_encounter(enc_type, settings, margin=beta_margin)
 
         parameters.extend([
             {
@@ -274,38 +312,50 @@ def build_parameter_space_trafficgen(encounters, encounter_settings_path, max_in
                 "value_type": "float",
             },
             {
-                "name": f"{ts_id}_wp_count",
+                "name": f"{ts_id}_beta",
                 "type": "range",
-                "bounds": [0, max_intermediate_wps],
-                "value_type": "int",
+                "bounds": beta_bounds,
+                "value_type": "float",
             },
         ])
 
-        for i in range(1, max_intermediate_wps + 1):
-            parameters.extend([
-                {
-                    "name": f"{ts_id}_wp_{i}_north",
-                    "type": "range",
-                    "bounds": [0.0, 2000.0],
-                    "value_type": "float",
-                },
-                {
-                    "name": f"{ts_id}_wp_{i}_east",
-                    "type": "range",
-                    "bounds": [-1000.0, 1000.0],
-                    "value_type": "float",
-                },
-            ])
-
-        for i in range(1, max_intermediate_wps + 2):
-            parameters.append({
-                "name": f"{ts_id}_leg_speed_{i}",
-                "type": "range",
-                "bounds": [0.5, 8.0],
-                "value_type": "float",
-            })
-
     return parameters
+
+
+def prepare_spawn_requests_trafficgen(
+    parameterization,
+    encounters,
+    own_ship_initial_ned,
+    config_path,
+    encounter_settings_path,
+):
+    """Build trafficgen spawn requests from BO initial-condition parameters.
+
+    Maps the Ax ``parameterization`` (relative_speed, vector_time, beta per
+    target ship) into a trafficgen encounters dict, then delegates to the shared
+    pipeline ``scenario_config.prepare_spawn_requests_with_traffic_gen`` to
+    produce spawn requests. Each resulting route is a straight start->end leg
+    (initial conditions only); no intermediate waypoints are injected.
+    """
+    from orchestrator.scenario_config import prepare_spawn_requests_with_traffic_gen
+
+    enc_dict = {}
+    for enc in encounters:
+        ts_id = enc["id"]
+        prefix = ts_id.lower()
+        enc_dict[ts_id] = {
+            "desiredEncounterType": enc["encounter_type"],
+            "relativeSpeed": float(parameterization[f"{prefix}_relative_speed"]),
+            "vectorTime": float(parameterization[f"{prefix}_vector_time"]),
+            "beta": float(parameterization[f"{prefix}_beta"]),
+        }
+
+    return prepare_spawn_requests_with_traffic_gen(
+        own_ship_initial_ned,
+        enc_dict,
+        config_path,
+        encounter_settings_path,
+    )
 
 
 # ═════════════════════════════════════════════════════════════
@@ -386,7 +436,7 @@ def run_ax_optimization(
 # Replay best trial
 # ═════════════════════════════════════════════════════════════
 def replay_best_trial(
-    config_preparer_fn,
+    scenario_preparer_fn,
     target_ship_ids,
     best_parameters,
     root,
@@ -397,9 +447,10 @@ def replay_best_trial(
 
     Parameters
     ----------
-    config_preparer_fn : callable
-        ``config_preparer_fn(parameters) -> config`` — builds a ready-to-run
-        YAML config dict from the given BO parameters.
+    scenario_preparer_fn : callable
+        ``scenario_preparer_fn(parameters) -> (config, spawn_requests)`` — builds
+        a ready-to-run base config and the trafficgen spawn requests for the
+        given BO parameters.
     target_ship_ids : list[str]
         IDs of target ships (e.g. ``["TS1", "TS2"]``).
     best_parameters : dict
@@ -411,8 +462,8 @@ def replay_best_trial(
     best_anim_path : Path
         Full path for the best-trial animation file.
     """
-    config = config_preparer_fn(best_parameters)
-    instance = run_simulation(config, root)
+    config, spawn_requests = scenario_preparer_fn(best_parameters)
+    instance = run_simulation(config, root, spawn_requests=spawn_requests)
 
     save_dir.mkdir(parents=True, exist_ok=True)
 
