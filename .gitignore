@@ -198,6 +198,11 @@ cython_debug/
 # Ruff stuff:
 .ruff_cache/
 
+# BO / simulation results and artifacts
+**/ax_results.json
+saved_animation/
+data/situation_outputs/
+
 # PyPI configuration file
 .pypirc
 
