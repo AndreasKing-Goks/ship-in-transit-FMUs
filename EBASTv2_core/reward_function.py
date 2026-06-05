@@ -288,7 +288,7 @@ def compute_reward(observation, args):
         reward             += rew_dist
         
         ## Intermediate waypoint sampling penalty/reward
-        iws_count_coeff         = 0.2
+        iws_count_coeff         = 0.5
         max_remaining_requests  = remaining_requests_bound["max"]
         used_requests           = max_remaining_requests - remaining_requests
         used_to_max_ratio       = used_requests / max_remaining_requests
