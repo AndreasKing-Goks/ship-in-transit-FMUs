@@ -6,7 +6,7 @@
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=128G
 #SBATCH --time=48:00:00
-#SBATCH --output=logs/%x_%j.out
+#SBATCH --output=/dev/null
 #SBATCH --error=logs/%x_%j.err
 
 echo "Running on node: $(hostname)"
