@@ -68,7 +68,7 @@ def format_episode_recap(env: EBASTv2Env, episode_name="Episode Recap", time_dec
         lines.append(f"     - encounterType                     : {encounters[ts_id]['desiredEncounterType']}")
         lines.append(f"     - vectorTime                        : {encounters[ts_id]['vectorTime']:.1f} [minutes]")
         lines.append(f"     - beta                              : {encounters[ts_id]['beta']:.1f} [deg]")
-        lines.append(f"     - relativeSpeed                     : {encounters[ts_id]['relativeSpeed']*own_ship_initial["sog"]:.1f} [m/s]")
+        lines.append(f"     - relativeSpeed                     : {encounters[ts_id]['relativeSpeed']*own_ship_initial['sog']:.1f} [m/s]")
         lines.append("")
     
     lines.append("Positional observation space bound [min, max]:")
