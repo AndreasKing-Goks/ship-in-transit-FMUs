@@ -21,11 +21,16 @@ from stable_baselines3.common.callbacks import CheckpointCallback
 from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv
 from gymnasium.utils.env_checker import check_env
 
-# Ensure libcosim DLL is found
+# Ensure libcosim DLL is found on WINDOWS
 # Note: os.add_dll_directory only exists on Windows.
-dll_dir = Path(sys.prefix) / "Lib" / "site-packages" / "libcosimpy" / "libcosimc"
-if hasattr(os, "add_dll_directory") and dll_dir.exists():
-    os.add_dll_directory(str(dll_dir))
+# On Linux/HPC, shared libraries should be handled by LD_LIBRARY_PATH.
+if sys.platform.startswith("win"):
+    dll_dir = Path(sys.prefix) / "Lib" / "site-packages" / "libcosimpy" / "libcosimc"
+
+    if dll_dir.exists():
+        os.add_dll_directory(str(dll_dir))
+    else:
+        print(f"Warning: libcosim DLL directory not found: {dll_dir}")
 
 ## PATH HELPER (OBLIGATORY)
 # project root = two levels up from this file
