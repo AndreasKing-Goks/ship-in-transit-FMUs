@@ -2,8 +2,16 @@
 import os, sys
 from pathlib import Path
 
-dll_dir = Path(sys.prefix) / "Lib" / "site-packages" / "libcosimpy" / "libcosimc"
-os.add_dll_directory(str(dll_dir))
+# Ensure libcosim DLL is found on WINDOWS
+# Note: os.add_dll_directory only exists on Windows.
+# On Linux/HPC, shared libraries should be handled by LD_LIBRARY_PATH.
+if sys.platform.startswith("win"):
+    dll_dir = Path(sys.prefix) / "Lib" / "site-packages" / "libcosimpy" / "libcosimc"
+
+    if dll_dir.exists():
+        os.add_dll_directory(str(dll_dir))
+    else:
+        print(f"Warning: libcosim DLL directory not found: {dll_dir}")
 
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
