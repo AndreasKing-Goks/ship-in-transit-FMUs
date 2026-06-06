@@ -18,8 +18,7 @@ print("Torch:", torch.__version__)
 from sb3_contrib import RecurrentPPO
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.callbacks import CheckpointCallback
-from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv
-from gymnasium.utils.env_checker import check_env
+from stable_baselines3.common.vec_env import SubprocVecEnv
 
 # Ensure libcosim DLL is found on WINDOWS
 # Note: os.add_dll_directory only exists on Windows.
