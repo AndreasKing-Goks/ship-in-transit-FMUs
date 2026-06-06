@@ -1317,7 +1317,7 @@ class ShipInTransitCoSimulation(CoSimInstance):
             # Title
             if create_title:
                 plt.title(
-                    f"Time series from co-simulation instance \"{self.instanceName}\"",
+                    f"Time series from co-simulation instance \'{self.instanceName}\'",
                     fontsize=style["title_fs"]
                 )
 
