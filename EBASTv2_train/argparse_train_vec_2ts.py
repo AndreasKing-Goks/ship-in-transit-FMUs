@@ -60,7 +60,7 @@ def parse_cli_args():
     parser = argparse.ArgumentParser(description="EB-ASTv2 with RecurrentPPO model")
 
     # Paths / run setup
-    parser.add_argument("--config_path", type=Path, default=ROOT / "EBASTv2_train" / "EBASTv2_train.yaml", metavar="CONFIG_PATH",
+    parser.add_argument("--config_path", type=Path, default=ROOT / "EBASTv2_train" / "EBASTv2_train_2.yaml", metavar="CONFIG_PATH",
                         help="PATH: training config yaml path (default: ROOT/EBASTv2_train/EBASTv2_train.yaml)")
     parser.add_argument("--encounter_settings_path", type=Path, default=ROOT / "EBASTv2_train" / "encounter_settings.json", metavar="ENCOUNTER_SETTINGS_PATH",
                         help="PATH: encounter settings json path (default: ROOT/EBASTv2_train/encounter_settings.json)")
@@ -86,13 +86,13 @@ def parse_cli_args():
                         help="VEC_ENV: The number of environment instances for computating parallelization (default: 4)")
 
     # RecurrentPPO core
-    parser.add_argument("--total_timesteps", type=int, default=128_000, metavar="TOTAL_TIMESTEPS",
+    parser.add_argument("--total_timesteps", type=int, default=256_000, metavar="TOTAL_TIMESTEPS",
                         help="AST: total model training timesteps. Ideally bigger than n_steps (default: 128_000)")
     parser.add_argument("--policy", type=str, default="MultiInputLstmPolicy", metavar="POLICY",
                         help="AST: RecurrentPPO policy name (default: MultiInputLstmPolicy)")
     parser.add_argument("--learning_rate", type=float, default=3e-4, metavar="LEARNING_RATE",
                         help="AST: learning rate (default: 3e-4)")
-    parser.add_argument("--n_steps", type=int, default=128, metavar="N_STEPS",
+    parser.add_argument("--n_steps", type=int, default=128, metavar="N_STEPS", 
                         help="AST: number of steps to run for each environment per update (default: 128)")
     parser.add_argument("--batch_size", type=int, default=128, metavar="BATCH_SIZE",
                         help="AST: minibatch size (default: 128)")

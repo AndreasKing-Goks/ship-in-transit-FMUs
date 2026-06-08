@@ -288,11 +288,11 @@ def compute_reward(observation, args):
         reward             += rew_dist
         
         ## Intermediate waypoint sampling penalty/reward
-        iws_count_coeff         = 0.5
+        rew_iwp_coeff           = 1.0
         max_remaining_requests  = remaining_requests_bound["max"]
         used_requests           = max_remaining_requests - remaining_requests
         used_to_max_ratio       = used_requests / max_remaining_requests
-        rew_iwp                 = -(np.mean(used_to_max_ratio) * iws_count_coeff)
+        rew_iwp                 = -(np.mean(used_to_max_ratio) * rew_iwp_coeff)
         reward                 += rew_iwp
         reward_components["scope_angle_request_done_rewards"].append(rew_iwp)
         
@@ -330,6 +330,7 @@ def compute_reward(observation, args):
         reward_components["scope_angle_change_log_likelihood_rewards"].append(rew_scc) 
         
         ## Interception scope angle reward
+        rew_isa_coeff       = 2.0
         rews_isa            = []
         for idx, sc, r_cog in zip(ts_iw_idx, scope_angles, routes_cog_ned_deg):
             ts_idx              = idx - 1
@@ -356,7 +357,7 @@ def compute_reward(observation, args):
                 error   = desired_angle_deg - interception_angle_deg
                 
                 # Compute reward
-                rew_isa     = intercept_angle_reward_func(error)
+                rew_isa     = intercept_angle_reward_func(error) * rew_isa_coeff
                 
             else:
                 # No reward when no collision is forseeable

@@ -1,10 +1,10 @@
 #!/bin/bash
-#SBATCH --job-name=EBAST_v2_train
+#SBATCH --job-name=EBAST_v2_train_2ts
 #SBATCH --account=share-ie-itk
 #SBATCH --partition=GPUQ
 #SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=16
-#SBATCH --mem=128G
+#SBATCH --mem=64G
 #SBATCH --time=48:00:00
 #SBATCH --output=/dev/null
 #SBATCH --error=logs/%x_%j.err
@@ -29,6 +29,6 @@ nvidia-smi
 
 echo "Starting training..."
 
-python -u EBASTv2_train/argparse_train_vec.py --run_trained_episode=False --animate=False --plot=False --animation_show=False --animation_block=False
+python -u EBASTv2_train/argparse_train_vec_2ts.py --run_trained_episode=False --animate=False --plot=False --animation_show=False --animation_block=False --n_envs=16
 
 echo "Finished at: $(date)"

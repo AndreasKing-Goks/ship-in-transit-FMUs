@@ -10,9 +10,6 @@ import torch
 print("Torch:", torch.__version__)
 
 from sb3_contrib import RecurrentPPO
-from stable_baselines3.common.evaluation import evaluate_policy
-from stable_baselines3.common.monitor import Monitor
-from gymnasium.utils.env_checker import check_env
 
 # Ensure libcosim DLL is found
 dll_dir = Path(sys.prefix) / "Lib" / "site-packages" / "libcosimpy" / "libcosimc"
@@ -25,23 +22,18 @@ sys.path.insert(0, str(ROOT))
 
 from EBASTv2_core.env import EBASTv2Env
 from EBASTv2_core.episode_logger import log_episode_recap
-from EBASTv2_core.path_utils import get_RL_model_path
 from orchestrator.scenario_config import generate_spawn_request_bank, load_spawn_requests_bank_path
 
 import numpy as np
-import time
 
 # =========================
 # Handle paths
 # =========================
+# Trained Model Name
+model_name                      = "EB-ASTv2_train_2026-06-07_09-40-33_087a"
+
 # Get the config path
 config_path                     = ROOT / "EBASTv2_train" / "EBASTv2_train.yaml"
-
-# Log path
-log_path                        = ROOT / "EBASTv2_train" / "simulated_trained_model" / "episode_recap.txt"
-
-# Get the save path for animation
-saved_animation_path            = ROOT / "EBASTv2_train" / "simulated_trained_model" / "simulated_trained_model_meet5.gif"
 
 # Get the encounter settings path
 encounter_settings_path         = ROOT / "EBASTv2_train" / "encounter_settings.json"
@@ -50,7 +42,15 @@ encounter_settings_path         = ROOT / "EBASTv2_train" / "encounter_settings.j
 spawn_requests_bank_path        = ROOT / "EBASTv2_train" / "spawn_request_bank.pkl"
 
 # Get the trianed model
-model_path                      = ROOT / "EBASTv2_train" / "trained_model" / "AST_train_2026-05-31_14-27-50_d547" / "model" / "model.zip"
+model_path                      = ROOT / "EBASTv2_train" / "trained_model" / model_name / "model" / "model.zip"
+
+# Log path
+# log_path                        = ROOT / "EBASTv2_train" / "simulated_trained_model" / "episode_recap.txt"
+log_path                        = ROOT / "EBASTv2_train" / "trained_model" / model_name / "log" / "episode_recap.txt"
+
+# Get the save path for animation
+# saved_animation_path            = ROOT / "EBASTv2_train" / "simulated_trained_model" / "simulated_trained_model_meet_new.gif"
+saved_animation_path            = ROOT / "EBASTv2_train" / "trained_model" / model_name / "saved_animation" / "simulated_trained_model.gif"
 
 # =========================
 # Instantiate the environment wrapper
