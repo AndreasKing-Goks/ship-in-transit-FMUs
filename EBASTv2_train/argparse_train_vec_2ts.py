@@ -66,8 +66,8 @@ def parse_cli_args():
                         help="PATH: encounter settings json path (default: ROOT/EBASTv2_train/encounter_settings.json)")
     parser.add_argument("--spawn_requests_bank_path", type=Path, default=ROOT / "EBASTv2_train" / "spawn_request_bank.pkl", metavar="SPAWN_REQUESTS_BANK_PATH",
                         help="PATH: spawn requests bank pickle path (default: ROOT/EBASTv2_train/spawn_request_bank.pkl)")
-    parser.add_argument("--model_name", type=str, default="EB-ASTv2_train", metavar="MODEL_NAME",
-                        help="RUN: model/run name used for output folders (default: EB-ASTv2_train)")
+    parser.add_argument("--model_name", type=str, default="EB-ASTv2_train_2ts", metavar="MODEL_NAME",
+                        help="RUN: model/run name used for output folders (default: EB-ASTv2_train_2ts)")
     parser.add_argument("--save_anim_filename", type=str, default="EBASTv2_train.gif", metavar="SAVE_ANIM_FILENAME",
                         help="RUN: animation filename to save (default: EBASTv2_train.gif)")
     parser.add_argument("--save_reward_function", type=str2bool, default=True, metavar="SAVE_REWARD_FUNCTION",
