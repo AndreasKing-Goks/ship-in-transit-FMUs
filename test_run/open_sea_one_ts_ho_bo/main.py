@@ -35,6 +35,8 @@ from orchestrator.scenario_config import (
     get_target_ship_ids,
     prepare_trial_config_direct,
 )
+from orchestrator.utils import view_bo_results_table
+
 
 # ─── Paths ───────────────────────────────────────────────────
 CONFIG_PATH = Path(__file__).with_name("single_target_ship_ho.yaml")
@@ -44,9 +46,16 @@ RESULTS_PATH = Path(__file__).with_name("ax_results.json")
 
 
 # ─── Trial evaluation closure ────────────────────────────────
-def evaluate_trial(parameters, _target_ship_ids=None):
+def evaluate_trial(parameters, _target_ship_ids=None, max_intermediate_wps=0):
     """Run one Ax trial: prepare config → simulate → compute metrics."""
-    config = prepare_trial_config_direct(parameters, CONFIG_PATH, _target_ship_ids)
+    # If max_intermediate_wps=0, inject wp_count=0 since it's not in the search space
+    params = dict(parameters)
+    if max_intermediate_wps == 0:
+        for ts_id in _target_ship_ids:
+            prefix = ts_id.lower()
+            params[f"{prefix}_wp_count"] = 0
+    
+    config = prepare_trial_config_direct(params, CONFIG_PATH, _target_ship_ids)
     instance = run_simulation(config, ROOT)
     metrics = compute_trial_metrics(instance, num_target_ships=len(_target_ship_ids))
     return {"objective": (metrics["objective"], 0.0)}, metrics
@@ -54,10 +63,11 @@ def evaluate_trial(parameters, _target_ship_ids=None):
 
 def main():
     """Run BO, persist results, and optionally replay the best trial."""
-    num_sobol_trials = 2
-    num_bo_trials = 2
+    num_sobol_trials = 20
+    num_bo_trials = 80
     total_trials = num_sobol_trials + num_bo_trials
-    replay_best = True
+    max_intermediate_wps = 0
+    replay_best = False
 
     base_config = load_base_config(CONFIG_PATH)
     target_ship_ids = get_target_ship_ids(base_config)
@@ -70,8 +80,8 @@ def main():
 
     ax_client, best_parameters, history = run_ax_optimization(
         experiment_name="open_sea_one_ts_ho_bo",
-        parameter_space=build_parameter_space_direct(target_ship_ids),
-        evaluate_fn=lambda p: evaluate_trial(p, target_ship_ids),
+        parameter_space=build_parameter_space_direct(target_ship_ids, max_intermediate_wps=max_intermediate_wps),
+        evaluate_fn=lambda p: evaluate_trial(p, _target_ship_ids=target_ship_ids, max_intermediate_wps=max_intermediate_wps),
         total_trials=total_trials,
         num_sobol_trials=num_sobol_trials,
         random_seed=7,
@@ -79,6 +89,8 @@ def main():
 
     save_results(ax_client, best_parameters, history, RESULTS_PATH, trim=True)
     print_trial_summary_table(ax_client)
+
+    view_bo_results_table(RESULTS_PATH, save_csv=True)
 
     if best_parameters is None:
         print("No valid Ax trials were completed. Check trial errors in history.")

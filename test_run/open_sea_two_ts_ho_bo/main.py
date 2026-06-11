@@ -33,6 +33,7 @@ from orchestrator.bo_core import (
     prepare_spawn_requests_trafficgen,
 )
 from orchestrator.scenario_config import load_base_config
+from orchestrator.utils import view_bo_results_table
 
 # ─── Paths ───────────────────────────────────────────────────
 CONFIG_PATH = Path(__file__).with_name("two_target_ship_ho.yaml")
@@ -79,10 +80,10 @@ def evaluate_trial(parameters):
 
 def main():
     """Run BO, persist results, and optionally replay the best trial."""
-    num_sobol_trials = 2
-    num_bo_trials = 2
+    num_sobol_trials = 20
+    num_bo_trials = 80
     total_trials = num_sobol_trials + num_bo_trials
-    replay_best = True
+    replay_best = False
 
     print(
         f"Running Ax optimization with {num_sobol_trials} Sobol trials "
@@ -101,6 +102,9 @@ def main():
 
     save_results(ax_client, best_parameters, history, RESULTS_PATH, trim=False)
     print_trial_summary_table(ax_client)
+    
+    # Always create CSV results
+    view_bo_results_table(RESULTS_PATH, save_csv=True)
 
     if best_parameters is None:
         print("No valid Ax trials were completed. Check trial errors in history.")

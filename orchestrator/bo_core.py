@@ -49,7 +49,7 @@ def _capped_margin(value, threshold):
 def compute_trial_metrics(instance, num_target_ships):
     """AST-aligned danger score used as the BO/MC objective.
 
-    Mirrors the *terminal* reward of the AST adversary
+    Mirrors the terminal reward of the AST adversary
     (RL_env/reward_function.py): own-ship outcome bonuses
     (collision/grounding/navigation-failure/reach-end) plus target-ship
     validity penalties, plus a nearest-distance shaping term computed with the
@@ -309,12 +309,6 @@ def build_parameter_space_direct(target_ship_ids, max_intermediate_wps=3):
                 "value_type": "float",
             },
             {
-                "name": f"{prefix}_wp_count",
-                "type": "range",
-                "bounds": [0, max_intermediate_wps],
-                "value_type": "int",
-            },
-            {
                 "name": f"{prefix}_end_north",
                 "type": "range",
                 "bounds": [-500.0, 1500.0],
@@ -327,6 +321,15 @@ def build_parameter_space_direct(target_ship_ids, max_intermediate_wps=3):
                 "value_type": "float",
             },
         ])
+
+        # Only add wp_count if max_intermediate_wps > 0
+        if max_intermediate_wps > 0:
+            parameters.append({
+                "name": f"{prefix}_wp_count",
+                "type": "range",
+                "bounds": [0, max_intermediate_wps],
+                "value_type": "int",
+            })
 
         for i in range(1, max_intermediate_wps + 1):
             parameters.extend([

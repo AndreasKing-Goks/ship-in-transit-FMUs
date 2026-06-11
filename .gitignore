@@ -200,6 +200,7 @@ cython_debug/
 
 # BO / simulation results and artifacts
 **/ax_results.json
+**/ax_results_metrics.csv
 saved_animation/
 data/situation_outputs/
 

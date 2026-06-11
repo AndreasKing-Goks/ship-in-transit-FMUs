@@ -6,8 +6,10 @@ from pathlib import Path
 import re
 import datetime
 import uuid
+import json
 
 import numpy as np
+import pandas as pd
 
 
 # =============================================================================================================
@@ -204,3 +206,62 @@ def get_trained_model_and_log_path(ROOT: Path, model_name: str, unique: bool = T
     tb_path   = str(base_dir / model_name_unique / "tb")
 
     return model_path, log_path, tb_path
+
+
+# =============================================================================================================
+# Visualize BO results 
+# =============================================================================================================
+def view_bo_results_table(results_json_path, save_csv=True, csv_output_path=None):
+    """
+    Load BO results JSON and display metrics in a formatted table.
+    
+    Parameters
+    ----------
+    results_json_path : str or Path
+        Path to the ax_results.json file from BO experiment.
+    save_csv : bool
+        If True, save the table as CSV.
+    csv_output_path : str or Path, optional
+        Path to save CSV. If None, saves to same directory as JSON with "_metrics.csv" suffix.
+    
+    Returns
+    -------
+    pd.DataFrame
+        DataFrame containing all trial metrics.
+    
+    Example
+    -------
+    >>> df = view_bo_results_table("test_run/open_sea_one_ts_ho_bo/ax_results.json")
+    """
+    results_json_path = Path(results_json_path)
+    
+    # Load the results
+    with open(results_json_path, "r") as f:
+        data = json.load(f)
+    
+    # Extract metrics from each trial
+    metrics_list = []
+    for trial in data["history"]:
+        row = {
+            "trial": trial["trial_index"],
+            "type": trial["trial_type"],
+            "status": trial["trial_status"],
+        }
+        row.update(trial["metrics"])
+        metrics_list.append(row)
+    
+    # Create DataFrame
+    df = pd.DataFrame(metrics_list)
+    
+    # Display
+    print(df.to_string())
+    
+    # Optional: save as CSV
+    if save_csv:
+        if csv_output_path is None:
+            csv_output_path = results_json_path.parent / f"{results_json_path.stem}_metrics.csv"
+        df.to_csv(csv_output_path, index=False)
+        print(f"\nAlso saved to {csv_output_path}")
+    
+    return df
+
