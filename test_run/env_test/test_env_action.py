@@ -22,7 +22,7 @@ from orchestrator.scenario_config import generate_spawn_request_bank, load_spawn
 config_path = ROOT / "test_run" / "env_test" / "test_env.yaml"
 
 # Get the save path for animation
-save_path = ROOT / "saved_animation" / "test_env_action_250.mp4"
+save_path = ROOT / "saved_animation" / "test_env_action_ts_1.mp4"
 
 # Get the encounter settings path
 encounter_settings_path = ROOT / "test_run" / "env_test" / "encounter_settings.json"
@@ -54,15 +54,28 @@ env = EBASTv2Env(
     spawn_requests_bank=spawn_requests_bank
     )
 
-env.set_for_evaluation()
+# env.set_for_evaluation()
 
-obs, info   = env.reset(seed=250)
+case_idx    = 82
+obs, info   = env.reset(seed=250, specific_case_idx=case_idx)
 
-action_list = [[30,2500],
-               [30,2000],
-               [-30,2000],
-               [-30,2000],
-               [-30,1900]] # for 250
+action_list = [[-13,2500],
+               [-13,3500],
+               [-23,3500],
+               [-23,4500],
+               [-23,4500]]
+
+# action_list = [[-13,2500],
+#                [-13,3500],
+#                [-13,3500],
+#                [-23,4500],
+#                [-23,4500]] # Collision
+
+# action_list = [[30,2500],
+#                [30,2000],
+#                [-30,2000],
+#                [-30,2000],
+#                [-30,1900]] # for 250
 
 # action_list = [[-20,3700],
 #                [-20,2000],
@@ -108,7 +121,7 @@ env.instance.AnimateFleetTrajectory(
         margin_frac=0.08,
         equal_aspect=True,
         interval_ms=20,
-        frame_step=1,
+        frame_step=20,
         trail_len=50,
         plot_routes=True,
         plot_waypoints=True,

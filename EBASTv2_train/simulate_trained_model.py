@@ -30,7 +30,7 @@ import numpy as np
 # Handle paths
 # =========================
 # Trained Model Name
-model_name                      = "EB-ASTv2_train_2026-06-07_09-40-33_087a"
+model_name                      = "EB-ASTv2_train_1ts_2026-06-08_16-45-58_f9d4"
 
 # Get the config path
 config_path                     = ROOT / "EBASTv2_train" / "EBASTv2_train.yaml"
@@ -45,12 +45,12 @@ spawn_requests_bank_path        = ROOT / "EBASTv2_train" / "spawn_request_bank.p
 model_path                      = ROOT / "EBASTv2_train" / "trained_model" / model_name / "model" / "model.zip"
 
 # Log path
-# log_path                        = ROOT / "EBASTv2_train" / "simulated_trained_model" / "episode_recap.txt"
-log_path                        = ROOT / "EBASTv2_train" / "trained_model" / model_name / "log" / "episode_recap.txt"
+log_path                        = ROOT / "EBASTv2_train" / "simulated_trained_model" / "episode_recap.txt"
+# log_path                        = ROOT / "EBASTv2_train" / "trained_model" / model_name / "log" / "episode_recap.txt"
 
 # Get the save path for animation
-# saved_animation_path            = ROOT / "EBASTv2_train" / "simulated_trained_model" / "simulated_trained_model_meet_new.gif"
-saved_animation_path            = ROOT / "EBASTv2_train" / "trained_model" / model_name / "saved_animation" / "simulated_trained_model.gif"
+saved_animation_path            = ROOT / "EBASTv2_train" / "simulated_trained_model" / "simulated_trained_model.gif"
+# saved_animation_path            = ROOT / "EBASTv2_train" / "trained_model" / model_name / "saved_animation" / "simulated_trained_model.mp4"
 
 # =========================
 # Instantiate the environment wrapper
@@ -83,7 +83,8 @@ env.set_for_evaluation()
 recurrent_ppo_model = RecurrentPPO.load(model_path)
 
 # Reset the trained model
-obs, info   = env.reset()
+case_idx    = None
+obs, info   = env.reset(specific_case_idx=case_idx)
 
 # Cell and hidden state of the LSTM
 lstm_states = None
@@ -136,7 +137,7 @@ env.instance.AnimateFleetTrajectory(
         plot_inter_wp_proj=False,
         with_labels=True,
         precompute_ship_outlines=True,
-        save_path=saved_animation_path,
+        # save_path=saved_animation_path,
         writer_fps=20,
         palette=None,
         blit=True,

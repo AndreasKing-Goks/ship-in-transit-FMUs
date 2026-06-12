@@ -52,6 +52,7 @@ def logprior_scope_angle_change(
 def find_collision_heading(pos_own, vel_own, pos_tar, speed_tar):
     """
     Find target heading that would make target collide with own ship.
+    Recorded when first enter RoA
 
     pos_own   : [north, east]
     vel_own   : [v_north, v_east]
@@ -134,9 +135,9 @@ def compute_reward(observation, args):
         # Unpack args
         (os_id, ts_id, ts_iw_idx,
          stop_info, n_ts,
-         reward_components,
+         reward_components, finish_intercept_flags,
          skip_map_evaluation,
-         n_ts_iw, nearest_dist_dict,
+         ts_iw_id, nearest_dist_dict,
          remaining_requests_bound,
          max_scope_angles, IW_coordinates,
          scope_angles, prev_scope_angles,
@@ -243,17 +244,37 @@ def compute_reward(observation, args):
         rel_tar_ships_pos   = observation["rel_tar_ships_pos"].reshape(n_ts, 3)
         tar_ships_speed     = observation["tar_ships_forward_speed"]
         remaining_requests  = observation["remaining_requests"]
+        action_masks        = observation["action_masks"]
+        
+        # Compute the used requests to max requests ratio
+        max_remaining_requests  = remaining_requests_bound["max"]
+        used_requests           = max_remaining_requests - remaining_requests
+        used_to_max_ratio       = used_requests / max_remaining_requests
         
         # Unpack own ship position
         own_north       = own_ship_pos[0]
         own_east        = own_ship_pos[1]
         
-        ## Nearest distance reward during state-action transition
+        # Unpack nearest distance
         ss_dist_list    = list(nearest_dist_dict.values())
+        ss_dist_list_iw = []    # For IW enabled target ship
+        for ts_id in list(nearest_dist_dict.keys()):
+            if ts_id in ts_iw_id:
+                ss_dist_list_iw.append(nearest_dist_dict[ts_id])
+        
+        ##############################################################################################
+        ## REWARD 1: TOTAL DISTANCE REWARD
+        # Mean of the sum of Reward 1a, Reward 1b, and Reward 1c
+        
+        # REWARD 1a: Nearest distance reward during state-action transition [FOR IW & NON-IW SHIP]
         rew_nd_ss       = np.mean([nearest_distance_reward_func(dist) for dist in ss_dist_list])
+        
+        # Store REWARD 1a
         reward_components["nearest_distance_rewards"].append(rew_nd_ss)
         
-        ## Intermediate waypoint nearest distance to own ship
+        #--------------------------------------------------------------------------------------------#
+        
+        # REWARD 1b: Intermediate waypoint nearest distance to own ship [FOR IW & NON-IW SHIP]
         iw_dist_list        = []
         for IW_coordinate in IW_coordinates:
             iw_north        = IW_coordinate[0]
@@ -264,12 +285,14 @@ def compute_reward(observation, args):
             
             dist            = np.hypot(d_north, d_east)
             iw_dist_list.append(dist)
-            
-        # Get the IW distance to own_ship
         rew_nd_iw      = np.mean([iw_distance_to_os_reward_func(dist) for dist in iw_dist_list])
+        
+        # Store REWARD 1b
         reward_components["nearest_distance_iw_rewards"].append(rew_nd_iw)
         
-        # Compute the distance of each target ship to the own ship when RoA
+        #--------------------------------------------------------------------------------------------#
+        
+        # REWARD 1c: Target ship nearest distance to the own ship when ROA [FOR IW & NON-IW SHIP]
         roa_dist_list       = []
         for rel_tar_ship_pos in rel_tar_ships_pos:
             rel_tar_north       = rel_tar_ship_pos[0]
@@ -277,62 +300,90 @@ def compute_reward(observation, args):
             
             dist            = np.hypot(rel_tar_north, rel_tar_east)         
             roa_dist_list.append(dist)
-        
-        ## Nearest distance reward when RoA
         rew_nd_roa          = np.mean([nearest_distance_reward_func(dist) for dist in roa_dist_list])
+        
+        # Store REWARD 1c
         reward_components["nearest_distance_roa_rewards"].append(rew_nd_roa)
         
-        ## TOTAL DISTANCE REWARD
+        #--------------------------------------------------------------------------------------------#
+        
+        # COMPUTE REWARD 1
         rew_dist            = (rew_nd_ss + rew_nd_iw + rew_nd_roa)/3
-        reward_components["total_distance_rewards"].append(rew_dist)
         reward             += rew_dist
         
-        ## Intermediate waypoint sampling penalty/reward
-        rew_iwp_coeff           = 1.0
-        max_remaining_requests  = remaining_requests_bound["max"]
-        used_requests           = max_remaining_requests - remaining_requests
-        used_to_max_ratio       = used_requests / max_remaining_requests
-        rew_iwp                 = -(np.mean(used_to_max_ratio) * rew_iwp_coeff)
+        # Store REWARD 1
+        reward_components["total_distance_rewards"].append(rew_dist)
+        
+        ##############################################################################################
+        
+        ## REWARD 2: Intermediate waypoint sampling penalty/reward [FOR IW SHIP]
+        rew_iwp_coeff           = 1.5
+        rew_iwp                 = -(np.mean(used_to_max_ratio * rew_iwp_coeff))
         reward                 += rew_iwp
+        
+        # Store REWARD 2
         reward_components["scope_angle_request_done_rewards"].append(rew_iwp)
         
-        ## Scope angle change log likelihood reward
-        rews_scc                = []
-        mean_change             = 0.0
-        rew_coeff               = n_ts_iw        # Linearly dependent to the amount of ts_iw
-        sigma                   = 5.0
+        ##############################################################################################
         
-        for sc, psc, am, msc in zip(scope_angles, prev_scope_angles, previous_action_masks, max_scope_angles):
+        ## REWARD 3: Scope angle change log likelihood reward [FOR IW SHIP]
+        # Initially low influence then gets dominant
+        rews_scc                    = []
+        mean_change                 = 0.0
+        rew_scc_coeff_multiplier    = 1.0
+        sigma                       = 5.0
+        
+        for sc, psc, am, msc, umr in zip(scope_angles, prev_scope_angles, previous_action_masks, max_scope_angles, used_to_max_ratio):
             # Skip it if the action is masked
             if bool(am) != True:
                 continue
             
-            ll_scc_min              = logprior_scope_angle_change(scope_angle_change=0.0,
+            # Compute the low bound likelihood
+            ll_scc_min          = logprior_scope_angle_change(scope_angle_change=0.0,
                                                               mean_change=mean_change,
                                                               sigma=sigma,
                                                               theta=2*msc)
-            ll_scc_max              = logprior_scope_angle_change(scope_angle_change=2*msc,
+            # Compute the high bound likelihood
+            ll_scc_max          = logprior_scope_angle_change(scope_angle_change=2*msc,
                                                               mean_change=mean_change,
                                                               sigma=sigma,
                                                               theta=2*msc)
             
+            # Compute the scope angle change likelihood
             scope_angle_change  = sc - psc
             ll_scc              = logprior_scope_angle_change(scope_angle_change=scope_angle_change,
                                                               mean_change=mean_change,
                                                               sigma=sigma,
                                                               theta=2*msc)
             
-            rew                 = ((ll_scc - ll_scc_min) / (ll_scc_min - ll_scc_max)) * rew_coeff
+            # Compute the dynamic reward coefficient
+            rew_scc_coeff       = umr * rew_scc_coeff_multiplier
+            
+            # Reward is based on the normalized scope angle change likelihood
+            rew                 = ((ll_scc - ll_scc_min) / (ll_scc_min - ll_scc_max)) * rew_scc_coeff
             
             rews_scc.append(rew)
         rew_scc                 = np.mean(rews_scc)
         reward                 += rew_scc
+        
+        # Store REWARD 3
         reward_components["scope_angle_change_log_likelihood_rewards"].append(rew_scc) 
         
-        ## Interception scope angle reward
-        rew_isa_coeff       = 2.0
-        rews_isa            = []
-        for idx, sc, r_cog in zip(ts_iw_idx, scope_angles, routes_cog_ned_deg):
+        ##############################################################################################
+        
+        ## REWARD 4: Interception scope angle reward [FOR IW SHIP]
+        # Initially high influence then mellows down
+        rew_isa_coeff_multiplier    = 1.0
+        passing_discount_factor     = 0.75
+        rews_isa                    = []
+        zipped_list                 =zip(ts_iw_idx, scope_angles, previous_action_masks, 
+                                         routes_cog_ned_deg, used_to_max_ratio, 
+                                         ss_dist_list_iw, finish_intercept_flags)
+        for i, (idx, sc, am, r_cog, umr, ss_dist_iw, fi) in enumerate(zipped_list):
+            # Skip it if the action is masked
+            if bool(am) != True:
+                continue
+            
             ts_idx              = idx - 1
             tar_ship_pos        = rel_tar_ships_pos[ts_idx] + own_ship_pos
             tar_ship_speed      = tar_ships_speed[ts_idx]
@@ -347,6 +398,7 @@ def compute_reward(observation, args):
             speed_tar           = tar_ship_speed
             
             return_val          = find_collision_heading(pos_own, vel_own, pos_tar, speed_tar)
+
             
             if return_val is not None:
                 # When collision is feasible
@@ -354,18 +406,30 @@ def compute_reward(observation, args):
                 desired_angle_deg               = sc + r_cog
                 
                 # Compute the error between the desired and the interception angle
-                error   = desired_angle_deg - interception_angle_deg
+                error           = desired_angle_deg - interception_angle_deg
+                
+                # Compute the dynamic reward coefficient
+                rew_isa_coeff   = (2.0 - umr) * rew_isa_coeff_multiplier
                 
                 # Compute reward
-                rew_isa     = intercept_angle_reward_func(error) * rew_isa_coeff
+                rew_isa         = intercept_angle_reward_func(error) * rew_isa_coeff
                 
             else:
-                # No reward when no collision is forseeable
-                rew_isa     = 0.0
-            rews_isa.append(rew_isa)
+                # Reward is the nearest distance during transition converted using nearest distance reward design.
+                # However this only valid for one passing. Once passed, set the flag as True and no rewards is obtained
+                if fi is False:
+                    rew_isa         = nearest_distance_reward_func(ss_dist_iw) * passing_discount_factor
+                    finish_intercept_flags[i] = True
+
+                else:
+                    rew_isa         = 0.0
+            
+            rews_isa.append(rew_isa)            
             
         rew_isa             = np.mean(rews_isa)
         reward             += rew_isa
+        
+        # Store REWARD 4
         reward_components["intercept_scope_angle_rewards"].append(rew_isa)
-            
+        
         return reward

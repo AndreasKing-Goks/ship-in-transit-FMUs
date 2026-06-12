@@ -118,7 +118,7 @@ class EBASTv2Env(gym.Env):
             max_scope_angle     = self.ship_configs[idx]["fmu_params"]["MISSION_MANAGER"]["scope_angle_max_deg"]
             self.max_scope_angles.append(max_scope_angle)
             min_scope_angle     = -max_scope_angle
-            max_scope_length    = 5000
+            max_scope_length    = 10000
             min_scope_length    = 1000
             
             data = {
@@ -668,9 +668,9 @@ class EBASTv2Env(gym.Env):
         IW_coordinates          = [datum[frame]["sampled_inter_wps"][-1] for datum, frame in zip(IW_sampling_data, last_frame)]
         args                    = (self.os_id, self.ts_id, self.ts_iw_idx,
                                    self.instance.stop_info, self.n_ts,
-                                   self.reward_components,
+                                   self.reward_components, self.finish_intercept_flags,
                                    self.skip_map_evaluation,
-                                   self.n_ts_iw , self.nearest_dist_dict,
+                                   self.ts_iw_id , self.nearest_dist_dict,
                                    self.remaining_requests_bound,
                                    self.max_scope_angles, IW_coordinates,
                                    scope_angles, prev_scope_angles,
@@ -692,7 +692,7 @@ class EBASTv2Env(gym.Env):
         return observation, reward, terminated, truncated, info
     
     
-    def reset(self, seed: Optional[int] = None, options: Optional[dict] = None):
+    def reset(self, seed: Optional[int] = None, options: Optional[dict] = None, specific_case_idx=None):
         """
             Reset the environment all together
         """
@@ -713,26 +713,31 @@ class EBASTv2Env(gym.Env):
             self.truncated          = False
             
             # Sample the case index depends on the training/evaluation mode
-            if self.for_training:
+            if specific_case_idx is not None:
+                case_idx                = specific_case_idx
+            elif self.for_training:
                 case_idx                = int(self.np_random.integers(0, self.start_eval_case_id))
             else:
                 case_idx                = int(self.np_random.integers(self.start_eval_case_id, self.n_spawn_cases))
             
             # Use Ship Traffic Generator to generates collision encounter case
-            config                  = load_base_config(self.config_path)
-            case                    = self.spawn_cases[case_idx]
-            spawn_requests          = case["spawn_requests"]
-            own_ship_initial        = case["own_ship_initial"]
-            encounters              = case["encounters"]
+            config                      = load_base_config(self.config_path)
+            case                        = self.spawn_cases[case_idx]
+            spawn_requests              = case["spawn_requests"]
+            own_ship_initial            = case["own_ship_initial"]
+            encounters                  = case["encounters"]
             
             # For output
-            self.case_idx           = case_idx
-            self.spawn_requests     = spawn_requests
-            self.own_ship_initial   = own_ship_initial
-            self.encounters         = encounters 
+            self.case_idx               = case_idx
+            self.spawn_requests         = spawn_requests
+            self.own_ship_initial       = own_ship_initial
+            self.encounters             = encounters 
             
             # Spawn request
-            self.routes_cog_ned_deg = []
+            self.routes_cog_ned_deg     = []
+            
+            # Initial intercept scope angle pass flag
+            self.finish_intercept_flags = [False] * self.n_ts_iw
             
             for ts_id in self.ts_iw_id:
                 north_route         = spawn_requests[ts_id]["north_route"]

@@ -15,6 +15,8 @@ from EBASTv2_core.env import EBASTv2Env
 from EBASTv2_core.episode_logger import log_episode_recap
 from orchestrator.scenario_config import generate_spawn_request_bank, load_spawn_requests_bank_path
 
+import numpy as np
+
 # =========================
 # Load the Configuration
 # =========================
@@ -22,7 +24,7 @@ from orchestrator.scenario_config import generate_spawn_request_bank, load_spawn
 config_path = ROOT / "test_run" / "env_test" / "test_env_2.yaml"
 
 # Get the save path for animation
-save_path = ROOT / "saved_animation" / "test_env_action_250.mp4"
+save_path = ROOT / "saved_animation" / "test_env_action_ts_2_RF.mp4"
 
 # Get the encounter settings path
 encounter_settings_path = ROOT / "test_run" / "env_test" / "encounter_settings.json"
@@ -56,16 +58,43 @@ env = EBASTv2Env(
 
 env.set_for_evaluation()
 
-obs, info   = env.reset(seed=250)
+case_idx    = 82
+obs, info   = env.reset(seed=250, specific_case_idx=case_idx)
+
+action_list_1 = [[25,3500],
+                 [25,3500],
+                 [25,3500],
+                 [25,3500],
+                 [25,3500]]
+
+action_list_2 = [[-13,500],
+                 [-13,2500],
+                 [-13,2500],
+                 [-15,2500],
+                 [-15,2500]]
 
 term = False
+i_ts1   = 0
+i_ts2   = 0
+
 while not term:
-    obs = env._get_obs()
-    do_action_sampling = any(obs["action_masks"])
+    obs                 = env._get_obs()
+    action_masks        = obs["action_masks"]
+    do_action_sampling  = any(action_masks)
     
     if do_action_sampling:
-        action = env.action_space.sample()
-        obs, rew, term, trun, inf = env.step(action)
+        action = [[0, 1000]] * len(action_masks)
+        
+        if bool(action_masks[0]) is True:
+            action[0]   = (action_list_1[i_ts1])
+            i_ts1      += 1
+        if bool(action_masks[1]) is True:
+            action[1]   = action_list_2[i_ts2]
+            i_ts2      += 1
+        
+        action_flatten  = env._normalize_action(np.array(action).flatten())
+        
+        obs, rew, term, trun, inf = env.step(action_flatten)
 
 # =========================
 # Log the episode
@@ -102,7 +131,7 @@ env.instance.AnimateFleetTrajectory(
         plot_inter_wp_proj=False,
         with_labels=True,
         precompute_ship_outlines=True,
-        # save_path=save_path,
+        save_path=save_path,
         writer_fps=20,
         palette=None,
         blit=True,
