@@ -86,17 +86,17 @@ def parse_cli_args():
                         help="VEC_ENV: The number of environment instances for computating parallelization (default: 4)")
 
     # RecurrentPPO core
-    parser.add_argument("--total_timesteps", type=int, default=256_000, metavar="TOTAL_TIMESTEPS",
+    parser.add_argument("--total_timesteps", type=int, default=1_280_000, metavar="TOTAL_TIMESTEPS",
                         help="AST: total model training timesteps. Ideally bigger than n_steps (default: 128_000)")
     parser.add_argument("--policy", type=str, default="MultiInputLstmPolicy", metavar="POLICY",
                         help="AST: RecurrentPPO policy name (default: MultiInputLstmPolicy)")
-    parser.add_argument("--learning_rate", type=float, default=3e-4, metavar="LEARNING_RATE",
+    parser.add_argument("--learning_rate", type=float, default=1e-4, metavar="LEARNING_RATE",
                         help="AST: learning rate (default: 3e-4)")
-    parser.add_argument("--n_steps", type=int, default=128, metavar="N_STEPS", 
+    parser.add_argument("--n_steps", type=int, default=512, metavar="N_STEPS",
                         help="AST: number of steps to run for each environment per update (default: 128)")
-    parser.add_argument("--batch_size", type=int, default=128, metavar="BATCH_SIZE",
+    parser.add_argument("--batch_size", type=int, default=1024, metavar="BATCH_SIZE",
                         help="AST: minibatch size (default: 128)")
-    parser.add_argument("--n_epochs", type=int, default=10, metavar="N_EPOCHS",
+    parser.add_argument("--n_epochs", type=int, default=3, metavar="N_EPOCHS",
                         help="AST: number of epoch when optimizing surrogate loss (default: 10)")
     parser.add_argument("--gamma", type=float, default=1.00, metavar="GAMMA",
                         help="AST: discount factor (default: 1.00)")
@@ -106,7 +106,7 @@ def parse_cli_args():
                         help="AST: PPO clipping parameter (default: 0.2)")
     parser.add_argument("--normalize_advantage", type=str2bool, default=True, metavar="NORMALIZE_ADVANTAGE",
                         help="AST: normalize advantage estimates (default: True)")
-    parser.add_argument("--ent_coef", type=float, default=0.0, metavar="ENT_COEF",
+    parser.add_argument("--ent_coef", type=float, default=0.005, metavar="ENT_COEF",
                         help="AST: entropy coefficient (default: 0.0)")
     parser.add_argument("--vf_coef", type=float, default=0.5, metavar="VF_COEF",
                         help="AST: value function coefficient (default: 0.5)")
