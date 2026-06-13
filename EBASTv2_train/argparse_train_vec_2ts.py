@@ -86,7 +86,7 @@ def parse_cli_args():
                         help="VEC_ENV: The number of environment instances for computating parallelization (default: 4)")
 
     # RecurrentPPO core
-    parser.add_argument("--total_timesteps", type=int, default=1_920_000, metavar="TOTAL_TIMESTEPS",
+    parser.add_argument("--total_timesteps", type=int, default=2_560_000, metavar="TOTAL_TIMESTEPS",
                         help="AST: total model training timesteps. Ideally bigger than n_steps (default: 128_000)")
     parser.add_argument("--policy", type=str, default="MultiInputLstmPolicy", metavar="POLICY",
                         help="AST: RecurrentPPO policy name (default: MultiInputLstmPolicy)")
