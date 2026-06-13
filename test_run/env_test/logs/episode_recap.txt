@@ -59,7 +59,7 @@ Simulation time before action            : 255.0 s
 Simulation time after action             : 680.0 s
 Terminated                               : False
 Truncated                                : False
-Total Reward                             : 1.5001312214311942
+Total Reward                             : 1.6501312273916586
   > Termination Rewards
     - Own Ship Collision                 : 0.0
     - Own Ship Grounding                 : 0.0
@@ -70,7 +70,7 @@ Total Reward                             : 1.5001312214311942
     - Target Ships Navigation Failure    : 0.0
     - Target Ships Reaches End Waypoint  : 0.0
   > Non-termination Rewards
-    - Scope Angle Request Done           : -0.3000
+    - Scope Angle Request Done           : -0.1500
     - Scope Angle Change Log Likelihood  : -0.009388889028794237
     - Intercepting Scope Angle           : 1.7915418569710428
     - Proximity based                    : 0.01797826540987449
@@ -109,16 +109,16 @@ Target ships
 [ACTION]
 A single action consists of [scope angle, scope length] * number of target ships with IW sampler enabled.
 
-Raw normalized action vector             : [-0.4333333373069763, -0.25]
+Raw normalized action vector             : [-0.4333333373069763, -0.5384615659713745]
 Denormalized action vector               : [-13.0, 2500.0]
 
 IW action for target ship [TS2]
   Normalized scope angle                 : -0.4333333373069763
-  Normalized scope length                : -0.25
+  Normalized scope length                : -0.5384615659713745
   Scope angle deg                        : -13.0
   Scope length m                         : 2500.0
   Scope angle bounds deg                 : [-30, 30]
-  Scope length bounds m                  : [1000, 5000]
+  Scope length bounds m                  : [1000, 7500]
 
 [OBSERVATION AFTER ACTION - DENORMALIZED]
 
@@ -151,7 +151,7 @@ Simulation time before action            : 680.0 s
 Simulation time after action             : 1375.0 s
 Terminated                               : False
 Truncated                                : False
-Total Reward                             : 1.0790079824789416
+Total Reward                             : 1.3790079943998705
   > Termination Rewards
     - Own Ship Collision                 : 0.0
     - Own Ship Grounding                 : 0.0
@@ -162,7 +162,7 @@ Total Reward                             : 1.0790079824789416
     - Target Ships Navigation Failure    : 0.0
     - Target Ships Reaches End Waypoint  : 0.0
   > Non-termination Rewards
-    - Scope Angle Request Done           : -0.6000
+    - Scope Angle Request Done           : -0.3000
     - Scope Angle Change Log Likelihood  : 0.0
     - Intercepting Scope Angle           : 1.5956961198088953
     - Proximity based                    : 0.08331188651190426
@@ -201,16 +201,16 @@ Target ships
 [ACTION]
 A single action consists of [scope angle, scope length] * number of target ships with IW sampler enabled.
 
-Raw normalized action vector             : [-0.4333333373069763, 0.25]
+Raw normalized action vector             : [-0.4333333373069763, -0.23076921701431274]
 Denormalized action vector               : [-13.0, 3500.0]
 
 IW action for target ship [TS2]
   Normalized scope angle                 : -0.4333333373069763
-  Normalized scope length                : 0.25
+  Normalized scope length                : -0.23076921701431274
   Scope angle deg                        : -13.0
   Scope length m                         : 3500.0
   Scope angle bounds deg                 : [-30, 30]
-  Scope length bounds m                  : [1000, 5000]
+  Scope length bounds m                  : [1000, 7500]
 
 [OBSERVATION AFTER ACTION - DENORMALIZED]
 
@@ -243,7 +243,7 @@ Simulation time before action            : 1375.0 s
 Simulation time after action             : 2075.0 s
 Terminated                               : False
 Truncated                                : False
-Total Reward                             : 0.2411938917912635
+Total Reward                             : 0.6911939096726569
   > Termination Rewards
     - Own Ship Collision                 : 0.0
     - Own Ship Grounding                 : 0.0
@@ -254,7 +254,7 @@ Total Reward                             : 0.2411938917912635
     - Target Ships Navigation Failure    : 0.0
     - Target Ships Reaches End Waypoint  : 0.0
   > Non-termination Rewards
-    - Scope Angle Request Done           : -0.9000
+    - Scope Angle Request Done           : -0.4500
     - Scope Angle Change Log Likelihood  : -0.016666667328940496
     - Intercepting Scope Angle           : 0.9740950876014294
     - Proximity based                    : 0.18376550728156152
@@ -293,16 +293,16 @@ Target ships
 [ACTION]
 A single action consists of [scope angle, scope length] * number of target ships with IW sampler enabled.
 
-Raw normalized action vector             : [-0.7666666507720947, 0.25]
+Raw normalized action vector             : [-0.7666666507720947, -0.23076921701431274]
 Denormalized action vector               : [-23.0, 3500.0]
 
 IW action for target ship [TS2]
   Normalized scope angle                 : -0.7666666507720947
-  Normalized scope length                : 0.25
+  Normalized scope length                : -0.23076921701431274
   Scope angle deg                        : -23.0
   Scope length m                         : 3500.0
   Scope angle bounds deg                 : [-30, 30]
-  Scope length bounds m                  : [1000, 5000]
+  Scope length bounds m                  : [1000, 7500]
 
 [OBSERVATION AFTER ACTION - DENORMALIZED]
 
@@ -335,7 +335,7 @@ Simulation time before action            : 2075.0 s
 Simulation time after action             : 2975.0 s
 Terminated                               : False
 Truncated                                : False
-Total Reward                             : 0.19968612711657185
+Total Reward                             : 0.7996861509584298
   > Termination Rewards
     - Own Ship Collision                 : 0.0
     - Own Ship Grounding                 : 0.0
@@ -346,7 +346,7 @@ Total Reward                             : 0.19968612711657185
     - Target Ships Navigation Failure    : 0.0
     - Target Ships Reaches End Waypoint  : 0.0
   > Non-termination Rewards
-    - Scope Angle Request Done           : -1.2000
+    - Scope Angle Request Done           : -0.6000
     - Scope Angle Change Log Likelihood  : 0.0
     - Intercepting Scope Angle           : 0.7361401812442226
     - Proximity based                    : 0.663545993556065
@@ -385,16 +385,16 @@ Target ships
 [ACTION]
 A single action consists of [scope angle, scope length] * number of target ships with IW sampler enabled.
 
-Raw normalized action vector             : [-0.7666666507720947, 0.75]
+Raw normalized action vector             : [-0.7666666507720947, 0.07692313194274902]
 Denormalized action vector               : [-23.0, 4500.0]
 
 IW action for target ship [TS2]
   Normalized scope angle                 : -0.7666666507720947
-  Normalized scope length                : 0.75
+  Normalized scope length                : 0.07692313194274902
   Scope angle deg                        : -23.0
   Scope length m                         : 4500.0
   Scope angle bounds deg                 : [-30, 30]
-  Scope length bounds m                  : [1000, 5000]
+  Scope length bounds m                  : [1000, 7500]
 
 [OBSERVATION AFTER ACTION - DENORMALIZED]
 
@@ -427,7 +427,7 @@ Simulation time before action            : 2975.0 s
 Simulation time after action             : 3630.0 s
 Terminated                               : True
 Truncated                                : False
-Total Reward                             : -3.340034529025396
+Total Reward                             : -2.590034529025396
   > Termination Rewards
     - Own Ship Collision                 : 0.0
     - Own Ship Grounding                 : 0.0
@@ -438,7 +438,7 @@ Total Reward                             : -3.340034529025396
     - Target Ships Navigation Failure    : 0.0
     - Target Ships Reaches End Waypoint  : 0.0
   > Non-termination Rewards
-    - Scope Angle Request Done           : -1.5000
+    - Scope Angle Request Done           : -0.7500
     - Scope Angle Change Log Likelihood  : 0.0
     - Intercepting Scope Angle           : 0.0
     - Proximity based                    : 0.15996547097460403
@@ -477,16 +477,16 @@ Target ships
 [ACTION]
 A single action consists of [scope angle, scope length] * number of target ships with IW sampler enabled.
 
-Raw normalized action vector             : [-0.7666666507720947, 0.75]
+Raw normalized action vector             : [-0.7666666507720947, 0.07692313194274902]
 Denormalized action vector               : [-23.0, 4500.0]
 
 IW action for target ship [TS2]
   Normalized scope angle                 : -0.7666666507720947
-  Normalized scope length                : 0.75
+  Normalized scope length                : 0.07692313194274902
   Scope angle deg                        : -23.0
   Scope length m                         : 4500.0
   Scope angle bounds deg                 : [-30, 30]
-  Scope length bounds m                  : [1000, 5000]
+  Scope length bounds m                  : [1000, 7500]
 
 [OBSERVATION AFTER ACTION - DENORMALIZED]
 

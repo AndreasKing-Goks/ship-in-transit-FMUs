@@ -30,7 +30,7 @@ import numpy as np
 # Handle paths
 # =========================
 # Trained Model Name
-model_name                      = "EB-ASTv2_train_2ts_2026-06-12_22-51-13_c4c4"
+model_name                      = "EB-ASTv2_train_2ts_2026-06-08_17-10-07_0e10"
 
 # Get the config path
 config_path                     = ROOT / "EBASTv2_train" / "EBASTv2_train_2.yaml"

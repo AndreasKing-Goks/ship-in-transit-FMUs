@@ -317,8 +317,14 @@ def compute_reward(observation, args):
         ##############################################################################################
         
         ## REWARD 2: Intermediate waypoint sampling penalty/reward [FOR IW SHIP]
-        rew_iwp_coeff           = 1.25
-        rew_iwp                 = -(np.mean(used_to_max_ratio * rew_iwp_coeff))
+        rew_iwp_coeff           = 0.75
+        rews_iwp                = []
+        for ratio, am in zip(used_to_max_ratio, previous_action_masks):
+            # Skip it if the action is masked
+            if bool(am) != True:
+                continue
+            rews_iwp.append(-ratio * rew_iwp_coeff)
+        rew_iwp                 = (np.mean(rews_iwp))
         reward                 += rew_iwp
         
         # Store REWARD 2
