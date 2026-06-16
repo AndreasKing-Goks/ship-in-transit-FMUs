@@ -162,7 +162,8 @@ def main():
     recurrent_ppo_model = RecurrentPPO.load(
         str(old_model_path),
         env=vec_env,
-        device=args.device
+        device=args.device,
+        tensorboard_log=tb_dir
     )
     
     # Log training settings
