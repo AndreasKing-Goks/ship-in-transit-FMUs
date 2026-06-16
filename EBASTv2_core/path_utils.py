@@ -59,3 +59,65 @@ def get_RL_model_path(root: Path, model_name: str, unique: bool = True, save_ani
         saved_anim_path = None
 
     return model_path, train_args_log_path, episode_log_path, tb_path, saved_anim_path, checkpoint_dir
+
+def get_re_trained_RL_model_path(root: Path, results_ID: str, model_name:str, unique: bool = True, save_anim_filename: str = None):
+    """
+    Use the model path name that will be used for retraining, and modify to create new directories
+    
+    Example:
+        old run:
+        EB-ASTv2_train_2026-06-06_11-58-34_f00e/
+
+        continued run:
+        EB-ASTv2_train_continue_xx_2026-06-06_11-58-34_f00e/
+    """
+    # Base directory
+    base_dir = Path(root) / "EBASTv2_train" / "trained_model"
+    base_dir.mkdir(parents=True, exist_ok=True)
+    
+    # Retrieve the train results ID and modify it
+    if unique:
+        short_id            = uuid.uuid4().hex[:2]  # short unique string
+        tag                 = f"_continue_{short_id}"
+        old_name            = results_ID
+        model_name_unique   = old_name.replace(
+            model_name,
+            f"{model_name}{tag}"
+        )
+    else:
+        tag                 = "_continue"
+        old_name            = results_ID
+        model_name_unique   = old_name.replace(
+            model_name,
+            f"{model_name}{tag}"
+        )
+
+    # Full paths
+    model_dir = base_dir / model_name_unique / "model"
+    model_dir.mkdir(parents=True, exist_ok=True)
+    model_path = str(model_dir / "model.zip")
+    
+    checkpoint_dir = base_dir / model_name_unique / "checkpoints"
+    checkpoint_dir.mkdir(parents=True, exist_ok=True)
+
+    log_dir = base_dir / model_name_unique / "log"
+    log_dir.mkdir(parents=True, exist_ok=True)
+    
+    train_args_log_path = str(log_dir / "train_args.txt")
+    episode_log_path    = str(log_dir / "episode_recap.txt")
+
+    tb_dir = base_dir / model_name_unique / "tb"
+    tb_dir.mkdir(parents=True, exist_ok=True)
+    tb_path = str(tb_dir)
+    
+    if save_anim_filename is not None:
+        saved_anim_dir = base_dir / model_name_unique / "saved_animation"
+
+        # Create directory automatically if it does not exist
+        saved_anim_dir.mkdir(parents=True, exist_ok=True)
+
+        saved_anim_path = str(saved_anim_dir / save_anim_filename)
+    else:
+        saved_anim_path = None
+
+    return model_path, train_args_log_path, episode_log_path, tb_path, saved_anim_path, checkpoint_dir
