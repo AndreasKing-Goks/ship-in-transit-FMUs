@@ -8,7 +8,7 @@ sys.path.insert(0, str(ROOT))
 
 from EBASTv2_core.path_utils import get_re_trained_RL_model_path
 
-results_ID  = "EB-ASTv2_train_2ts_2026-06-13_22-30-22_69f2"
+results_ID  = "EB-ASTv2_train_2ts_continue_03_2026-06-13_22-30-22_69f2"
 model_name  = "EB-ASTv2_train_2ts"
 
 model_path, train_args_log_path, episode_log_path, tb_path, saved_anim_path, checkpoint_dir = get_re_trained_RL_model_path(ROOT,

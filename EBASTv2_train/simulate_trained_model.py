@@ -30,7 +30,7 @@ import numpy as np
 # Handle paths
 # =========================
 # Trained Model Name
-model_name                      = "EB-ASTv2_train_2ts_2026-06-13_22-30-22_69f2"
+model_name                      = "EB-ASTv2_train_2ts_continue_03_2026-06-13_22-30-22_69f2"
 
 # Get the config path
 config_path                     = ROOT / "EBASTv2_train" / "EBASTv2_train_2.yaml"
@@ -77,7 +77,7 @@ env = EBASTv2Env(
 # Run the trained model and log the episode
 # =========================
 # Set the environment to evaluation mode
-# env.set_for_evaluation()
+env.set_for_evaluation()
 
 # Load the trained model
 recurrent_ppo_model = RecurrentPPO.load(model_path)
@@ -133,7 +133,7 @@ env.instance.AnimateFleetTrajectory(
         plot_waypoints=True,
         plot_roa=True,
         plot_start_end=True,
-        plot_inter_wp_roa=True,
+        plot_inter_wp_roa=False,
         plot_inter_wp_proj=False,
         with_labels=True,
         precompute_ship_outlines=True,

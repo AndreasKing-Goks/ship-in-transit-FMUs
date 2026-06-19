@@ -3,7 +3,7 @@
 #SBATCH --account=share-ie-itk
 #SBATCH --partition=GPUQ
 #SBATCH --gres=gpu:1
-#SBATCH --cpus-per-task=32
+#SBATCH --cpus-per-task=64
 #SBATCH --mem=256G
 #SBATCH --time=72:00:00
 #SBATCH --output=/dev/null
@@ -29,6 +29,6 @@ nvidia-smi
 
 echo "Starting training..."
 
-python -u EBASTv2_train/argparse_re-train_vec_2ts.py --results_ID=EB-ASTv2_train_2ts_2026-06-13_22-30-22_69f2 --n_envs=32
+python -u EBASTv2_train/argparse_re-train_vec_2ts.py --results_ID=EB-ASTv2_train_2ts_continue_03_2026-06-13_22-30-22_69f2 --n_envs=32
 
 echo "Finished at: $(date)"
