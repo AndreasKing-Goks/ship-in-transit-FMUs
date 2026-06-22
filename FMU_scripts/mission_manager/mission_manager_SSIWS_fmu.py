@@ -94,7 +94,7 @@ class MissionManagerSingleSegmentIWSampler(Fmi2Slave):
         self.register_variable(Real("north", causality=Fmi2Causality.input))
         self.register_variable(Real("east", causality=Fmi2Causality.input))
         self.register_variable(Real("scope_angle_deg", causality=Fmi2Causality.input))
-        self.register_variable(Boolean("inside_trigger_zone", causality=Fmi2Causality.input))
+        self.register_variable(Boolean("inside_trigger_zone", causality=Fmi2Causality.input, variability=Fmi2Variability.discrete))
 
         self.register_variable(Real("wp_start_north", causality=Fmi2Causality.parameter, variability=Fmi2Variability.fixed))
         self.register_variable(Real("wp_start_east",  causality=Fmi2Causality.parameter, variability=Fmi2Variability.fixed))
@@ -115,9 +115,9 @@ class MissionManagerSingleSegmentIWSampler(Fmi2Slave):
         self.register_variable(Real("next_wp_north", causality=Fmi2Causality.output))
         self.register_variable(Real("next_wp_east",  causality=Fmi2Causality.output))
         self.register_variable(Real("next_wp_speed", causality=Fmi2Causality.output))
-        self.register_variable(Boolean("last_segment_active", causality=Fmi2Causality.output))
-        self.register_variable(Boolean("reach_wp_end", causality=Fmi2Causality.output))
-        self.register_variable(Boolean("request_scope_angle", causality=Fmi2Causality.output))
+        self.register_variable(Boolean("last_segment_active", causality=Fmi2Causality.output, variability=Fmi2Variability.discrete))
+        self.register_variable(Boolean("reach_wp_end", causality=Fmi2Causality.output, variability=Fmi2Variability.discrete))
+        self.register_variable(Boolean("request_scope_angle", causality=Fmi2Causality.output, variability=Fmi2Variability.discrete))
         for i in range(1, 5):
             self.register_variable(Real(f"inter_wp_sampling_time_{i}", causality=Fmi2Causality.output))
             self.register_variable(Real(f"inter_wp_{i}_north", causality=Fmi2Causality.output))
@@ -126,8 +126,8 @@ class MissionManagerSingleSegmentIWSampler(Fmi2Slave):
             self.register_variable(Real(f"inter_wp_proj_{i}_east", causality=Fmi2Causality.output))
         
         # Debug
-        self.register_variable(Integer("_idx", causality=Fmi2Causality.output))
-        self.register_variable(String("messages", causality=Fmi2Causality.output))
+        self.register_variable(Integer("_idx", causality=Fmi2Causality.output, variability=Fmi2Variability.discrete))
+        self.register_variable(String("messages", causality=Fmi2Causality.output, variability=Fmi2Variability.discrete))
 
     def _valid_triplet(self, n, e, s) -> bool:
         return np.isfinite(n) and np.isfinite(e) and np.isfinite(s)

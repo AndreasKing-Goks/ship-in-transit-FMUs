@@ -106,17 +106,17 @@ class MissionManagerAST(Fmi2Slave):
         self.register_variable(Real("next_wp_north", causality=Fmi2Causality.output))
         self.register_variable(Real("next_wp_east",  causality=Fmi2Causality.output))
         self.register_variable(Real("next_wp_speed", causality=Fmi2Causality.output))
-        self.register_variable(Boolean("last_segment_active", causality=Fmi2Causality.output))
-        self.register_variable(Boolean("reach_wp_end", causality=Fmi2Causality.output))
-        self.register_variable(Boolean("request_captain_intent", causality=Fmi2Causality.output))
-        self.register_variable(Boolean("insert_wp_now", causality=Fmi2Causality.output))
-        self.register_variable(Integer("idx", causality=Fmi2Causality.output))
+        self.register_variable(Boolean("last_segment_active", causality=Fmi2Causality.output, variability=Fmi2Variability.discrete))
+        self.register_variable(Boolean("reach_wp_end", causality=Fmi2Causality.output, variability=Fmi2Variability.discrete))
+        self.register_variable(Boolean("request_captain_intent", causality=Fmi2Causality.output, variability=Fmi2Variability.discrete))
+        self.register_variable(Boolean("insert_wp_now", causality=Fmi2Causality.output, variability=Fmi2Variability.discrete))
+        self.register_variable(Integer("idx", causality=Fmi2Causality.output, variability=Fmi2Variability.discrete))
         self.register_variable(Real("next_wp_proj_north", causality=Fmi2Causality.output))
         self.register_variable(Real("next_wp_proj_east", causality=Fmi2Causality.output))
-        self.register_variable(Integer("accepted_sampled_inter_wp", causality=Fmi2Causality.output))
-        
+        self.register_variable(Integer("accepted_sampled_inter_wp", causality=Fmi2Causality.output, variability=Fmi2Variability.discrete))
+
         # Messages
-        self.register_variable(String("messages", causality=Fmi2Causality.output))
+        self.register_variable(String("messages", causality=Fmi2Causality.output, variability=Fmi2Variability.discrete))
 
     def _valid_triplet(self, n, e, s) -> bool:
         return np.isfinite(n) and np.isfinite(e) and np.isfinite(s)
