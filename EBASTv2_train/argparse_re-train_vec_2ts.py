@@ -72,8 +72,8 @@ def parse_cli_args():
                         help="RUN: animation filename to save (default: EBASTv2_train.gif)")
     parser.add_argument("--save_reward_function", type=str2bool, default=True, metavar="SAVE_REWARD_FUNCTION",
                         help="RUN: save the reward function and automatically store it the log (default: False)")
-    parser.add_argument("--results_ID", type=str, default="EB-ASTv2_train_2ts_continue_03_2026-06-13_22-30-22_69f2", metavar="RESULTS_ID",
-                        help="RUN: continue training the already trained model with the defined results_ID (default: EB-ASTv2_train_2ts_continue_03_2026-06-13_22-30-22_69f2)")
+    parser.add_argument("--results_ID", type=str, default="EB-ASTv2_train_2ts_continue_7a_continue_03_2026-06-13_22-30-22_69f2", metavar="RESULTS_ID",
+                        help="RUN: continue training the already trained model with the defined results_ID (default: EB-ASTv2_train_2ts_continue_7a_continue_03_2026-06-13_22-30-22_69f2)")
 
     # Spawn request generation
     parser.add_argument("--n_cases", type=int, default=100, metavar="N_CASES",
