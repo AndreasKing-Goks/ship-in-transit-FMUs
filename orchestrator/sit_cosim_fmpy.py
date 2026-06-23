@@ -352,11 +352,11 @@ class ShipInTransitCoSimulation(CoSimInstance):
         
         # Start the ship when the time is equal to the start time, else ship is delayed
         start_time = spawn["start_time"]
-        if self.time < start_time*1e9:
+        if self.time < start_time:
             self.ship_delayed[ship_id].append(True)
         else:
             self.ship_delayed[ship_id].append(False)
-        
+
         return fmu_params
     
     
@@ -788,8 +788,8 @@ class ShipInTransitCoSimulation(CoSimInstance):
     
     def update_ship_delayed_status(self, ship_id, spawn):
         start_time  = spawn.get("start_time")
-        
-        if self.time < start_time*1e9:
+
+        if self.time < start_time:
             self.ship_delayed[ship_id].append(True)
         else:
             self.ship_delayed[ship_id].append(False)
@@ -1123,8 +1123,59 @@ class ShipInTransitCoSimulation(CoSimInstance):
             self.stop_info[ship_id]['collision']['colliders'].append(None)
         
         return grounded, outside, navigational_failure, reaches_end_waypoint, collision
-                
-    
+
+
+    def _reset_per_ship_state(self):
+        """
+            Rebuild the SIT-level per-ship bookkeeping (stop_info, ship_reach_end_waypoint,
+            ship_delayed, per-ship nav-warning flags) that the base CoSimInstance.Reset()
+            does not know about, mirroring how __init__ sets it up the first time.
+            Must run after super().Reset(), since it relies on self.time being back at 0.0.
+        """
+        self.ship_delayed               = {}
+        self.ship_reach_end_waypoint    = {}
+        self.stop_info                  = {}
+
+        for ship_config in self.ship_configs:
+            ship_id     = ship_config["id"]
+            start_time  = ship_config["spawn"].get("start_time", 0.0)
+
+            self.ship_reach_end_waypoint[ship_id]  = [False]
+            self.ship_delayed[ship_id]             = [self.time < start_time]
+
+            setattr(self, f"_navwarn_active_{ship_id}", False)
+            setattr(self, f"_navrecover_printed_{ship_id}", False)
+            setattr(self, f"_navwarn_time_counter_{ship_id}", 0.0)
+            setattr(self, f"_navfail_printed_{ship_id}", False)
+            setattr(self, f"_{ship_id}_rew_printed", False)
+
+            self.stop_info[ship_id] = {
+                'colav_active'          : {
+                        'status'        : [],
+                        'candidates'    : [],
+                    },
+                'collision'             : {
+                        'status'        : [],
+                        'colliders'     : []
+                    },
+                'grounding'             : [],
+                'nav_fail_warning'      : [],
+                'navigation_failure'    : [],
+                'reaches_end_waypoint'  : [],
+                'outside_horizon'       : [],
+            }
+
+
+    def Reset(self):
+        """
+            Reset the underlying co-simulation (FMUs, observer time series, self.time
+            via CoSimInstance.Reset()) AND the SIT-level bookkeeping added on top of it,
+            so that repeated Simulate() calls on the same instance behave like fresh runs.
+        """
+        super().Reset()
+        self._reset_per_ship_state()
+
+
     def step(self):
         # Simulate
         self.CoSimManipulate()
