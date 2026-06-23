@@ -8,9 +8,9 @@ trajectories on both backends, and compare the total time taken to solve the who
 Unlike main.py (one scenario, one fresh instance per backend), this also exercises
 fmpy's Reset(): the libcosimpy side creates a brand new instance for every case (it has
 no working Reset()), while the fmpy side creates ONE instance up front and reuses it for
-every case via Reset() + re-staging that case's spawn positions/routes - the realistic
-pattern for sweeping many scenarios (e.g. Monte Carlo) without paying FMU
-re-instantiation cost on every case.
+every case via RespawnAndReset() (re-staging that case's spawn positions/routes, then
+applying Reset()) - the realistic pattern for sweeping many scenarios (e.g. Monte Carlo)
+without paying FMU re-instantiation cost on every case.
 
 Reuses the trafficgen example config from test_run/traffic_generator_test/, and the
 existing bank-of-scenarios machinery in orchestrator/scenario_config.py
@@ -40,7 +40,6 @@ from orchestrator.sit_cosim_fmpy import ShipInTransitCoSimulation as ShipInTrans
 from orchestrator.scenario_config import (load_base_config,
                                           generate_spawn_request_bank,
                                           load_spawn_requests_bank_path)
-from orchestrator.utils import compile_ship_params
 
 N_CASES = 10
 
@@ -57,33 +56,6 @@ def get_trajectory(instance, ship_ids):
             _, _, values = instance.GetObserverTimeSeries(key)
             traj[key] = np.asarray(values, dtype=float)
     return traj
-
-
-def respawn_fmpy_instance(instance, config, spawn_requests):
-    """
-        Stage a new case's spawn positions/routes on an existing fmpy
-        ShipInTransitCoSimulation instance, ready for the next Reset() call to apply.
-
-        Must be called before Reset(): the ship's initial position/yaw/speed are FMI2
-        "fixed"-variability parameters, which can only legally change while the FMU is
-        in initialization mode. SetInitialValues() only stages self.initial_values;
-        it is Reset()'s own _initialize() that re-enters initialization mode and applies
-        them properly, then rebuilds the SIT bookkeeping (stop_info,
-        ship_reach_end_waypoint, ...) using the ship_configs set here.
-    """
-    ship_configs = instance.AddShipSpawn(spawn_requests=spawn_requests,
-                                         ROOT=ROOT,
-                                         simu_config=config["simulation"],
-                                         ship_configs=copy.deepcopy(config["ships"]))
-    instance.ship_configs = ship_configs
-    instance.ship_idxs    = [ship_config["id"] for ship_config in ship_configs]
-
-    for ship_config in ship_configs:
-        prefix     = ship_config["id"]
-        fmu_params = compile_ship_params(ship_config)
-        fmu_params = instance.spawn_ship(ship_id=prefix, spawn=ship_config["spawn"], fmu_params=fmu_params)
-        for block, params in fmu_params.items():
-            instance.SetInitialValues(slaveName=instance.ship_slave(prefix, block), params=params)
 
 
 # =========================
@@ -119,7 +91,7 @@ time_libcosimpy = time.perf_counter() - t0
 # =========================
 # fmpy: ONE instance, reused across all cases via Reset()
 # =========================
-print(f"\n=== Running {N_CASES} cases on fmpy (one instance, Reset() between cases) ===")
+print(f"\n=== Running {N_CASES} cases on fmpy (one instance, RespawnAndReset() between cases) ===")
 fmpy_trajectories = []
 fmpy_instance      = None
 t0 = time.perf_counter()
@@ -127,8 +99,7 @@ for case_idx, spawn_requests in enumerate(spawn_request_bank):
     if fmpy_instance is None:
         fmpy_instance = ShipInTransitCoSimulationFmpy(config=copy.deepcopy(config), spawn_requests=spawn_requests, ROOT=ROOT)
     else:
-        respawn_fmpy_instance(fmpy_instance, config, spawn_requests)
-        fmpy_instance.Reset()
+        fmpy_instance.RespawnAndReset(config=config, spawn_requests=spawn_requests, ROOT=ROOT)
     fmpy_instance.Simulate()
     fmpy_trajectories.append(get_trajectory(fmpy_instance, ship_ids))
 time_fmpy = time.perf_counter() - t0

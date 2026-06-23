@@ -1,4 +1,5 @@
 import sys
+import copy
 from pathlib import Path
 
 import matplotlib.pyplot as plt
@@ -1174,6 +1175,53 @@ class ShipInTransitCoSimulation(CoSimInstance):
         """
         super().Reset()
         self._reset_per_ship_state()
+
+
+    def RespawnAndReset(self, config: dict, spawn_requests: dict, ROOT: Path):
+        """
+            Stage a new scenario's spawn positions/routes on this instance and apply
+            them via Reset(), combining what would otherwise be a manual
+            "stage spawn data, then call Reset()" two-step into one call.
+
+            Use this to sweep many different cases (e.g. a Monte Carlo bank of
+            trafficgen scenarios) on a single fmpy instance, avoiding the FMU
+            re-instantiation cost of constructing a fresh ShipInTransitCoSimulation
+            per case. Ship topology (ids/blocks/FMU slaves already created by
+            AddAllShips()) must stay the same across calls - only each ship's spawn
+            position/route/start_time may differ; this method re-stages spawn data
+            for the EXISTING slaves, it does not add or remove FMU slaves.
+
+            Must stage before calling Reset(): the ship's initial position/yaw/speed
+            are FMI2 "fixed"-variability parameters, which can only legally change
+            while the FMU is in initialization mode. SetInitialValues() only stages
+            self.initial_values; it is Reset()'s own _initialize() that re-enters
+            initialization mode, applies them, and then rebuilds the SIT bookkeeping
+            (stop_info, ship_reach_end_waypoint, ...) from the ship_configs set here.
+        """
+        new_ship_ids = {ship_config["id"] for ship_config in config["ships"]}
+        if new_ship_ids != set(self.ship_idxs):
+            raise ValueError(
+                f"RespawnAndReset() cannot change ship topology on an existing "
+                f"instance: existing ship ids {sorted(self.ship_idxs)} != new ship "
+                f"ids {sorted(new_ship_ids)}. Construct a new "
+                f"ShipInTransitCoSimulation instance instead."
+            )
+
+        ship_configs = self.AddShipSpawn(spawn_requests=spawn_requests,
+                                         ROOT=ROOT,
+                                         simu_config=config["simulation"],
+                                         ship_configs=copy.deepcopy(config["ships"]))
+        self.ship_configs = ship_configs
+        self.ship_idxs    = [ship_config["id"] for ship_config in ship_configs]
+
+        for ship_config in ship_configs:
+            prefix     = ship_config["id"]
+            fmu_params = compile_ship_params(ship_config)
+            fmu_params = self.spawn_ship(ship_id=prefix, spawn=ship_config["spawn"], fmu_params=fmu_params)
+            for block, params in fmu_params.items():
+                self.SetInitialValues(slaveName=self.ship_slave(prefix, block), params=params)
+
+        self.Reset()
 
 
     def step(self):
