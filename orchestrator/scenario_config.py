@@ -139,14 +139,20 @@ def generate_traffic_gen_situation(
     own_ship_desc,
     target_ships_desc,
     encounter_settings_path,
-    max_retries=25,
+    max_retries=5,
 ):
     """Call trafficgen to produce a TrafficSituation from encounter parameters.
 
     trafficgen uses internal randomness (random future position for the target
-    ship, random beta when unset, etc.).  The same parameters can therefore
-    fail on one draw but succeed on the next.  We retry up to *max_retries*
-    times before giving up.
+    ship, random beta when unset, etc.).  Here ``beta``, ``relativeSpeed`` and
+    ``vectorTime`` are fixed (supplied by BO), so each retry re-uses the SAME
+    encounter parameters and only trafficgen's internal random future position
+    changes.  trafficgen already retries its own geometry search ~25 times per
+    call, so a small *max_retries* is enough to absorb unlucky draws while
+    failing fast on combinations that are simply infeasible (e.g. a relative
+    speed too low to place the target ship).  Failing fast lets the optimizer
+    move on and request a replacement trial instead of burning many attempts on
+    the same impossible parameters.
     """
     _require_trafficgen()
     
@@ -410,6 +416,7 @@ def prepare_spawn_requests_with_traffic_gen(
     encounters,
     config_path,
     encounter_settings_path,
+    max_retries=5,
 ):
     """Generate situation → convert to NED → populate config (end-to-end)."""
     # First get the initial config
@@ -430,6 +437,7 @@ def prepare_spawn_requests_with_traffic_gen(
     # Get the situation and convert it again to NED situation
     traffic_situations = generate_traffic_gen_situation(
         encounters, own_ship_initial, own_ship_desc, target_ships_desc, encounter_settings_path,
+        max_retries=max_retries,
     )
     situations_ned = convert_trafficgen_to_ned(traffic_situations, encounters)
     

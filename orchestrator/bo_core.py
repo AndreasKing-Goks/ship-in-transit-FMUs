@@ -8,6 +8,8 @@ import traceback
 import numpy as np
 import pandas as pd
 from ax.service.ax_client import AxClient, ObjectiveProperties
+from ax.generation_strategy.generation_strategy import GenerationStrategy, GenerationStep
+from ax.adapter.registry import Generators
 
 from orchestrator.sit_cosim import ShipInTransitCoSimulation
 from RL_env.reward_designs import RewardDesign4
@@ -500,33 +502,96 @@ def run_ax_optimization(
         is ``{"objective": (value, sem)}`` and *metrics* is a flat dict.
     total_trials, num_sobol_trials, random_seed : int
         Standard Ax loop settings.
+
+    Trial replacement
+    -----------------
+    A trial that raises (e.g. trafficgen cannot place the target ships for that
+    parameter combination) is marked FAILED in Ax and a fresh trial of the SAME
+    phase is generated to take its place, so the run always ends with
+    ``num_sobol_trials`` completed Sobol trials followed by
+    ``num_bo_trials`` completed BoTorch trials.
+
+    What a failure means on the GP side
+    -----------------------------------
+    A FAILED trial carries no data into the surrogate model: the Gaussian
+    process is fit only on COMPLETED ``(parameters -> objective)`` observations.
+    The model therefore does not "see" the infeasible region as bad — it simply
+    has no observation there — and the acquisition function may propose nearby
+    points again. Replacing failures (rather than counting them) keeps the
+    intended number of *informative* observations in each phase.
     """
     if num_sobol_trials < 0:
         raise ValueError("num_sobol_trials must be >= 0")
     if num_sobol_trials > total_trials:
         raise ValueError("num_sobol_trials cannot be greater than total_trials")
 
-    ax_client = AxClient(random_seed=random_seed)
+    num_bo_trials = total_trials - num_sobol_trials
+
+    # Build an explicit Sobol -> BoTorch generation strategy.
+    #
+    # Setting ``min_trials_observed = num_sobol_trials`` together with
+    # ``enforce_num_trials = True`` makes the Sobol step keep generating extra
+    # Sobol trials until that many have been *completed* (observed) before the
+    # strategy is allowed to transition to BoTorch. Failed Sobol trials are thus
+    # automatically replaced. The BoTorch step is unbounded (``num_trials = -1``)
+    # and the loop below stops it once ``num_bo_trials`` BoTorch trials complete,
+    # so failed BoTorch trials are replaced too.
+    steps = []
+    if num_sobol_trials > 0:
+        steps.append(
+            GenerationStep(
+                generator=Generators.SOBOL,
+                num_trials=num_sobol_trials,
+                min_trials_observed=num_sobol_trials,
+                enforce_num_trials=True,
+            )
+        )
+    steps.append(GenerationStep(generator=Generators.BOTORCH_MODULAR, num_trials=-1))
+
+    ax_client = AxClient(
+        generation_strategy=GenerationStrategy(steps=steps),
+        random_seed=random_seed,
+    )
     ax_client.create_experiment(
         name=experiment_name,
         parameters=parameter_space,
         objectives={"objective": ObjectiveProperties(minimize=True)},
-        choose_generation_strategy_kwargs={
-            "num_initialization_trials": num_sobol_trials,
-        },
     )
 
     history = []
+    completed = {"Sobol": 0, "BoTorch": 0}
+    failed = {"Sobol": 0, "BoTorch": 0}
 
-    for _ in range(total_trials):
+    # Safety cap so a systematically-failing evaluate_fn cannot loop forever.
+    max_attempts = total_trials * 5 + 20
+    attempts = 0
+
+    while completed["Sobol"] < num_sobol_trials or completed["BoTorch"] < num_bo_trials:
+        if attempts >= max_attempts:
+            print(
+                f"Stopping early: hit safety cap of {max_attempts} trial attempts "
+                f"(Sobol {completed['Sobol']}/{num_sobol_trials}, "
+                f"BoTorch {completed['BoTorch']}/{num_bo_trials})."
+            )
+            break
+        attempts += 1
+
         parameters, trial_index = ax_client.get_next_trial()
+
+        # Identify which phase generated this trial so failures are replaced
+        # within the correct phase.
+        generator_run = ax_client.experiment.trials[trial_index].generator_runs[0]
+        node_name = getattr(generator_run, "_generation_node_name", "") or ""
+        phase = "Sobol" if "Sobol" in node_name else "BoTorch"
 
         try:
             raw_data, metrics = evaluate_fn(parameters)
             ax_client.complete_trial(trial_index=trial_index, raw_data=raw_data)
+            completed[phase] += 1
         except Exception as exc:
             ax_client.log_trial_failure(trial_index=trial_index)
-            print(f"Trial {trial_index} failed: {exc}")
+            failed[phase] += 1
+            print(f"{phase} trial {trial_index} failed (a replacement will be run): {exc}")
             print(traceback.format_exc())
             metrics = {"objective": float("inf"), "error": str(exc)}
 
@@ -538,9 +603,11 @@ def run_ax_optimization(
             }
         )
 
-    completed_trials = sum(1 for item in history if "error" not in item["metrics"])
-    failed_trials = len(history) - completed_trials
-    print(f"Completed trials: {completed_trials}, Failed trials: {failed_trials}")
+    print(
+        f"Completed — Sobol: {completed['Sobol']}/{num_sobol_trials}, "
+        f"BoTorch: {completed['BoTorch']}/{num_bo_trials}. "
+        f"Replaced failures — Sobol: {failed['Sobol']}, BoTorch: {failed['BoTorch']}."
+    )
 
     best_result = ax_client.get_best_parameters()
     if best_result is None:

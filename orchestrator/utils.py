@@ -213,7 +213,7 @@ def get_trained_model_and_log_path(ROOT: Path, model_name: str, unique: bool = T
 # =============================================================================================================
 def view_bo_results_table(results_json_path, save_csv=True, csv_output_path=None):
     """
-    Load BO results JSON and display metrics in a formatted table.
+    Load BO results JSON and display metrics (and trial parameter values) in a formatted table.
     
     Parameters
     ----------
@@ -227,7 +227,7 @@ def view_bo_results_table(results_json_path, save_csv=True, csv_output_path=None
     Returns
     -------
     pd.DataFrame
-        DataFrame containing all trial metrics.
+        DataFrame containing trial metadata, selected parameter values, and metrics.
     
     Example
     -------
@@ -239,14 +239,17 @@ def view_bo_results_table(results_json_path, save_csv=True, csv_output_path=None
     with open(results_json_path, "r") as f:
         data = json.load(f)
     
-    # Extract metrics from each trial
+    # Extract parameters and metrics from each trial
     metrics_list = []
     for trial in data["history"]:
+        trial_params = trial.get("parameters", {})
         row = {
             "trial": trial["trial_index"],
             "type": trial["trial_type"],
             "status": trial["trial_status"],
         }
+        # Prefix parameter columns to avoid accidental name collisions.
+        row.update({f"param_{k}": v for k, v in trial_params.items()})
         row.update(trial["metrics"])
         metrics_list.append(row)
     
