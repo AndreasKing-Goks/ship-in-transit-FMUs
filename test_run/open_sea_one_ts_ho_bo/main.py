@@ -35,7 +35,7 @@ from orchestrator.scenario_config import (
     get_target_ship_ids,
     prepare_trial_config_direct,
 )
-from orchestrator.utils import view_bo_results_table
+from orchestrator.utils import view_bo_results_table, plot_bo_results
 
 
 # ─── Paths ───────────────────────────────────────────────────
@@ -58,7 +58,10 @@ def evaluate_trial(parameters, _target_ship_ids=None, max_intermediate_wps=0):
     config = prepare_trial_config_direct(params, CONFIG_PATH, _target_ship_ids)
     instance = run_simulation(config, ROOT)
     metrics = compute_trial_metrics(instance, num_target_ships=len(_target_ship_ids))
-    return {"objective": (metrics["objective"], 0.0)}, metrics
+    # SEM=None tells Ax the objective is noisy (the simulation has internal
+    # randomness) and to infer the noise level, instead of trusting each value
+    # as exact.
+    return {"objective": (metrics["objective"], None)}, metrics
 
 
 def main():
@@ -91,6 +94,10 @@ def main():
     print_trial_summary_table(ax_client)
 
     view_bo_results_table(RESULTS_PATH, save_csv=True)
+
+    # Always create the BO result figures (convergence, parameter trajectories,
+    # parallel coordinates) next to the metrics CSV.
+    plot_bo_results(RESULTS_PATH.with_name(f"{RESULTS_PATH.stem}_metrics.csv"), save=True, show=False)
 
     if best_parameters is None:
         print("No valid Ax trials were completed. Check trial errors in history.")

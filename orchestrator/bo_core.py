@@ -611,7 +611,7 @@ def run_ax_optimization(
                 # still reach the target number of *feasible* BoTorch evaluations.
                 ax_client.complete_trial(
                     trial_index=trial_index,
-                    raw_data={"objective": (float(infeasible_penalty), 0.0)},
+                    raw_data={"objective": (float(infeasible_penalty), None)},
                 )
                 penalized[phase] += 1
                 metrics = {

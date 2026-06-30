@@ -10,6 +10,7 @@ import json
 
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
 
 
 # =============================================================================================================
@@ -267,4 +268,211 @@ def view_bo_results_table(results_json_path, save_csv=True, csv_output_path=None
         print(f"\nAlso saved to {csv_output_path}")
     
     return df
+
+
+# =============================================================================================================
+# Bayesian Optimization Results Visualization
+# =============================================================================================================
+# Colors per generation phase used by the BO result plots.
+_PHASE_COLORS = {
+    "Sobol": "#888888",            # gray   – random exploration phase
+    "BoTorch": "#1f77b4",          # blue   – Bayesian (model-driven) phase
+    "Fallback_Sobol": "#9467bd",   # purple – BoTorch fell back to a Sobol draw
+}
+_INFEASIBLE_COLOR = "#d62728"      # red    – trials that could not be evaluated
+
+
+def _bo_phase_of(type_str):
+    """Map an Ax generation_method string to a coarse phase label."""
+    t = str(type_str)
+    if "BoTorch" in t:
+        return "BoTorch"
+    if "Fallback" in t:
+        return "Fallback_Sobol"
+    return "Sobol"
+
+
+def load_bo_results(csv_path):
+    """Load a BO ``*_metrics.csv`` and add helper columns used by the plots.
+
+    Parameters
+    ----------
+    csv_path : str or Path
+        Path to the metrics CSV produced by ``view_bo_results_table``.
+
+    Returns
+    -------
+    pd.DataFrame
+        The trials sorted by index, with ``phase`` and ``feasible`` columns added.
+    """
+    df = pd.read_csv(csv_path)
+    df = df.sort_values("trial").reset_index(drop=True)
+    df["phase"] = df["type"].map(_bo_phase_of)
+    # A trial is a "real" evaluation only if Ax completed it successfully.
+    df["feasible"] = df["status"].astype(str).str.upper() == "COMPLETED"
+    return df
+
+
+def plot_bo_convergence(df, ax):
+    """Objective per trial + running best. Lower is better (more dangerous)."""
+    feasible = df[df["feasible"]].copy()
+    infeasible = df[~df["feasible"]].copy()
+
+    # Scatter each feasible trial's objective, colored by phase.
+    for phase, color in _PHASE_COLORS.items():
+        sub = feasible[feasible["phase"] == phase]
+        if not sub.empty:
+            ax.scatter(sub["trial"], sub["objective"], s=45, color=color,
+                       label=f"{phase} (evaluated)", zorder=3, edgecolors="white",
+                       linewidths=0.5)
+
+    # Running best = cumulative minimum over feasible trials (Ax minimizes).
+    if not feasible.empty:
+        running_best = feasible["objective"].cummin()
+        ax.step(feasible["trial"], running_best, where="post", color="black",
+                linewidth=2, label="running best", zorder=4)
+
+    # Mark infeasible / failed trials along the top so they are visible
+    # without distorting the y-axis (their objective is inf or a penalty).
+    if not infeasible.empty and not feasible.empty:
+        top = feasible["objective"].max()
+        ax.scatter(infeasible["trial"], np.full(len(infeasible), top),
+                   marker="x", s=60, color=_INFEASIBLE_COLOR,
+                   label="infeasible (failed)", zorder=5)
+
+    ax.set_xlabel("Trial index")
+    ax.set_ylabel("Objective  (= -danger_score, lower = better)")
+    ax.set_title("Objective per trial and running best")
+    ax.grid(True, alpha=0.3)
+    ax.legend(fontsize=8, loc="best")
+
+
+def plot_bo_parameter_trajectories(df, param_cols):
+    """One subplot per parameter: value vs trial index, colored by phase."""
+    n = len(param_cols)
+    ncols = 2
+    nrows = int(np.ceil(n / ncols))
+    fig, axes = plt.subplots(nrows, ncols, figsize=(12, 3 * nrows), squeeze=False)
+    axes = axes.ravel()
+
+    for i, col in enumerate(param_cols):
+        ax = axes[i]
+        # Connecting line shows the path the algorithm took.
+        ax.plot(df["trial"], df[col], color="lightgray", linewidth=1, zorder=1)
+        for phase, color in _PHASE_COLORS.items():
+            sub = df[df["phase"] == phase]
+            if not sub.empty:
+                ax.scatter(sub["trial"], sub[col], s=30, color=color,
+                           label=phase, zorder=3)
+        # Mark infeasible trials in red so you see which regions failed.
+        infeasible = df[~df["feasible"]]
+        if not infeasible.empty:
+            ax.scatter(infeasible["trial"], infeasible[col], marker="x", s=45,
+                       color=_INFEASIBLE_COLOR, zorder=4, label="infeasible")
+        ax.set_title(col.replace("param_", ""), fontsize=10)
+        ax.set_xlabel("Trial")
+        ax.set_ylabel("Value")
+        ax.grid(True, alpha=0.3)
+
+    # Hide any unused subplots.
+    for j in range(n, len(axes)):
+        axes[j].set_visible(False)
+
+    # Single shared legend.
+    handles, labels = axes[0].get_legend_handles_labels()
+    fig.legend(handles, labels, loc="upper center", ncol=4, fontsize=9)
+    fig.suptitle("Search-space movement: parameter value per trial", y=1.0)
+    fig.tight_layout(rect=(0, 0, 1, 0.96))
+    return fig
+
+
+def plot_bo_parallel_coordinates(df, param_cols):
+    """Parallel-coordinates of feasible trials, each line colored by objective.
+
+    Every trial is a poly-line crossing all parameter axes. Darker/low-objective
+    lines mark the more dangerous (better) regions the optimizer favored.
+    """
+    feasible = df[df["feasible"]].copy()
+    fig, ax = plt.subplots(figsize=(12, 6))
+    if feasible.empty or not param_cols:
+        ax.text(0.5, 0.5, "No feasible trials to plot", ha="center", va="center")
+        return fig
+
+    # Normalize each parameter axis to [0, 1] for comparable scales.
+    norm = feasible[param_cols].copy()
+    for col in param_cols:
+        lo, hi = feasible[col].min(), feasible[col].max()
+        norm[col] = (feasible[col] - lo) / (hi - lo) if hi > lo else 0.5
+
+    x = np.arange(len(param_cols))
+    obj = feasible["objective"].to_numpy()
+    cmap = plt.get_cmap("viridis")
+    o_lo, o_hi = obj.min(), obj.max()
+    denom = (o_hi - o_lo) if o_hi > o_lo else 1.0
+
+    for _, row in norm.assign(_obj=obj).iterrows():
+        color = cmap((row["_obj"] - o_lo) / denom)
+        ax.plot(x, row[param_cols].to_numpy(dtype=float), color=color,
+                alpha=0.7, linewidth=1.2)
+
+    ax.set_xticks(x)
+    ax.set_xticklabels([c.replace("param_", "") for c in param_cols],
+                       rotation=30, ha="right", fontsize=9)
+    ax.set_ylabel("Normalized parameter value [0, 1]")
+    ax.set_title("Parallel coordinates of feasible trials (color = objective)")
+    ax.grid(True, alpha=0.3, axis="x")
+
+    sm = plt.cm.ScalarMappable(cmap=cmap, norm=plt.Normalize(vmin=o_lo, vmax=o_hi))
+    sm.set_array([])
+    cbar = fig.colorbar(sm, ax=ax)
+    cbar.set_label("objective (lower = more dangerous = better)")
+    fig.tight_layout()
+    return fig
+
+
+def plot_bo_results(csv_path, save=True, show=True):
+    """Generate the three BO result figures from a metrics CSV.
+
+    Produces:
+        1. Convergence  – objective per trial + running best (should trend down).
+        2. Parameter trajectories – how each parameter moves across trials.
+        3. Parallel coordinates – feasible trials colored by objective.
+
+    Parameters
+    ----------
+    csv_path : str or Path
+        Path to the ``*_metrics.csv`` file from a BO experiment.
+    save : bool
+        If True, write the three PNG figures next to the CSV.
+    show : bool
+        If True, open the figure windows (blocks until closed).
+    """
+    csv_path = Path(csv_path)
+    df = load_bo_results(csv_path)
+    param_cols = [c for c in df.columns if c.startswith("param_")]
+    if not param_cols:
+        raise ValueError(f"No 'param_*' columns found in {csv_path}")
+
+    out_dir = csv_path.parent
+    stem = csv_path.stem
+
+    # 1) Convergence
+    fig1, ax1 = plt.subplots(figsize=(10, 6))
+    plot_bo_convergence(df, ax1)
+    fig1.tight_layout()
+
+    # 2) Per-parameter trajectories
+    fig2 = plot_bo_parameter_trajectories(df, param_cols)
+
+    # 3) Parallel coordinates
+    fig3 = plot_bo_parallel_coordinates(df, param_cols)
+
+    if save:
+        fig1.savefig(out_dir / f"{stem}_convergence.png", dpi=150, bbox_inches="tight")
+        fig2.savefig(out_dir / f"{stem}_param_trajectories.png", dpi=150, bbox_inches="tight")
+        fig3.savefig(out_dir / f"{stem}_parallel_coords.png", dpi=150, bbox_inches="tight")
+        print(f"Saved 3 figures next to {csv_path.name} in {out_dir}")
+
+    if show:
+        plt.show()
 
