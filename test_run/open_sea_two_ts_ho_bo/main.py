@@ -80,8 +80,8 @@ def evaluate_trial(parameters):
 
 def main():
     """Run BO, persist results, and optionally replay the best trial."""
-    num_sobol_trials = 10
-    num_bo_trials = 10
+    num_sobol_trials = 50
+    num_bo_trials = 150
     total_trials = num_sobol_trials + num_bo_trials
     replay_best = False
 

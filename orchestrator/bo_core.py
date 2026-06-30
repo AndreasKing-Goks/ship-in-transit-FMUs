@@ -488,6 +488,7 @@ def run_ax_optimization(
     total_trials=15,
     num_sobol_trials=5,
     random_seed=7,
+    infeasible_penalty=10.0,
 ):
     """Execute the full Ax optimization loop.
 
@@ -502,23 +503,29 @@ def run_ax_optimization(
         is ``{"objective": (value, sem)}`` and *metrics* is a flat dict.
     total_trials, num_sobol_trials, random_seed : int
         Standard Ax loop settings.
+    infeasible_penalty : float
+        Objective value assigned to an infeasible BoTorch trial (one whose
+        ``evaluate_fn`` raises, e.g. trafficgen cannot place the target ships).
+        Since the objective is minimized, this should be clearly worse than any
+        achievable real objective so the surrogate learns to avoid that region.
 
-    Trial replacement
-    -----------------
-    A trial that raises (e.g. trafficgen cannot place the target ships for that
-    parameter combination) is marked FAILED in Ax and a fresh trial of the SAME
-    phase is generated to take its place, so the run always ends with
-    ``num_sobol_trials`` completed Sobol trials followed by
-    ``num_bo_trials`` completed BoTorch trials.
-
-    What a failure means on the GP side
-    -----------------------------------
-    A FAILED trial carries no data into the surrogate model: the Gaussian
-    process is fit only on COMPLETED ``(parameters -> objective)`` observations.
-    The model therefore does not "see" the infeasible region as bad — it simply
-    has no observation there — and the acquisition function may propose nearby
-    points again. Replacing failures (rather than counting them) keeps the
-    intended number of *informative* observations in each phase.
+    How infeasible trials are handled (and why)
+    -------------------------------------------
+    * Sobol phase: an infeasible trial is marked FAILED and replaced by another
+      Sobol trial. Sobol points are independent quasi-random draws, so the
+      replacement explores a *different* parameterization — no risk of looping.
+    * BoTorch phase: an infeasible trial is COMPLETED with ``infeasible_penalty``
+      as its objective **and** replaced (it does not count toward
+      ``num_bo_trials``). Completing-with-penalty is essential: a FAILED trial
+      carries no data into the Gaussian-process surrogate, so the acquisition
+      function — fit on unchanged data — keeps proposing the SAME infeasible
+      parameters over and over (the classic "BO trial keeps failing with
+      identical parameters" loop). Feeding the penalty as an observation makes
+      the GP treat that region as bad and move elsewhere on the next trial.
+      Because an infeasible scenario fails cheaply (trafficgen rejects it before
+      any simulation runs), it is not counted against the feasible-evaluation
+      budget, so the run still ends with ``num_bo_trials`` *feasible* BoTorch
+      evaluations plus however many infeasible ones were penalized along the way.
     """
     if num_sobol_trials < 0:
         raise ValueError("num_sobol_trials must be >= 0")
@@ -534,8 +541,9 @@ def run_ax_optimization(
     # Sobol trials until that many have been *completed* (observed) before the
     # strategy is allowed to transition to BoTorch. Failed Sobol trials are thus
     # automatically replaced. The BoTorch step is unbounded (``num_trials = -1``)
-    # and the loop below stops it once ``num_bo_trials`` BoTorch trials complete,
-    # so failed BoTorch trials are replaced too.
+    # and the loop below stops it once ``num_bo_trials`` BoTorch trials complete.
+    # ``should_deduplicate`` is a safeguard so BoTorch never re-proposes a
+    # parameterization identical to an existing trial.
     steps = []
     if num_sobol_trials > 0:
         steps.append(
@@ -546,7 +554,13 @@ def run_ax_optimization(
                 enforce_num_trials=True,
             )
         )
-    steps.append(GenerationStep(generator=Generators.BOTORCH_MODULAR, num_trials=-1))
+    steps.append(
+        GenerationStep(
+            generator=Generators.BOTORCH_MODULAR,
+            num_trials=-1,
+            should_deduplicate=True,
+        )
+    )
 
     ax_client = AxClient(
         generation_strategy=GenerationStrategy(steps=steps),
@@ -561,6 +575,7 @@ def run_ax_optimization(
     history = []
     completed = {"Sobol": 0, "BoTorch": 0}
     failed = {"Sobol": 0, "BoTorch": 0}
+    penalized = {"Sobol": 0, "BoTorch": 0}
 
     # Safety cap so a systematically-failing evaluate_fn cannot loop forever.
     max_attempts = total_trials * 5 + 20
@@ -578,8 +593,8 @@ def run_ax_optimization(
 
         parameters, trial_index = ax_client.get_next_trial()
 
-        # Identify which phase generated this trial so failures are replaced
-        # within the correct phase.
+        # Identify which phase generated this trial so infeasible trials are
+        # handled with the right strategy (replace for Sobol, penalize for BO).
         generator_run = ax_client.experiment.trials[trial_index].generator_runs[0]
         node_name = getattr(generator_run, "_generation_node_name", "") or ""
         phase = "Sobol" if "Sobol" in node_name else "BoTorch"
@@ -589,11 +604,32 @@ def run_ax_optimization(
             ax_client.complete_trial(trial_index=trial_index, raw_data=raw_data)
             completed[phase] += 1
         except Exception as exc:
-            ax_client.log_trial_failure(trial_index=trial_index)
-            failed[phase] += 1
-            print(f"{phase} trial {trial_index} failed (a replacement will be run): {exc}")
+            if phase == "BoTorch":
+                # Penalize so the GP avoids this infeasible region instead of
+                # re-proposing the same parameters on the next trial, but do NOT
+                # count it toward num_bo_trials: a replacement is generated so we
+                # still reach the target number of *feasible* BoTorch evaluations.
+                ax_client.complete_trial(
+                    trial_index=trial_index,
+                    raw_data={"objective": (float(infeasible_penalty), 0.0)},
+                )
+                penalized[phase] += 1
+                metrics = {
+                    "objective": float(infeasible_penalty),
+                    "infeasible": True,
+                    "error": str(exc),
+                }
+                print(
+                    f"BoTorch trial {trial_index} infeasible — penalized with "
+                    f"objective {infeasible_penalty} and a replacement will be run: {exc}"
+                )
+            else:
+                # Sobol: mark failed and let the strategy generate a replacement.
+                ax_client.log_trial_failure(trial_index=trial_index)
+                failed[phase] += 1
+                metrics = {"objective": float("inf"), "error": str(exc)}
+                print(f"Sobol trial {trial_index} failed (a replacement will be run): {exc}")
             print(traceback.format_exc())
-            metrics = {"objective": float("inf"), "error": str(exc)}
 
         history.append(
             {
@@ -605,8 +641,9 @@ def run_ax_optimization(
 
     print(
         f"Completed — Sobol: {completed['Sobol']}/{num_sobol_trials}, "
-        f"BoTorch: {completed['BoTorch']}/{num_bo_trials}. "
-        f"Replaced failures — Sobol: {failed['Sobol']}, BoTorch: {failed['BoTorch']}."
+        f"BoTorch (feasible): {completed['BoTorch']}/{num_bo_trials}. "
+        f"Replaced Sobol failures: {failed['Sobol']}. "
+        f"Penalized + replaced BoTorch infeasible trials: {penalized['BoTorch']}."
     )
 
     best_result = ax_client.get_best_parameters()
@@ -768,6 +805,13 @@ def save_results(ax_client, best_parameters, history, results_path, trim=True):
             print(f"Could not extract Ax metadata for trial {trial_index}: {exc}")
             enriched_item["trial_type"] = "unknown"
             enriched_item["trial_status"] = enriched_item.get("trial_status", "unknown")
+
+        # Infeasible BoTorch trials are COMPLETED inside Ax (they carry a penalty
+        # objective so the GP keeps learning), but in the saved results / CSV we
+        # report them as FAILED so a reader sees them the same way as infeasible
+        # Sobol trials and is not misled into treating them as real evaluations.
+        if enriched_item.get("metrics", {}).get("infeasible"):
+            enriched_item["trial_status"] = "FAILED"
 
         enriched_history.append(enriched_item)
 
