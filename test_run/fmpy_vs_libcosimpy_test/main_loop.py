@@ -12,6 +12,10 @@ every case via RespawnAndReset() (re-staging that case's spawn positions/routes,
 applying Reset()) - the realistic pattern for sweeping many scenarios (e.g. Monte Carlo)
 without paying FMU re-instantiation cost on every case.
 
+Also checks that PlotFleetTrajectory still works on the final case for both backends,
+in particular that fmpy's repeated RespawnAndReset() cycles haven't left the instance
+in a state the plotting code can't read.
+
 Reuses the trafficgen example config from test_run/traffic_generator_test/, and the
 existing bank-of-scenarios machinery in orchestrator/scenario_config.py
 (generate_spawn_request_bank / load_spawn_requests_bank_path).
@@ -132,3 +136,24 @@ print(f"\nAll {N_CASES} cases match: {all_match}")
 print(f"\nlibcosimpy total solve time ({N_CASES} cases): {time_libcosimpy:.3f} s")
 print(f"fmpy total solve time       ({N_CASES} cases): {time_fmpy:.3f} s")
 print(f"fmpy speedup:                                  {time_libcosimpy / time_fmpy:.2f}x")
+
+# =========================
+# Check PlotFleetTrajectory still works on the final case for both backends - in
+# particular, that fmpy's instance is still in a plottable state after going through
+# N_CASES-1 RespawnAndReset() cycles. Runs headless (show=False, save to file):
+# AnimateFleetTrajectory is skipped
+# =========================
+print("\n=== Checking PlotFleetTrajectory on the final case (both backends) ===")
+try:
+    libcosimpy_plot_path = HERE / "plot_libcosimpy_final_case.png"
+    instance.PlotFleetTrajectory(show=False, save_path=libcosimpy_plot_path)
+    print(f"  libcosimpy: OK (saved to {libcosimpy_plot_path})")
+except Exception as error:
+    print(f"  libcosimpy: FAILED - {type(error).__name__}: {error}")
+
+try:
+    fmpy_plot_path = HERE / "plot_fmpy_final_case.png"
+    fmpy_instance.PlotFleetTrajectory(show=False, save_path=fmpy_plot_path)
+    print(f"  fmpy (after {N_CASES - 1} RespawnAndReset() cycles): OK (saved to {fmpy_plot_path})")
+except Exception as error:
+    print(f"  fmpy (after {N_CASES - 1} RespawnAndReset() cycles): FAILED - {type(error).__name__}: {error}")
