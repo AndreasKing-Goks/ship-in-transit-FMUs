@@ -5,7 +5,7 @@ simulation:
 
 ships:
   - id: OS0
-    sogMax: 5.0
+    sogMax: 8.0
     mmsi: 100000001
     shipType: Cargo
 
