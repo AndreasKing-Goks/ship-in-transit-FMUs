@@ -182,14 +182,14 @@ def compute_reward(observation, args):
 
         ### Termination rewards
         if own_ship_collision:
-            rew_osc = 5.0
+            rew_osc = 10.0
             reward += rew_osc
             reward_components["own_ship_collision_rewards"].append(rew_osc)
         else:
             reward_components["own_ship_collision_rewards"].append(0.0)
             
         if own_ship_grounding:
-            rew_osg = 5.0
+            rew_osg = 8.0
             reward += rew_osg
             reward_components["own_ship_grounding_rewards"].append(rew_osg)
         else:
@@ -210,21 +210,21 @@ def compute_reward(observation, args):
             reward_components["own_ship_reaches_end_waypoint_rewards"].append(0.0)
             
         if tar_ships_collision:
-            rew_tsc = -2.0
+            rew_tsc = -10.0
             reward += rew_tsc
             reward_components["tar_ships_collision_rewards"].append(rew_tsc)
         else:
             reward_components["tar_ships_collision_rewards"].append(0.0)
             
         if tar_ships_grounding:
-            rew_tsg = -2.0
+            rew_tsg = -8.0
             reward += rew_tsg
             reward_components["tar_ships_grounding_rewards"].append(rew_tsg)
         else:
             reward_components["tar_ships_grounding_rewards"].append(0.0)
             
         if tar_ships_navigation_failure:
-            rew_tsn = -1.0
+            rew_tsn = -3.0
             reward += rew_tsn
             reward_components["tar_ships_navigation_failure_rewards"].append(rew_tsn)
         else:
@@ -244,7 +244,7 @@ def compute_reward(observation, args):
         rel_tar_ships_pos   = observation["rel_tar_ships_pos"].reshape(n_ts, 3)
         tar_ships_speed     = observation["tar_ships_forward_speed"]
         remaining_requests  = observation["remaining_requests"]
-        action_masks        = observation["action_masks"]
+        # action_masks        = observation["action_masks"]
         
         # Compute the used requests to max requests ratio
         max_remaining_requests  = remaining_requests_bound["max"]

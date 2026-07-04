@@ -87,8 +87,7 @@ class ShipInTransitCoSimulation(CoSimInstance):
         self.AddAllShips(ship_configs=ship_configs, ROOT=ROOT)
         
         # All ship ids
-        self.ship_idxs           = [ship_config["id"] for ship_config in ship_configs]
-        
+        self.ship_ids            = [ship_config["id"] for ship_config in ship_configs]
         
         # =========================
         # Set the Map (if given)
@@ -1100,7 +1099,7 @@ class ShipInTransitCoSimulation(CoSimInstance):
                 test_sid = test_ship_config["id"]
                 
                 # Get the list of collider candidates
-                candidate_list = [ship_id for ship_id in self.ship_idxs if ship_id != test_sid]
+                candidate_list = [ship_id for ship_id in self.ship_ids if ship_id != test_sid]
                 
                 # If evaluating on the same ship, skip
                 if test_sid == ship_id:

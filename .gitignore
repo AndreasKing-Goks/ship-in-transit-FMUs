@@ -35,10 +35,13 @@ share/python-wheels/
 .installed.cfg
 *.egg
 MANIFEST
+
+# Folders
 trained_model/
 00_*/
 .vscode/
 00_paper/
+pre_generated_spawn_requests_bank/animation/
 
 # PyInstaller
 #  Usually these files are written by a python script from a template

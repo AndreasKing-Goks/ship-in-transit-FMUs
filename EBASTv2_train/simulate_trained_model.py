@@ -30,7 +30,7 @@ import numpy as np
 # Handle paths
 # =========================
 # Trained Model Name
-model_name                      = "EB-ASTv2_train_2ts_continue_7a_continue_03_2026-06-13_22-30-22_69f2"
+model_name                      = "EB-ASTv2_train_2ts_continue_7c_continue_7a_continue_03_2026-06-13_22-30-22_69f2"
 
 # Get the config path
 config_path                     = ROOT / "EBASTv2_train" / "EBASTv2_train_2.yaml"
@@ -41,7 +41,7 @@ encounter_settings_path         = ROOT / "EBASTv2_train" / "encounter_settings.j
 # Spawn requests bank path
 spawn_requests_bank_path        = ROOT / "EBASTv2_train" / "spawn_request_bank.pkl"
 
-# Get the trianed model
+# Get the trained model
 model_path                      = ROOT / "EBASTv2_train" / "trained_model" / model_name / "model" / "model.zip"
 
 # Log path
@@ -77,7 +77,7 @@ env = EBASTv2Env(
 # Run the trained model and log the episode
 # =========================
 # Set the environment to evaluation mode
-env.set_for_evaluation()
+# env.set_for_evaluation()
 
 # Load the trained model
 recurrent_ppo_model = RecurrentPPO.load(model_path)
