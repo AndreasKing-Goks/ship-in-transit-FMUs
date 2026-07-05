@@ -28,7 +28,7 @@ saved_animation_folder_path     = ROOT / "pre_generated_spawn_requests_bank" / "
 saved_animation_folder_path.mkdir(parents=True, exist_ok=True)
 
 # Case Index
-case_idxs                       = range(10)
+case_idxs                       = [1] #range(1)
 
 # Print and save encounter description
 description_lines = []
@@ -51,7 +51,7 @@ for case_idx in case_idxs:
     spawn_requests_bank_path        = ROOT / "pre_generated_spawn_requests_bank" / "spawn_request_bank_1000.pkl"
 
     # Get the save path for animation
-    saved_animation_path            = ROOT / "pre_generated_spawn_requests_bank" / "animation" / f"case_{case_idx}.gif"
+    saved_animation_path            = ROOT / "pre_generated_spawn_requests_bank" / "animation" / f"case_{case_idx}.mp4"
     
     # =========================
     # # Instantiate Co-simulation Wrapper
@@ -109,7 +109,7 @@ for case_idx in case_idxs:
             margin_frac=0.08,
             equal_aspect=True,
             interval_ms=20,
-            frame_step=10,
+            frame_step=1,
             trail_len=50,
             plot_routes=True,
             plot_waypoints=True,
@@ -123,7 +123,7 @@ for case_idx in case_idxs:
             writer_fps=20,
             palette=None,
             blit=True,
-            ship_scale=1.0
+            ship_scale=5.0
         )
 
 # Compile and write the description text

@@ -12,7 +12,7 @@ config_path                 = ROOT / "EBASTv2_train" / "EBASTv2_train_2.yaml"
 encounter_settings_path     = ROOT / "EBASTv2_train" / "encounter_settings.json"
 spawn_requests_bank_path    = ROOT / "pre_generated_spawn_requests_bank" / "spawn_request_bank_1000.pkl"
 own_ship_sog                = [5.0]
-n_cases                     = 1
+n_cases                     = 10
 training_case_ratio         = 0.9
 
 # ATTENTION

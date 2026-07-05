@@ -22,7 +22,7 @@ from orchestrator.scenario_config import (load_spawn_requests_bank_path,
 # Handle paths and case index
 # =========================
 # Case Index
-case_idx                        = 0
+case_idx                        = 1
 
 # Get the config path
 config_path                     = ROOT / "EBASTv2_train" / "EBASTv2_train_2.yaml"

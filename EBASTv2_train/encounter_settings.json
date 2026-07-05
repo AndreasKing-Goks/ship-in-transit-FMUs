@@ -12,10 +12,9 @@
         "crossingGiveWay": [0.5, 1.5],
         "crossingStandOn": [0.5, 1.5]
     },
-    "vectorRange": [10.0, 30.0],
     "situationLength": 60.0,
-    "maxMeetingDistance": 0.1,
+    "maxMeetingDistance": 0.25,
     "commonVector": 5.0,
-    "situationDevelopTime": 120.0,
+    "situationDevelopTime": 60.0,
     "disableLandCheck": true
 }
