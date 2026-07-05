@@ -126,7 +126,7 @@ class WindModel(Fmi2Slave):
         self.register_variable(Real("wind_speed", causality=Fmi2Causality.output))
         self.register_variable(Real("wind_direction_rad", causality=Fmi2Causality.output))
         self.register_variable(Real("wind_direction_deg", causality=Fmi2Causality.output))
-        self.register_variable(Boolean("wind_valid", causality=Fmi2Causality.output))
+        self.register_variable(Boolean("wind_valid", causality=Fmi2Causality.output, variability=Fmi2Variability.discrete))
 
     # =========================
     # Helpers
