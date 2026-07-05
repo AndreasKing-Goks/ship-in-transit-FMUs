@@ -1,0 +1,20 @@
+{
+    "classification": {
+        "theta13Criteria": 67.5,
+        "theta14Criteria": 5.0,
+        "theta15Criteria": 5.0,
+        "theta15": [112.5, 247.5]
+    },
+    "relativeSpeed": {
+        "overtakingStandOn": [1.5, 2.0],
+        "overtakingGiveWay": [0.25, 0.75],
+        "headOn": [0.5, 1.5],
+        "crossingGiveWay": [0.5, 1.5],
+        "crossingStandOn": [0.5, 1.5]
+    },
+    "situationLength": 60.0,
+    "maxMeetingDistance": 0.5,
+    "commonVector": 5.0,
+    "situationDevelopTime": 60.0,
+    "disableLandCheck": true
+}
