@@ -676,11 +676,10 @@ encounters = {
         "crossingGiveWay": [0.5, 1.5],
         "crossingStandOn": [0.5, 1.5]
     },
-    "vectorRange": [10.0, 30.0],
-    "situationLength": 30.0,
-    "maxMeetingDistance": 2.0,
+    "situationLength": 60.0,
+    "maxMeetingDistance": 0.5,
     "commonVector": 5.0,
-    "situationDevelopTime": 2.0,
+    "situationDevelopTime": 60.0,
     "disableLandCheck": true
 }
 ```
@@ -742,6 +741,7 @@ spawn_requests_bank_path = generate_spawn_request_bank(
     config_path=config_path,
     encounter_settings_path=encounter_settings_path,
     spawn_requests_bank_path=spawn_requests_bank_path,
+    own_ship_sog=own_ship_sog,
     n_cases=100,
     training_case_ratio=0.8,
     overwrite=False
@@ -749,6 +749,34 @@ spawn_requests_bank_path = generate_spawn_request_bank(
 ```
 
 During generation, valid encounter scenarios are repeatedly produced via `get_spawn_requests(...)` until the requested number of cases (`n_cases`) has been collected. Each generated case is assigned a unique `case_id` and stored in the bank.
+
+```python
+spawn_requests, own_ship_initial, encounters = get_spawn_requests(config_path, 
+                                                                  encounter_settings_path,
+                                                                  own_ship_sog,
+                                                                  own_ship_initial):
+```
+where `own_ship_sog` defines the own ship speed over ground (`SoG`), and `own_ship_initial` is a custom initial condition that the user can manually implement. `own_ship_initial` and `own_ship_sog` can be set to `None`. In this case, `own_ship_sog` is set to a default value of 5.0 m/s and `own_ship_initial` is set to the default value that is shown below:
+```python
+own_ship_initial = {
+    "position": {
+        "north": 0.0,
+        "east": 0.0,
+    },
+    "sog": sog,                             # m/s, STANDARD VALUE is 5.0 m/s
+    "cog": os_init_heading,                 # Randomly pick between np.arange(0.0, 360.0, 15.0)
+    "heading": os_init_heading,             # Randomly pick between np.arange(0.0, 360.0, 15.0)
+    "navStatus": "Under way using engine",  # Forced to only use this in Collision encounters
+}
+```
+> ⚠️ **ATTENTION!**  
+>
+> `own_ship_sog` supports two formats:
+> 1. `float`: use a fixed SoG for all generated cases. If above `SoGMax`, `SoGMax` is used.
+> 2. `list`[`float`]: sample SoG uniformly from the given lower bound to `SoGMax`.
+>    Example: [5.0] samples from 5.0 to `SoGMax`.
+>
+> The second format is useful when we want the own ship's `SoG` to vary (within the allowed bound), instead of sticking to one fixed value.
 
 #### Data Structure
 

@@ -510,9 +510,9 @@ def sample_beta_and_rel_speed_given_encounter_settings(encounter_type, encounter
     return beta, rel_speed
 
 def  get_spawn_requests(config_path, 
-                       encounter_settings_path,
-                       own_ship_sog=None,
-                       own_ship_initial=None):
+                        encounter_settings_path,
+                        own_ship_sog=None,
+                        own_ship_initial=None):
     
     # Save the base configuration for the Ship in Transit Co-simulation
     config_base     = load_base_config(config_path)
@@ -564,7 +564,7 @@ def  get_spawn_requests(config_path,
         }
     
     # Sample encounters
-    vectorTime_low  = 10
+    vectorTime_low  = 20
     vectorTime_high = 50
     
     # Generate encounter for target ships only

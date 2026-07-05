@@ -13,7 +13,7 @@
         "crossingStandOn": [0.5, 1.5]
     },
     "situationLength": 60.0,
-    "maxMeetingDistance": 0.25,
+    "maxMeetingDistance": 0.5,
     "commonVector": 5.0,
     "situationDevelopTime": 60.0,
     "disableLandCheck": true
