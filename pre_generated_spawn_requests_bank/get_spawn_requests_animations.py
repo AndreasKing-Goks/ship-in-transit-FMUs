@@ -2,6 +2,7 @@ from pathlib import Path
 import sys
 import os
 
+
 # Workaround for OpenMP duplicate runtime
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
@@ -14,7 +15,7 @@ os.add_dll_directory(str(dll_dir))
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from orchestrator.sit_cosim import ShipInTransitCoSimulation
+from orchestrator.sit_cosim_fmpy import ShipInTransitCoSimulation
 from orchestrator.scenario_config import (load_spawn_requests_bank_path, 
                                           load_base_config)
 

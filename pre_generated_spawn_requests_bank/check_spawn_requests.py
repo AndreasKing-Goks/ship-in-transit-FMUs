@@ -14,7 +14,7 @@ os.add_dll_directory(str(dll_dir))
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from orchestrator.sit_cosim import ShipInTransitCoSimulation
+from orchestrator.sit_cosim_fmpy import ShipInTransitCoSimulation
 from orchestrator.scenario_config import (load_spawn_requests_bank_path, 
                                           load_base_config)
 
@@ -22,7 +22,7 @@ from orchestrator.scenario_config import (load_spawn_requests_bank_path,
 # Handle paths and case index
 # =========================
 # Case Index
-case_idx                        = 1
+case_idx                        = 5
 
 # Get the config path
 config_path                     = ROOT / "EBASTv2_train" / "EBASTv2_train_2.yaml"
@@ -118,15 +118,18 @@ key_group_list = [
     # Base results
     ["OS0.forward_speed", "OS0.next_wp_speed", "OS0.total_ship_speed"],
     ["OS0.yaw_angle_rad", "OS0.yaw_angle_ref_rad"],
+    ["OS0.rudder_angle_deg"],
+    ["OS0.shaft_speed_rpm", "OS0.shaft_speed_cmd_rpm"],
+    ["OS0.throttle_cmd"],
     
-    ## Target Ship(s)
-    # Base results
-    ["TS1.forward_speed", "TS1.next_wp_speed", "TS1.total_ship_speed"],
-    ["TS1.yaw_angle_rad", "TS1.yaw_angle_ref_rad"],
+    # ## Target Ship(s)
+    # # Base results
+    # ["TS1.forward_speed", "TS1.next_wp_speed", "TS1.total_ship_speed"],
+    # ["TS1.yaw_angle_rad", "TS1.yaw_angle_ref_rad"],
     
-    # Base results
-    ["TS2.forward_speed", "TS2.next_wp_speed", "TS2.total_ship_speed"],
-    ["TS2.yaw_angle_rad", "TS2.yaw_angle_ref_rad"],
+    # # Base results
+    # ["TS2.forward_speed", "TS2.next_wp_speed", "TS2.total_ship_speed"],
+    # ["TS2.yaw_angle_rad", "TS2.yaw_angle_ref_rad"],
 ]
 
 # Plot Time Series
