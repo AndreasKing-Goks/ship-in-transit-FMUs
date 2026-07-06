@@ -61,8 +61,8 @@ def parse_cli_args():
                         help="PATH: training config yaml path (default: ROOT/EBASTv2_train/EBASTv2_train.yaml)")
     parser.add_argument("--encounter_settings_path", type=Path, default=ROOT / "EBASTv2_train" / "encounter_settings.json", metavar="ENCOUNTER_SETTINGS_PATH",
                         help="PATH: encounter settings json path (default: ROOT/EBASTv2_train/encounter_settings.json)")
-    parser.add_argument("--spawn_requests_bank_path", type=Path, default=ROOT / "EBASTv2_train" / "spawn_request_bank.pkl", metavar="SPAWN_REQUESTS_BANK_PATH",
-                        help="PATH: spawn requests bank pickle path (default: ROOT/EBASTv2_train/spawn_request_bank.pkl)")
+    parser.add_argument("--spawn_requests_bank_path", type=Path, default=ROOT / "EBASTv2_train" / "spawn_request_bank_1000.pkl", metavar="SPAWN_REQUESTS_BANK_PATH",
+                        help="PATH: spawn requests bank pickle path (default: ROOT/EBASTv2_train/spawn_request_bank_1000.pkl)")
     parser.add_argument("--model_name", type=str, default="EB-ASTv2_train_ppo", metavar="MODEL_NAME",
                         help="RUN: model/run name used for output folders (default: EB-ASTv2_train_ppo)")
     parser.add_argument("--save_anim_filename", type=str, default="EBASTv2_train_ppo.gif", metavar="SAVE_ANIM_FILENAME",
@@ -177,6 +177,7 @@ def main():
                 config_path=args.config_path,
                 encounter_settings_path=args.encounter_settings_path,
                 spawn_requests_bank=spawn_requests_bank,
+                use_fmpy=args.use_fmpy
             )
             env.reset(seed=None if args.seed is None else args.seed + rank)
             
