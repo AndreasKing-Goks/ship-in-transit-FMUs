@@ -150,6 +150,8 @@ Create the main simulator instance using `ShipInTransitCosimulation` with `libco
 > **FMPy Support**  
 >
 > This simulator also includes the option fo using `FMPy` as the backend. `FMPy` enables the use of proper `reset` method, where the reset handles the re-assignment of the FMUs attributes to their initial values. This is different on how the `libcosimpy` backend simulator handles reset, where the simulator needs to be reinstantiate the `ShipInTransitCosimulation` class again. With algorithm that uses episodic process, proper `reset` method is more efficient on the memory usage, hence making the simulation process faster.
+>
+> Thank you for **Etienne Purcell** (etienne.purcell@sintef.no) for implementing this feature to the simulator.
 
 
 ## 5. Run the Simulation
@@ -850,3 +852,6 @@ cases[start_eval_case_id:]
 ```
 
 correspond to evaluation cases.
+
+## Event-Based Adaptive Stress Testing v2 (EB-ASTv2) modules
+TBD
