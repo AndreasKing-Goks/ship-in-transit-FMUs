@@ -53,7 +53,8 @@ env = EBASTv2Env(
     ROOT=ROOT,
     config_path=config_path,
     encounter_settings_path=encounter_settings_path,
-    spawn_requests_bank=spawn_requests_bank
+    spawn_requests_bank=spawn_requests_bank,
+    use_fmpy=True
     )
 
 env.set_for_evaluation()
@@ -131,7 +132,7 @@ env.instance.AnimateFleetTrajectory(
         plot_inter_wp_proj=False,
         with_labels=True,
         precompute_ship_outlines=True,
-        save_path=save_path,
+        # save_path=save_path,
         writer_fps=20,
         palette=None,
         blit=True,

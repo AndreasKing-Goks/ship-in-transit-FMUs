@@ -11,7 +11,6 @@ from gymnasium.spaces import Box
 import numpy as np
 import pandas as pd
 
-from orchestrator.sit_cosim import ShipInTransitCoSimulation
 from orchestrator.scenario_config import load_base_config
 
 from EBASTv2_core.reward_function import compute_reward
@@ -30,7 +29,21 @@ class EBASTv2Env(gym.Env):
                  encounter_settings_path,
                  spawn_requests_bank,
                  skip_map_evaluation: bool=True,
-                 custom_pos_bound: dict=None):
+                 custom_pos_bound: dict=None,
+                 use_fmpy: bool=False):
+        # Decide which orchestrator to use
+        # If FMPy
+        if use_fmpy:
+            from orchestrator.sit_cosim_fmpy import ShipInTransitCoSimulation
+        # If Libcosimpy
+        else:
+            from orchestrator.sit_cosim import ShipInTransitCoSimulation
+        self.use_fmpy                   = use_fmpy
+        self.orchestrator               = ShipInTransitCoSimulation
+        
+        # Set up placeholder attributes for the simulator instance
+        self.instance                   = None
+        
         # Initially set the environment for training
         self.for_training               = True
         
@@ -752,13 +765,29 @@ class EBASTv2Env(gym.Env):
                 
 
             # Instantiate the ShipInTransitCoSimulation
-            self.instance = ShipInTransitCoSimulation(
-                config=config,
-                spawn_requests=spawn_requests,
-                ROOT=self.ROOT,
-                skip_map_evaluation=self.skip_map_evaluation,
-                IW_sampling_animated=True
-            )
+            # FMPy
+            if self.use_fmpy:
+                if self.instance is None:
+                    self.instance = self.orchestrator(
+                        config=config,
+                        spawn_requests=spawn_requests,
+                        ROOT=self.ROOT,
+                        skip_map_evaluation=self.skip_map_evaluation,
+                        IW_sampling_animated=True
+                    )
+                else:
+                    self.instance.RespawnAndReset(config=config,
+                                                  spawn_requests=spawn_requests,
+                                                  ROOT=self.ROOT)
+            # Libcosimpy
+            else:
+                self.instance = self.orchestrator(
+                    config=config,
+                    spawn_requests=spawn_requests,
+                    ROOT=self.ROOT,
+                    skip_map_evaluation=self.skip_map_evaluation,
+                    IW_sampling_animated=True
+                )
             
             # List for recording one episode
             self.obs_list                   = []

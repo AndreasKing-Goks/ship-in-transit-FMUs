@@ -40,8 +40,6 @@ from EBASTv2_core.episode_logger import log_episode_recap, log_training_args
 from EBASTv2_core.path_utils import get_RL_model_path
 from orchestrator.scenario_config import generate_spawn_request_bank, load_spawn_requests_bank_path
 
-import numpy as np
-
 
 def str2bool(value):
     """Parse boolean CLI arguments safely."""
@@ -72,7 +70,9 @@ def parse_cli_args():
     parser.add_argument("--save_reward_function", type=str2bool, default=True, metavar="SAVE_REWARD_FUNCTION",
                         help="RUN: save the reward function and automatically store it the log (default: True)")
 
-    # Spawn request generation
+    # RL Environment and Spawn request generation
+    parser.add_argument("--use_fmpy", type=str2bool, default=True, metavar="USE_FMPY",
+                        help="ENV: enable the use of FMPy instead of Libcosimpy orchestrator to enable proper FMU reset (default: True)")
     parser.add_argument("--n_cases", type=int, default=1000, metavar="N_CASES",
                         help="ENV: number of spawn request cases to generate/collect (default: 1000)")
     parser.add_argument("--training_case_ratio", type=float, default=0.9, metavar="TRAINING_CASE_RATIO",
@@ -264,6 +264,7 @@ def main():
             config_path=args.config_path,
             encounter_settings_path=args.encounter_settings_path,
             spawn_requests_bank=spawn_requests_bank,
+            use_fmpy=args.use_fmpy
         )
 
         obs, info = eval_env.reset()

@@ -70,8 +70,7 @@ A simple manipulation method that forces FMUs to communicate with their connecte
 Allows targeted manipulation of a specific FMU variable by injecting a custom input value.
 
 ### `AddInputFromExternal()`
-Registers FMU variables that will receive input from **external
-sources** (not from another FMU).
+Registers FMU variables that will receive input from **external sources** (not from another FMU).
 
 Examples:
 -   Reinforcement learning actions
@@ -84,6 +83,15 @@ registered using `AddInputFromExternal()`.
 
 ### `SetInitialValue()`
 Initializes FMU parameters before the simulation starts. This method sets values for variables declared as **parameters**.
+
+## FMPy support
+We also have a separate script for an `FMPy`-based `CoSimInstance` that covers the same functionality with the `libcosimpy`-based `CoSimInstance`, but with additional function which is the `Reset` method and `Terminate` method.
+
+### `Reset()`
+Reset every FMU, clear recorded series, and re-apply initial values.
+
+### `Terminate()`
+Terminate FMUs and clean up the extracted directories.
 
 ------------------------------------------------------------------------
 
@@ -189,3 +197,35 @@ Creates an animated visualization of ship motion. Supported features:
 ### Modes
 1.  **Without map**
 2.  **With map (`self.is_map_exists == True`)**
+
+## FMPy support
+We also have a separate script for an `ShipInTransitCoSimulation`-based `CoSimInstance` that covers the same functionality with the `libcosimpy`-based `ShipInTransitCoSimulation`, but with additional function which is the `Reset` method and `RespawnAndReset` method.
+
+### `Reset()`
+Reset the underlying co-simulation (FMUs, observer time series, `self.time` via `CoSimInstance.Reset()`) AND the SIT-level bookkeeping added on top of it, so that repeated `Simulate()` calls on the same instance behave like fresh runs.
+
+### `RespawnAndReset()`
+
+Stage a new scenario's spawn positions and routes on the current co-simulation instance, then immediately apply them by calling `Reset()`. This combines the usual two-step workflow:
+
+1. Stage new spawn data.
+2. Call `Reset()`.
+
+into a single convenience function.
+
+This method is intended for efficiently sweeping through many scenarios (e.g., a Monte Carlo bank of `trafficgen` cases) while **reusing the same FMPy co-simulation instance**, thereby avoiding the overhead of repeatedly constructing a new `ShipInTransitCoSimulation`.
+
+The following constraints apply:
+
+- The ship topology **must remain unchanged** across calls. The existing FMU slaves created by `AddAllShips()` are reused.
+- Only each ship's:
+  - spawn position,
+  - route, and
+  - `start_time`
+  
+  may change between scenarios.
+- This method **does not** add or remove FMU slaves. Instead, it re-stages the spawn data for the existing ships before performing `Reset()`.
+
+This staging step is required because a ship's initial position, yaw, and speed are FMI 2.0 parameters with **`fixed` variability**. Such parameters can only be modified while the FMU is in **initialization mode**.
+
+Calling `SetInitialValues()` merely stages the values in `self.initial_values`; it does **not** write them to the FMUs. During `Reset()`, the internal `_initialize()` routine re-enters initialization mode, applies the staged values to each FMU, and rebuilds the Ship-in-Transit bookkeeping (e.g., `stop_info`, `ship_reach_end_waypoint`, and related state) using the updated `ship_configs`.

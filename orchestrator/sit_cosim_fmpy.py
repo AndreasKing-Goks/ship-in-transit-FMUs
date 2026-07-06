@@ -76,7 +76,7 @@ class ShipInTransitCoSimulation(CoSimInstance):
         self.AddAllShips(ship_configs=ship_configs, ROOT=ROOT)
         
         # All ship ids
-        self.ship_idxs           = [ship_config["id"] for ship_config in ship_configs]
+        self.ship_ids               = [ship_config["id"] for ship_config in ship_configs]
         
         
         # =========================
@@ -1081,7 +1081,7 @@ class ShipInTransitCoSimulation(CoSimInstance):
                 test_sid = test_ship_config["id"]
                 
                 # Get the list of collider candidates
-                candidate_list = [ship_id for ship_id in self.ship_idxs if ship_id != test_sid]
+                candidate_list = [ship_id for ship_id in self.ship_ids if ship_id != test_sid]
                 
                 # If evaluating on the same ship, skip
                 if test_sid == ship_id:
@@ -1109,7 +1109,7 @@ class ShipInTransitCoSimulation(CoSimInstance):
             collision = bool(colliders)
             push_flag(ship_id=ship_id, flag_name="collision", value=collision, detail=(colliders if colliders else None))
             if collision:
-                print(f"{ship_id} collides with {", ".join(colliders)}")
+                print(f"{ship_id} collides with {', '.join(colliders)}")
             
             # Get the colav active sign
             colav_active, candidate_idx = self.update_colav_active_flag(ship_id)
@@ -1199,10 +1199,10 @@ class ShipInTransitCoSimulation(CoSimInstance):
             (stop_info, ship_reach_end_waypoint, ...) from the ship_configs set here.
         """
         new_ship_ids = {ship_config["id"] for ship_config in config["ships"]}
-        if new_ship_ids != set(self.ship_idxs):
+        if new_ship_ids != set(self.ship_ids):
             raise ValueError(
                 f"RespawnAndReset() cannot change ship topology on an existing "
-                f"instance: existing ship ids {sorted(self.ship_idxs)} != new ship "
+                f"instance: existing ship ids {sorted(self.ship_ids)} != new ship "
                 f"ids {sorted(new_ship_ids)}. Construct a new "
                 f"ShipInTransitCoSimulation instance instead."
             )
@@ -1212,7 +1212,7 @@ class ShipInTransitCoSimulation(CoSimInstance):
                                          simu_config=config["simulation"],
                                          ship_configs=copy.deepcopy(config["ships"]))
         self.ship_configs = ship_configs
-        self.ship_idxs    = [ship_config["id"] for ship_config in ship_configs]
+        self.ship_ids    = [ship_config["id"] for ship_config in ship_configs]
 
         for ship_config in ship_configs:
             prefix     = ship_config["id"]

@@ -10,7 +10,7 @@ First clone the repository. Make sure `Conda` is installed. Then, set up the `Co
 conda env create -f environment.yml
 ```
 
-The created `Conda` environment already includes the `libcosimpy` package, which is used to orchestrate and manage the execution of the `FMUs` within the co-simulation framework. It also includes `pythonfmu` library to enable users to create and package their own FMUs.
+The created `Conda` environment already includes the `libcosimpy` and `FMPy` packages, where each of them can be used to orchestrate and manage the execution of the `FMUs` within the co-simulation framework. It also includes `pythonfmu` library to enable users to create and package their own FMUs.
 
 This simulator includes real-map support, using [OpenStreetMap (OSM)](https://www.openstreetmap.org/) API.This feature allows the simulator to:
 * Plot real geographic regions anywhere on the globe
@@ -40,6 +40,7 @@ pip install trafficgen
 ## Dependencies for Adaptive Stress Testing (Optional)
 
 Only when you care about doing reinforcement learning-based process. Recommended to do these steps in order.
+
 
 ### Scipy
 `SciPy` is used specifically for Adaptive Stress Testing algorithm because `SciPy` includes a probability distribution `Truncated Normal` that is used for the reward function computation. Run this command to install the package:
@@ -139,12 +140,16 @@ where the initial conditions must vary between simulation runs.
 
 
 ## 4. Instantiate the Co-Simulation Orchestrator
-Create the main simulator instance using `ShipInTransitCosimulation`. Direct link to the script is [here](orchestrator/sit_cosim.py). The detailed behavior of the `ShipInTransitCosimulation` class is documented [here](orchestrator/README.md).  This class acts as the **central orchestrator** responsible for:
+Create the main simulator instance using `ShipInTransitCosimulation` with `libcosimpy` backend to handle the FMU interactions. Direct link to the script is [here](orchestrator/sit_cosim.py). The detailed behavior of the `ShipInTransitCosimulation` class is documented [here](orchestrator/README.md).  This class acts as the **central orchestrator** responsible for:
 -   initializing ship subsystems
 -   coordinating FMU components
 -   managing simulation time progression
 -   handling inter-component communication
 -   plot and animation
+
+> **FMPy Support**  
+>
+> This simulator also includes the option fo using `FMPy` as the backend. `FMPy` enables the use of proper `reset` method, where the reset handles the re-assignment of the FMUs attributes to their initial values. This is different on how the `libcosimpy` backend simulator handles reset, where the simulator needs to be reinstantiate the `ShipInTransitCosimulation` class again. With algorithm that uses episodic process, proper `reset` method is more efficient on the memory usage, hence making the simulation process faster.
 
 
 ## 5. Run the Simulation
@@ -719,7 +724,7 @@ config, spawn_requests = prepare_config_and_spawn_requests_with_traffic_gen(
 
 ### Spawn Request Bank
 
-The **Spawn Request Bank** is a pre-generated collection of encounter scenarios intended primarily for **EB-ASTv2**, but can also be used for other purposes as well. It provides a fixed repository of spawn requests that can be reused across experiments, enabling deterministic case selection, random sampling, and consistent benchmarking.
+The **Spawn Request Bank** is a pre-generated collection of encounter scenarios intended primarily for **EB-ASTv2**, but can also be used for other purposes as well. It provides a fixed repository of spawn requests that can be reused across experiments, enabling deterministic case selection, random sampling, and consistent benchmarking. The implementation can be found [`here`](pre_generated_spawn_requests_bank/spawn_requests_bank_generator.py).
 
 The bank is serialized as a Python **pickle (`.pkl`) file** and can be loaded using:
 
