@@ -1,12 +1,12 @@
 #!/bin/bash
-#SBATCH --job-name=EBAST_v2_train_sac
+#SBATCH --job-name=EBAST_v2_train_ppo
 #SBATCH --account=share-ie-itk
 #SBATCH --partition=GPUQ
 #SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=32
 #SBATCH --mem=256G
 #SBATCH --time=12-00:00:00
-#SBATCH --output=/dev/null
+#SBATCH --output=logs/%x_%j.out
 #SBATCH --error=logs/%x_%j.err
 
 echo "Running on node: $(hostname)"
@@ -29,6 +29,6 @@ nvidia-smi
 
 echo "Starting training..."
 
-python -u EBASTv2_train/argparse_train_vec_sac.py --run_trained_episode=False --animate=False --plot=False --animation_show=False --animation_block=False --n_envs=32
+python -u EBASTv2_train/argparse_train_vec_ppo.py --run_trained_episode=False --animate=False --plot=False --animation_show=False --animation_block=False --n_envs=32
 
 echo "Finished at: $(date)"
