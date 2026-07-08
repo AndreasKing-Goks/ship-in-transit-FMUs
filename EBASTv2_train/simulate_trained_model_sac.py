@@ -9,7 +9,7 @@ os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 import torch
 print("Torch:", torch.__version__)
 
-from sb3_contrib import RecurrentPPO
+from stable_baselines3 import SAC
 
 # Ensure libcosim DLL is found
 dll_dir = Path(sys.prefix) / "Lib" / "site-packages" / "libcosimpy" / "libcosimc"
@@ -30,7 +30,7 @@ import numpy as np
 # Handle paths
 # =========================
 # Trained Model Name
-model_name                      = "EB-ASTv2_train_2ts_continue_7c_continue_7a_continue_03_2026-06-13_22-30-22_69f2"
+model_name                      = ""
 
 # Get the config path
 config_path                     = ROOT / "EBASTv2_train" / "EBASTv2_train_2.yaml"
@@ -39,18 +39,16 @@ config_path                     = ROOT / "EBASTv2_train" / "EBASTv2_train_2.yaml
 encounter_settings_path         = ROOT / "EBASTv2_train" / "encounter_settings.json"
 
 # Spawn requests bank path
-spawn_requests_bank_path        = ROOT / "EBASTv2_train" / "spawn_request_bank.pkl"
+spawn_requests_bank_path        = ROOT / "EBASTv2_train" / "spawn_request_bank_1000.pkl"
 
 # Get the trained model
 model_path                      = ROOT / "EBASTv2_train" / "trained_model" / model_name / "model" / "model.zip"
 
 # Log path
-log_path                        = ROOT / "EBASTv2_train" / "simulated_trained_model" / "episode_recap.txt"
-# log_path                        = ROOT / "EBASTv2_train" / "trained_model" / model_name / "log" / "episode_recap.txt"
+log_path                        = ROOT / "EBASTv2_train" / "simulated_trained_model" / "episode_recap_sac.txt"
 
 # Get the save path for animation
-saved_animation_path            = ROOT / "EBASTv2_train" / "simulated_trained_model" / "simulated_trained_model.gif"
-# saved_animation_path            = ROOT / "EBASTv2_train" / "trained_model" / model_name / "saved_animation" / "simulated_trained_model.mp4"
+saved_animation_path            = ROOT / "EBASTv2_train" / "simulated_trained_model" / "simulated_trained_model_sac.gif"
 
 # =========================
 # Instantiate the environment wrapper
@@ -77,31 +75,23 @@ env = EBASTv2Env(
 # Run the trained model and log the episode
 # =========================
 # Set the environment to evaluation mode
-# env.set_for_evaluation()
+env.set_for_evaluation()
 
 # Load the trained model
-recurrent_ppo_model = RecurrentPPO.load(model_path)
+sac_model = SAC.load(model_path)
 
 # Reset the trained model
 case_idx    = None
-obs, info   = env.reset(specific_case_idx=case_idx)
+obs, _   = env.reset(specific_case_idx=case_idx)
 
-# Cell and hidden state of the LSTM
-lstm_states = None
-num_envs    = 1
-
-# Episode start signals are used to reset the lstm states
-episode_starts = np.ones((num_envs,), dtype=bool)
+# Episode start signals are used to reset the states
 while True:
-    action, lstm_states = recurrent_ppo_model.predict(obs,
-                                                      state=lstm_states,
-                                                      episode_start=episode_starts,
-                                                      deterministic=True)
-    obs, rewards, terminated, truncated, info = env.step(action)
-    episode_starts = terminated or truncated
+    action, _ = sac_model.predict(obs,
+                                  deterministic=True)
+    obs, _, terminated, truncated, _ = env.step(action)
     
     # Break the loop if it's either terminated or truncated
-    if episode_starts:
+    if terminated or truncated:
         break
         
 # Log the episodes

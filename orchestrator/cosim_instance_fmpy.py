@@ -345,13 +345,14 @@ class CoSimInstance:
         hold immediately after this step) without writing that back.
         """
         self._initialize()
-
+        # Source of problem
         for slave_data in self.slaves.values():
+            
             slave_data["fmu"].doStep(
                 currentCommunicationPoint=self.time,
                 communicationStepSize=self.stepSize,
             )
-
+        
         next_time = self.time + self.stepSize
         for obs in self.observer_time_series_struct.values():
             obs.time.append(next_time)

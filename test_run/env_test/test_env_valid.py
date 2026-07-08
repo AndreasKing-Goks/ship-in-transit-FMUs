@@ -64,7 +64,8 @@ env = EBASTv2Env(
     ROOT=ROOT,
     config_path=config_path,
     encounter_settings_path=encounter_settings_path,
-    spawn_requests_bank=spawn_requests_bank
+    spawn_requests_bank=spawn_requests_bank,
+    use_fmpy=True
     )
 
 # Check the env validity

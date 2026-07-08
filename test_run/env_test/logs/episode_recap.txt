@@ -55,8 +55,8 @@ Positional observation space bound [min, max]:
 ----------------------------------------------------------------------------------------------------
 TRANSITION 1
 ----------------------------------------------------------------------------------------------------
-Simulation time before action            : 0.0 s
-Simulation time after action             : 0.0 s
+Simulation time before action            : 255.0 s
+Simulation time after action             : 410.0 s
 Terminated                               : False
 Truncated                                : False
 Total Reward                             : 1.3327379252103033
@@ -159,8 +159,8 @@ Target ships
 ----------------------------------------------------------------------------------------------------
 TRANSITION 2
 ----------------------------------------------------------------------------------------------------
-Simulation time before action            : 0.0 s
-Simulation time after action             : 0.0 s
+Simulation time before action            : 410.0 s
+Simulation time after action             : 875.0 s
 Terminated                               : False
 Truncated                                : False
 Total Reward                             : 1.3253765325123152
@@ -263,8 +263,8 @@ Target ships
 ----------------------------------------------------------------------------------------------------
 TRANSITION 3
 ----------------------------------------------------------------------------------------------------
-Simulation time before action            : 0.0 s
-Simulation time after action             : 0.0 s
+Simulation time before action            : 875.0 s
+Simulation time after action             : 1375.0 s
 Terminated                               : False
 Truncated                                : False
 Total Reward                             : 0.45476115005472384
@@ -367,8 +367,8 @@ Target ships
 ----------------------------------------------------------------------------------------------------
 TRANSITION 4
 ----------------------------------------------------------------------------------------------------
-Simulation time before action            : 0.0 s
-Simulation time after action             : 0.0 s
+Simulation time before action            : 1375.0 s
+Simulation time after action             : 1580.0 s
 Terminated                               : False
 Truncated                                : False
 Total Reward                             : 0.7202757996722458
@@ -471,8 +471,8 @@ Target ships
 ----------------------------------------------------------------------------------------------------
 TRANSITION 5
 ----------------------------------------------------------------------------------------------------
-Simulation time before action            : 0.0 s
-Simulation time after action             : 0.0 s
+Simulation time before action            : 1580.0 s
+Simulation time after action             : 1875.0 s
 Terminated                               : False
 Truncated                                : False
 Total Reward                             : 0.03774849811235281
@@ -575,8 +575,8 @@ Target ships
 ----------------------------------------------------------------------------------------------------
 TRANSITION 6
 ----------------------------------------------------------------------------------------------------
-Simulation time before action            : 0.0 s
-Simulation time after action             : 0.0 s
+Simulation time before action            : 1875.0 s
+Simulation time after action             : 2280.0 s
 Terminated                               : False
 Truncated                                : False
 Total Reward                             : 0.7154793553059599
@@ -679,8 +679,8 @@ Target ships
 ----------------------------------------------------------------------------------------------------
 TRANSITION 7
 ----------------------------------------------------------------------------------------------------
-Simulation time before action            : 0.0 s
-Simulation time after action             : 0.0 s
+Simulation time before action            : 2280.0 s
+Simulation time after action             : 2980.0 s
 Terminated                               : False
 Truncated                                : False
 Total Reward                             : 0.521243645542629
@@ -783,8 +783,8 @@ Target ships
 ----------------------------------------------------------------------------------------------------
 TRANSITION 8
 ----------------------------------------------------------------------------------------------------
-Simulation time before action            : 0.0 s
-Simulation time after action             : 0.0 s
+Simulation time before action            : 2980.0 s
+Simulation time after action             : 3625.0 s
 Terminated                               : True
 Truncated                                : False
 Total Reward                             : -2.309163689409095

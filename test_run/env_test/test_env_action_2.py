@@ -54,7 +54,7 @@ env = EBASTv2Env(
     config_path=config_path,
     encounter_settings_path=encounter_settings_path,
     spawn_requests_bank=spawn_requests_bank,
-    use_fmpy=True
+    use_fmpy=False
     )
 
 env.set_for_evaluation()
@@ -122,7 +122,7 @@ env.instance.AnimateFleetTrajectory(
         margin_frac=0.08,
         equal_aspect=True,
         interval_ms=20,
-        frame_step=10,
+        frame_step=1,
         trail_len=50,
         plot_routes=True,
         plot_waypoints=True,

@@ -1,4 +1,4 @@
-import sys
+import os, sys
 import copy
 from pathlib import Path
 
@@ -2557,7 +2557,7 @@ class ShipInTransitCoSimulation(CoSimInstance):
         C_NEUTRAL = "#d9d9d9"
 
         # Always update time text
-        t_sec = i * self.stepSize / 1e9
+        t_sec = i * self.stepSize
         artists["time_text"].set_text(f"TIME\n{int(round(t_sec))} s")
         artists["frame_text"].set_text(f"FRAME\n{i}")
 
@@ -2648,7 +2648,7 @@ class ShipInTransitCoSimulation(CoSimInstance):
         """
         Update time/frame boxes for disabled status panel.
         """
-        t_sec = i * self.stepSize / 1e9
+        t_sec = i * self.stepSize
         artists["time_text"].set_text(f"TIME\n{int(round(t_sec))} s")
         artists["frame_text"].set_text(f"FRAME\n{i}")
         

@@ -11,7 +11,7 @@ os.add_dll_directory(str(dll_dir))
 ROOT = Path(__file__).resolve().parents[0]
 sys.path.insert(0, str(ROOT))
 
-from orchestrator.sit_cosim import ShipInTransitCoSimulation
+from orchestrator.sit_cosim_fmpy  import ShipInTransitCoSimulation
 from orchestrator.scenario_config import load_base_config
 
 # =========================
@@ -71,7 +71,7 @@ instance.AnimateFleetTrajectory(
         margin_frac=0.08,
         equal_aspect=True,
         interval_ms=20,
-        frame_step=2,
+        frame_step=1,
         trail_len=50,
         plot_routes=True,
         plot_waypoints=True,

@@ -7,17 +7,24 @@ import sys
 import os
 import argparse
 
+# =========================
+# PATH HELPER
+# =========================
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
 # Workaround for OpenMP duplicate runtime
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
 # Important to keep to prevent sb3-contrib importing torch from ARS that causes error
 import torch
-print("Torch:", torch.__version__)
 
 from stable_baselines3 import PPO
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.callbacks import CheckpointCallback
 from stable_baselines3.common.vec_env import SubprocVecEnv
+from multiprocessing import freeze_support
 
 # Ensure libcosim DLL is found on WINDOWS
 # Note: os.add_dll_directory only exists on Windows.
@@ -30,15 +37,10 @@ if sys.platform.startswith("win"):
     else:
         print(f"Warning: libcosim DLL directory not found: {dll_dir}")
 
-## PATH HELPER (OBLIGATORY)
-# project root = two levels up from this file
-ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT))
-
 from EBASTv2_core.env import EBASTv2Env
 from EBASTv2_core.episode_logger import log_episode_recap, log_training_args
 from EBASTv2_core.path_utils import get_RL_model_path
-from orchestrator.scenario_config import generate_spawn_request_bank, load_spawn_requests_bank_path
+from orchestrator.scenario_config import load_spawn_requests_bank_path
 
 
 def str2bool(value):
@@ -52,17 +54,14 @@ def str2bool(value):
         return False
     raise argparse.ArgumentTypeError("Boolean value expected.")
 
+def print_debug(msg, debug):
+    if debug:
+        print(msg, flush=True)
 
 def parse_cli_args():
     parser = argparse.ArgumentParser(description="EB-ASTv2 with Proximal Policy Optimization model")
 
-    # Paths / run setup
-    parser.add_argument("--config_path", type=Path, default=ROOT / "EBASTv2_train" / "EBASTv2_train_2.yaml", metavar="CONFIG_PATH",
-                        help="PATH: training config yaml path (default: ROOT/EBASTv2_train/EBASTv2_train.yaml)")
-    parser.add_argument("--encounter_settings_path", type=Path, default=ROOT / "EBASTv2_train" / "encounter_settings.json", metavar="ENCOUNTER_SETTINGS_PATH",
-                        help="PATH: encounter settings json path (default: ROOT/EBASTv2_train/encounter_settings.json)")
-    parser.add_argument("--spawn_requests_bank_path", type=Path, default=ROOT / "EBASTv2_train" / "spawn_request_bank_1000.pkl", metavar="SPAWN_REQUESTS_BANK_PATH",
-                        help="PATH: spawn requests bank pickle path (default: ROOT/EBASTv2_train/spawn_request_bank_1000.pkl)")
+    # Run setup
     parser.add_argument("--model_name", type=str, default="EB-ASTv2_train_ppo", metavar="MODEL_NAME",
                         help="RUN: model/run name used for output folders (default: EB-ASTv2_train_ppo)")
     parser.add_argument("--save_anim_filename", type=str, default="EBASTv2_train_ppo.gif", metavar="SAVE_ANIM_FILENAME",
@@ -79,6 +78,8 @@ def parse_cli_args():
                         help="ENV: ratio of cases used for training in RL env (default: 0.9)")
     parser.add_argument("--overwrite_spawn_bank", type=str2bool, default=False, metavar="OVERWRITE_SPAWN_BANK",
                         help="ENV: whether to overwrite existing spawn request bank (default: False)")
+    parser.add_argument("--debug", type=str2bool, default=False, metavar="DEBUG",
+                        help="ENV: toogle on env debug mode (default: False)")
     
     # Environment vectorization
     parser.add_argument("--n_envs", type=int, default=32, metavar="N_ENVS",
@@ -127,26 +128,45 @@ def parse_cli_args():
                         help="AST: device to use, e.g. cpu, cuda, auto (default: cuda)")
 
     # Post-training run / plotting
-    parser.add_argument("--run_trained_episode", type=str2bool, default=True, metavar="RUN_TRAINED_EPISODE",
-                        help="RESULT: run the trained model once after saving/loading (default: True)")
-    parser.add_argument("--animate", type=str2bool, default=True, metavar="ANIMATE",
-                        help="RESULT: create/show/save trajectory animation (default: True)")
-    parser.add_argument("--plot", type=str2bool, default=True, metavar="PLOT",
-                        help="RESULT: plot fleet trajectory after animation (default: True)")
-    parser.add_argument("--animation_show", type=str2bool, default=True, metavar="ANIMATION_SHOW",
-                        help="RESULT: show animation window (default: True)")
-    parser.add_argument("--animation_block", type=str2bool, default=True, metavar="ANIMATION_BLOCK",
-                        help="RESULT: block execution while showing animation (default: True)")
+    parser.add_argument("--run_trained_episode", type=str2bool, default=False, metavar="RUN_TRAINED_EPISODE",
+                        help="RESULT: run the trained model once after saving/loading (default: False)")
+    parser.add_argument("--animate", type=str2bool, default=False, metavar="ANIMATE",
+                        help="RESULT: create/show/save trajectory animation (default: False)")
+    parser.add_argument("--plot", type=str2bool, default=False, metavar="PLOT",
+                        help="RESULT: plot fleet trajectory after animation (default: False)")
+    parser.add_argument("--animation_show", type=str2bool, default=False, metavar="ANIMATION_SHOW",
+                        help="RESULT: show animation window (default: False)")
+    parser.add_argument("--animation_block", type=str2bool, default=False, metavar="ANIMATION_BLOCK",
+                        help="RESULT: block execution while showing animation (default: False)")
 
     return parser.parse_args()
 
 
 def main():
+    # =========================
+    # PATH HELPER
+    # =========================
+    ROOT = Path(__file__).resolve().parents[1]
+    if str(ROOT) not in sys.path:
+        sys.path.insert(0, str(ROOT))
+    
+    # Parse args
     args = parse_cli_args()
+    print_debug("[MAIN] Args parsed",
+                debug=args.debug)
+    
+    # Print torch version
+    print_debug(f"[MAIN] Torch: {torch.__version__}",
+                debug=args.debug)
 
     # =========================
     # Handle paths
     # =========================
+    # Paths
+    config_path                 = ROOT / "EBASTv2_train" / "EBASTv2_train_2.yaml"
+    encounter_settings_path     = ROOT / "EBASTv2_train" / "encounter_settings.json"
+    spawn_requests_bank_path    = ROOT / "EBASTv2_train" / "spawn_request_bank_1000.pkl"
+    
     (model_path, train_args_log_path, 
      episode_log_path, tb_path, 
      saved_animation_path, checkpoint_dir) = get_RL_model_path(
@@ -158,29 +178,23 @@ def main():
     # =========================
     # Instantiate the environment wrapper - parallelized
     # =========================
-    spawn_requests_bank_path = generate_spawn_request_bank(
-        ROOT=ROOT,
-        config_path=args.config_path,
-        encounter_settings_path=args.encounter_settings_path,
-        spawn_requests_bank_path=args.spawn_requests_bank_path,
-        n_cases=args.n_cases,
-        training_case_ratio=args.training_case_ratio,
-        overwrite=args.overwrite_spawn_bank,
-    )
+    # Load the spawn requests bank
     spawn_requests_bank = load_spawn_requests_bank_path(spawn_requests_bank_path)
+    print_debug("[MAIN] Spawn request bank loaded",
+                debug=args.debug)
     
     # DummyVecEnv and SubprocVecEnv except function, not instance, hence:
     def make_env(rank):
         def _init():
             env = EBASTv2Env(
                 ROOT=ROOT,
-                config_path=args.config_path,
-                encounter_settings_path=args.encounter_settings_path,
+                config_path=config_path,
+                encounter_settings_path=encounter_settings_path,
                 spawn_requests_bank=spawn_requests_bank,
-                use_fmpy=args.use_fmpy
+                use_fmpy=args.use_fmpy,
+                debug=args.debug
             )
-            env.reset(seed=None if args.seed is None else args.seed + rank)
-            
+            # env.reset(seed=None if args.seed is None else args.seed + rank)
             return Monitor(env)
         return _init
     
@@ -189,6 +203,8 @@ def main():
     vec_env = SubprocVecEnv([
         make_env(rank) for rank in range(n_envs)
     ])
+    print_debug("[MAIN] VecEnv created",
+                debug=args.debug)
 
     # =========================
     # Instantiate the RL Model
@@ -220,6 +236,8 @@ def main():
         seed=args.seed,
         device=args.device,
     )
+    print_debug("[MAIN] PPO model created",
+                debug=args.debug)
     
     # Log training settings
     log_training_args(ROOT=ROOT, args=args, log_path=train_args_log_path, 
@@ -245,10 +263,13 @@ def main():
     if tb_dir is not None:
         learn_kwargs["tb_log_name"] = args.model_name
 
+    
+    print("[MAIN] Starting learn()", flush=True)
     ppo_model.learn(total_timesteps=args.total_timesteps, **learn_kwargs)
+    print("[MAIN] Finished learn()", flush=True)
 
     ppo_model.save(model_path)
-    print(f"Model saved to: {model_path}")
+    print(f"[MAIN] Model saved to: {model_path}", flush=True)
     
     # Close the vec_env
     vec_env.close()
@@ -265,17 +286,18 @@ def main():
             config_path=args.config_path,
             encounter_settings_path=args.encounter_settings_path,
             spawn_requests_bank=spawn_requests_bank,
-            use_fmpy=args.use_fmpy
+            use_fmpy=args.use_fmpy,
+            debug=args.debug
         )
 
-        obs, info = eval_env.reset()
+        obs, _ = eval_env.reset()
 
         while True:
-            action, _states = ppo_model.predict(
+            action, _ = ppo_model.predict(
                 obs,
                 deterministic=True,
             )
-            obs, rewards, terminated, truncated, info = eval_env.step(action)
+            obs, _, terminated, truncated, _ = eval_env.step(action)
 
             if terminated or truncated:
                 break
@@ -318,4 +340,5 @@ def main():
 
 
 if __name__ == "__main__":
+    freeze_support()
     main()

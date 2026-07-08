@@ -30,7 +30,8 @@ class EBASTv2Env(gym.Env):
                  spawn_requests_bank,
                  skip_map_evaluation: bool=True,
                  custom_pos_bound: dict=None,
-                 use_fmpy: bool=False):
+                 use_fmpy: bool=True,
+                 debug: bool=False):
         # Decide which orchestrator to use
         # If FMPy
         if use_fmpy:
@@ -38,6 +39,7 @@ class EBASTv2Env(gym.Env):
         # If Libcosimpy
         else:
             from orchestrator.sit_cosim import ShipInTransitCoSimulation
+            
         self.use_fmpy                   = use_fmpy
         self.orchestrator               = ShipInTransitCoSimulation
         
@@ -100,6 +102,10 @@ class EBASTv2Env(gym.Env):
         
         # Initialize observation space
         self._init_observation_space(custom_pos_bound)
+        
+        # For Debug
+        self.debug              = debug
+        self.debug_step_counter = 0
         
     
     def set_for_training(self):
@@ -579,7 +585,6 @@ class EBASTv2Env(gym.Env):
                     slaveVar="scope_length",
                     value=scope_length
                 )
-                
         # Step up the simulator
         self.instance.step()
     
@@ -595,6 +600,13 @@ class EBASTv2Env(gym.Env):
         self.nearest_dist_dict  = self._get_distances_to_own_ship()
 
         while not any_request:
+            if self.debug:
+                print(
+                    f"[ADVANCE] waiting for captain-intent request, "
+                    f"time={self.instance.time:.2f}, stopTime={self.instance.stopTime:.2f}, "
+                    f"use_fmpy={self.use_fmpy}",
+                    flush=True,
+                )
             # Simulator integration
             self._step(action_dict)
             
@@ -641,6 +653,16 @@ class EBASTv2Env(gym.Env):
         """
            The method is used to step up the Reinforcement Learning step. 
         """
+        ## DEBUG
+        if self.debug:
+            self.debug_step_counter = getattr(self, "debug_step_counter", 0) + 1
+
+            if self.debug_step_counter == 1:
+                print("[STEP] first step reached", flush=True)
+
+            if self.debug_step_counter % 50 == 0:
+                print(f"[STEP] step={self.debug_step_counter}", flush=True)
+        
         # Get the action masks
         observation     = self._get_obs()
         action_masks    = observation["action_masks"].astype(bool)
@@ -701,6 +723,13 @@ class EBASTv2Env(gym.Env):
         self.truncated_list.append(truncated)
         self.info_list.append(truncated)
         self.event_timestamp_list.append(self.instance.time)
+        
+        if (terminated or truncated) and self.debug:
+            print(
+                f"[STEP] episode ended: step={self.debug_step_counter}, "
+                f"terminated={terminated}, truncated={truncated}",
+                flush=True
+            )
 
         return observation, reward, terminated, truncated, info
     
@@ -714,13 +743,21 @@ class EBASTv2Env(gym.Env):
             self.instance = None
         
         # IMPORTANT: Seed the random number generator
-        super().reset(seed=seed)
+        if self.debug:
+            print("[RESET] start", flush=True)
+            super().reset(seed=seed)
+        else:
+            super().reset(seed=seed)
+        
         self.np_random, _ = gym.utils.seeding.np_random(seed)
         
         # Do repeated attempts of reset until an event happened
         max_attempts = 20
 
-        for attempt in range(max_attempts):            
+        for attempt in range(max_attempts):
+            if self.debug:
+                print(f"[RESET] attempt {attempt + 1}/{max_attempts}", flush=True)
+            
             # Run the simulator until at least one of the enabled ship request captaint intent
             self.terminated         = False
             self.truncated          = False
@@ -732,6 +769,8 @@ class EBASTv2Env(gym.Env):
                 case_idx                = int(self.np_random.integers(0, self.start_eval_case_id))
             else:
                 case_idx                = int(self.np_random.integers(self.start_eval_case_id, self.n_spawn_cases))
+            if self.debug:
+                print(f"[RESET] selected case_idx={case_idx}", flush=True)
             
             # Use Ship Traffic Generator to generates collision encounter case
             config                      = load_base_config(self.config_path)
@@ -765,6 +804,8 @@ class EBASTv2Env(gym.Env):
                 
 
             # Instantiate the ShipInTransitCoSimulation
+            if self.debug:
+                print("[RESET] before orchestrator instantiate/reset", flush=True)
             # FMPy
             if self.use_fmpy:
                 if self.instance is None:
@@ -775,10 +816,14 @@ class EBASTv2Env(gym.Env):
                         skip_map_evaluation=self.skip_map_evaluation,
                         IW_sampling_animated=True
                     )
+                    if self.debug:
+                        print("[RESET] FMPy ShipInTransitCosimulation instantiated", flush=True)
                 else:
                     self.instance.RespawnAndReset(config=config,
                                                   spawn_requests=spawn_requests,
                                                   ROOT=self.ROOT)
+                    if self.debug:
+                        print("[RESET] FMPy ShipInTransitCosimulation reset", flush=True)
             # Libcosimpy
             else:
                 self.instance = self.orchestrator(
@@ -788,6 +833,9 @@ class EBASTv2Env(gym.Env):
                     skip_map_evaluation=self.skip_map_evaluation,
                     IW_sampling_animated=True
                 )
+
+                if self.debug:
+                    print("[RESET] Libcosimpy ShipInTransitCosimulation instantiated", flush=True)
             
             # List for recording one episode
             self.obs_list                   = []
@@ -820,12 +868,18 @@ class EBASTv2Env(gym.Env):
             # Prev_action recorder (initiated at 0.0 degree)
             self.prev_scope_angels          = [0.0] * self.n_ts_iw
             
+            if self.debug:
+                print("[RESET] searching event ...", flush=True)
+            
             # Advance the simulation until an event is found
             found_event = self._advance_until_next_event()
 
             # If an event is encountered, output observation and info as a valid
             # reset attempt
             if found_event:
+                if self.debug:
+                    print("[RESET] event found!", flush=True)
+                
                 observation = self._get_obs()
                 info = self._get_info(reset_attempts=attempt + 1,
                                       case_idx=case_idx)
