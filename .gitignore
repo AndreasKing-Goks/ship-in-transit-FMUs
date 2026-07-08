@@ -42,6 +42,7 @@ trained_model/
 .vscode/
 00_paper/
 pre_generated_spawn_requests_bank/animation/
+slurm_jobs/logs/
 
 # PyInstaller
 #  Usually these files are written by a python script from a template
