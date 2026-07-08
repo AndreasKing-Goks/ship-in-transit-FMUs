@@ -53,6 +53,6 @@ python -u "$SCRIPT" \
     --animation_show=False \
     --animation_block=False \
     --use_fmpy=False\
-    --n_envs=32
+    --n_envs=64
 
 echo "Finished $ALG at: $(date)"
