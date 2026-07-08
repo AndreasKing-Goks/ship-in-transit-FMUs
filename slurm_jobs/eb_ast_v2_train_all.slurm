@@ -3,7 +3,7 @@
 #SBATCH --account=share-ie-itk
 #SBATCH --partition=GPUQ
 #SBATCH --gres=gpu:1
-#SBATCH --cpus-per-task=32
+#SBATCH --cpus-per-task=64
 #SBATCH --mem=256G
 #SBATCH --time=12-00:00:00
 #SBATCH --array=0-2
@@ -52,6 +52,7 @@ python -u "$SCRIPT" \
     --plot=False \
     --animation_show=False \
     --animation_block=False \
+    --use_fmpy=False\
     --n_envs=32
 
 echo "Finished $ALG at: $(date)"
