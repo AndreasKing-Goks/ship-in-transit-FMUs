@@ -12,7 +12,7 @@ from ax.generation_strategy.generation_strategy import GenerationStrategy, Gener
 from ax.adapter.registry import Generators
 
 from orchestrator.sit_cosim import ShipInTransitCoSimulation
-from RL_env.reward_designs import RewardDesign4
+from EBASTv2_core.reward_designs import RewardDesign4
 
 # Nearest-distance shaping function, identical to the one used by the AST reward
 # (RL_env/reward_function.py: nearest_distance_reward_func). Reused here so that
