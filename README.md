@@ -10,7 +10,7 @@ First clone the repository. Make sure `Conda` is installed. Then, set up the `Co
 conda env create -f environment.yml
 ```
 
-The created `Conda` environment already includes the `libcosimpy` package, which is used to orchestrate and manage the execution of the `FMUs` within the co-simulation framework. It also includes `pythonfmu` library to enable users to create and package their own FMUs.
+The created `Conda` environment already includes the `libcosimpy` and `FMPy` packages, where each of them can be used to orchestrate and manage the execution of the `FMUs` within the co-simulation framework. It also includes `pythonfmu` library to enable users to create and package their own FMUs.
 
 This simulator includes real-map support, using [OpenStreetMap (OSM)](https://www.openstreetmap.org/) API.This feature allows the simulator to:
 * Plot real geographic regions anywhere on the globe
@@ -40,6 +40,7 @@ pip install trafficgen
 ## Dependencies for Adaptive Stress Testing (Optional)
 
 Only when you care about doing reinforcement learning-based process. Recommended to do these steps in order.
+
 
 ### Scipy
 `SciPy` is used specifically for Adaptive Stress Testing algorithm because `SciPy` includes a probability distribution `Truncated Normal` that is used for the reward function computation. Run this command to install the package:
@@ -139,12 +140,18 @@ where the initial conditions must vary between simulation runs.
 
 
 ## 4. Instantiate the Co-Simulation Orchestrator
-Create the main simulator instance using `ShipInTransitCosimulation`. Direct link to the script is [here](orchestrator/sit_cosim.py). The detailed behavior of the `ShipInTransitCosimulation` class is documented [here](orchestrator/README.md).  This class acts as the **central orchestrator** responsible for:
+Create the main simulator instance using `ShipInTransitCosimulation` with `libcosimpy` backend to handle the FMU interactions. Direct link to the script is [here](orchestrator/sit_cosim.py). The detailed behavior of the `ShipInTransitCosimulation` class is documented [here](orchestrator/README.md).  This class acts as the **central orchestrator** responsible for:
 -   initializing ship subsystems
 -   coordinating FMU components
 -   managing simulation time progression
 -   handling inter-component communication
 -   plot and animation
+
+> **FMPy Support**  
+>
+> This simulator also includes the option fo using `FMPy` as the backend. `FMPy` enables the use of proper `reset` method, where the reset handles the re-assignment of the FMUs attributes to their initial values. This is different on how the `libcosimpy` backend simulator handles reset, where the simulator needs to be reinstantiate the `ShipInTransitCosimulation` class again. With algorithm that uses episodic process, proper `reset` method is more efficient on the memory usage, hence making the simulation process faster.
+>
+> Thank you for **Etienne Purcell** (etienne.purcell@sintef.no) for implementing this feature to the simulator.
 
 
 ## 5. Run the Simulation
@@ -676,11 +683,10 @@ encounters = {
         "crossingGiveWay": [0.5, 1.5],
         "crossingStandOn": [0.5, 1.5]
     },
-    "vectorRange": [10.0, 30.0],
-    "situationLength": 30.0,
-    "maxMeetingDistance": 2.0,
+    "situationLength": 60.0,
+    "maxMeetingDistance": 0.5,
     "commonVector": 5.0,
-    "situationDevelopTime": 2.0,
+    "situationDevelopTime": 60.0,
     "disableLandCheck": true
 }
 ```
@@ -720,7 +726,7 @@ config, spawn_requests = prepare_config_and_spawn_requests_with_traffic_gen(
 
 ### Spawn Request Bank
 
-The **Spawn Request Bank** is a pre-generated collection of encounter scenarios intended primarily for **EB-ASTv2**, but can also be used for other purposes as well. It provides a fixed repository of spawn requests that can be reused across experiments, enabling deterministic case selection, random sampling, and consistent benchmarking.
+The **Spawn Request Bank** is a pre-generated collection of encounter scenarios intended primarily for **EB-ASTv2**, but can also be used for other purposes as well. It provides a fixed repository of spawn requests that can be reused across experiments, enabling deterministic case selection, random sampling, and consistent benchmarking. The implementation can be found [`here`](pre_generated_spawn_requests_bank/spawn_requests_bank_generator.py).
 
 The bank is serialized as a Python **pickle (`.pkl`) file** and can be loaded using:
 
@@ -742,6 +748,7 @@ spawn_requests_bank_path = generate_spawn_request_bank(
     config_path=config_path,
     encounter_settings_path=encounter_settings_path,
     spawn_requests_bank_path=spawn_requests_bank_path,
+    own_ship_sog=own_ship_sog,
     n_cases=100,
     training_case_ratio=0.8,
     overwrite=False
@@ -749,6 +756,34 @@ spawn_requests_bank_path = generate_spawn_request_bank(
 ```
 
 During generation, valid encounter scenarios are repeatedly produced via `get_spawn_requests(...)` until the requested number of cases (`n_cases`) has been collected. Each generated case is assigned a unique `case_id` and stored in the bank.
+
+```python
+spawn_requests, own_ship_initial, encounters = get_spawn_requests(config_path, 
+                                                                  encounter_settings_path,
+                                                                  own_ship_sog,
+                                                                  own_ship_initial):
+```
+where `own_ship_sog` defines the own ship speed over ground (`SoG`), and `own_ship_initial` is a custom initial condition that the user can manually implement. `own_ship_initial` and `own_ship_sog` can be set to `None`. In this case, `own_ship_sog` is set to a default value of 5.0 m/s and `own_ship_initial` is set to the default value that is shown below:
+```python
+own_ship_initial = {
+    "position": {
+        "north": 0.0,
+        "east": 0.0,
+    },
+    "sog": sog,                             # m/s, STANDARD VALUE is 5.0 m/s
+    "cog": os_init_heading,                 # Randomly pick between np.arange(0.0, 360.0, 15.0)
+    "heading": os_init_heading,             # Randomly pick between np.arange(0.0, 360.0, 15.0)
+    "navStatus": "Under way using engine",  # Forced to only use this in Collision encounters
+}
+```
+> ⚠️ **ATTENTION!**  
+>
+> `own_ship_sog` supports two formats:
+> 1. `float`: use a fixed SoG for all generated cases. If above `SoGMax`, `SoGMax` is used.
+> 2. `list`[`float`]: sample SoG uniformly from the given lower bound to `SoGMax`.
+>    Example: [5.0] samples from 5.0 to `SoGMax`.
+>
+> The second format is useful when we want the own ship's `SoG` to vary (within the allowed bound), instead of sticking to one fixed value.
 
 #### Data Structure
 
@@ -817,3 +852,6 @@ cases[start_eval_case_id:]
 ```
 
 correspond to evaluation cases.
+
+## Event-Based Adaptive Stress Testing v2 (EB-ASTv2) modules
+TBD

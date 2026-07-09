@@ -88,9 +88,9 @@ class MissionManager(Fmi2Slave):
         self.register_variable(Real("next_wp_east",  causality=Fmi2Causality.output))
         self.register_variable(Real("next_wp_speed", causality=Fmi2Causality.output))
 
-        self.register_variable(Boolean("last_wp_active", causality=Fmi2Causality.output))
-        
-        self.register_variable(Boolean("reach_wp_end", causality=Fmi2Causality.output))
+        self.register_variable(Boolean("last_wp_active", causality=Fmi2Causality.output, variability=Fmi2Variability.discrete))
+
+        self.register_variable(Boolean("reach_wp_end", causality=Fmi2Causality.output, variability=Fmi2Variability.discrete))
 
     def _valid_triplet(self, n, e, s) -> bool:
         return np.isfinite(n) and np.isfinite(e) and np.isfinite(s)

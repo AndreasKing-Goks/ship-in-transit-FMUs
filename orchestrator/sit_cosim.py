@@ -2,8 +2,16 @@
 import os, sys
 from pathlib import Path
 
-dll_dir = Path(sys.prefix) / "Lib" / "site-packages" / "libcosimpy" / "libcosimc"
-os.add_dll_directory(str(dll_dir))
+# Ensure libcosim DLL is found on WINDOWS
+# Note: os.add_dll_directory only exists on Windows.
+# On Linux/HPC, shared libraries should be handled by LD_LIBRARY_PATH.
+if sys.platform.startswith("win"):
+    dll_dir = Path(sys.prefix) / "Lib" / "site-packages" / "libcosimpy" / "libcosimc"
+
+    if dll_dir.exists():
+        os.add_dll_directory(str(dll_dir))
+    else:
+        print(f"Warning: libcosim DLL directory not found: {dll_dir}")
 
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
@@ -79,8 +87,7 @@ class ShipInTransitCoSimulation(CoSimInstance):
         self.AddAllShips(ship_configs=ship_configs, ROOT=ROOT)
         
         # All ship ids
-        self.ship_idxs           = [ship_config["id"] for ship_config in ship_configs]
-        
+        self.ship_ids            = [ship_config["id"] for ship_config in ship_configs]
         
         # =========================
         # Set the Map (if given)
@@ -1092,7 +1099,7 @@ class ShipInTransitCoSimulation(CoSimInstance):
                 test_sid = test_ship_config["id"]
                 
                 # Get the list of collider candidates
-                candidate_list = [ship_id for ship_id in self.ship_idxs if ship_id != test_sid]
+                candidate_list = [ship_id for ship_id in self.ship_ids if ship_id != test_sid]
                 
                 # If evaluating on the same ship, skip
                 if test_sid == ship_id:
@@ -1120,7 +1127,7 @@ class ShipInTransitCoSimulation(CoSimInstance):
             collision = bool(colliders)
             push_flag(ship_id=ship_id, flag_name="collision", value=collision, detail=(colliders if colliders else None))
             if collision:
-                print(f"{ship_id} collides with {", ".join(colliders)}")
+                print(f"{ship_id} collides with {', '.join(colliders)}")
             
             # Get the colav active sign
             colav_active, candidate_idx = self.update_colav_active_flag(ship_id)
@@ -1309,7 +1316,7 @@ class ShipInTransitCoSimulation(CoSimInstance):
             # Title
             if create_title:
                 plt.title(
-                    f"Time series from co-simulation instance \"{self.instanceName}\"",
+                    f"Time series from co-simulation instance \'{self.instanceName}\'",
                     fontsize=style["title_fs"]
                 )
 

@@ -92,8 +92,8 @@ class SimpleCollisionAvoidance(Fmi2Slave):
         self.register_variable(Real("new_thrust_cmd", causality=Fmi2Causality.output))
         self.register_variable(Real("new_rudder_angle_deg", causality=Fmi2Causality.output))
         self.register_variable(Real("colav_rud_ang_increment", causality=Fmi2Causality.output))
-        self.register_variable(Boolean("colav_active", causality=Fmi2Causality.output))
-        self.register_variable(Boolean("ship_collision", causality=Fmi2Causality.output))
+        self.register_variable(Boolean("colav_active", causality=Fmi2Causality.output, variability=Fmi2Variability.discrete))
+        self.register_variable(Boolean("ship_collision", causality=Fmi2Causality.output, variability=Fmi2Variability.discrete))
         
         for i in range(1,4):
             self.register_variable(Real(f"beta_own_to_tar_{i}", causality=Fmi2Causality.output))

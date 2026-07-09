@@ -139,7 +139,7 @@ def generate_traffic_gen_situation(
     own_ship_desc,
     target_ships_desc,
     encounter_settings_path,
-    max_retries=5,
+    max_retries=50,
 ):
     """Call trafficgen to produce a TrafficSituation from encounter parameters.
 
@@ -210,13 +210,13 @@ def generate_traffic_gen_situation(
         f"Could not generate {len(encounters)} target ships."
     )
 
-def get_own_ship_description(own_ship_config):
+def get_own_ship_description(own_ship_config, sogMax_val=8.0):
     # Get the own ship descriptions
     length      = own_ship_config["fmu_params"]["SHIP_MODEL"]["length_of_ship"]
     width       = own_ship_config["fmu_params"]["SHIP_MODEL"]["width_of_ship"]
     height      = own_ship_config["fmu_params"]["SHIP_MODEL"]["front_above_water_height"]
     
-    sogMax      = own_ship_config.get("sogMax", 13.0)       # If not specified, assume max speed of ground is 13 m/s
+    sogMax      = own_ship_config.get("sogMax", sogMax_val)       # If not specified, assume max speed of ground is 8 m/s
     mmsi        = own_ship_config.get("mmsi", 100000001)    # If not specified, assume mmsi as 100000001
     name        = own_ship_config.get("id")
     shipType    = own_ship_config.get("shipType", "Cargo")  # If not specified, assume ship type as Cargo
@@ -235,7 +235,7 @@ def get_own_ship_description(own_ship_config):
     }
     return own_ship_desc
 
-def get_target_ships_description(target_ship_configs):
+def get_target_ships_description(target_ship_configs, sogMax_val=8.0):
     target_ships_desc = []
     
     for ts_config in target_ship_configs:
@@ -243,7 +243,7 @@ def get_target_ships_description(target_ship_configs):
         width       = ts_config["fmu_params"]["SHIP_MODEL"]["width_of_ship"]
         height      = ts_config["fmu_params"]["SHIP_MODEL"]["front_above_water_height"]
         shipType    = ts_config.get("shipType", "Cargo")  # If not specified, assume ship type as Cargo
-        sogMax      = ts_config.get("sogMax", 13.0)       # If not specified, assume max speed over ground is 13 m/s
+        sogMax      = ts_config.get("sogMax", sogMax_val)       # If not specified, assume max speed over ground is 8 m/s
         
         data = {
             "dimensions":
@@ -504,11 +504,11 @@ def sample_beta_and_rel_speed_given_encounter_settings(encounter_type, encounter
     rel_speed_params    = encounter_settings.get("relativeSpeed")
     
     key_map = {
-        "head-on": "headOn",
-        "overtaking-give-way": "overtakingGiveWay",
-        "overtaking-stand-on": "overtakingStandOn",
-        "crossing-give-way": "crossingGiveWay",
-        "crossing-stand-on": "crossingStandOn",
+        "head-on"               : "headOn",
+        "overtaking-give-way"   : "overtakingGiveWay",
+        "overtaking-stand-on"   : "overtakingStandOn",
+        "crossing-give-way"     : "crossingGiveWay",
+        "crossing-stand-on"     : "crossingStandOn",
     }
     
     key = key_map[encounter_type]
@@ -517,9 +517,10 @@ def sample_beta_and_rel_speed_given_encounter_settings(encounter_type, encounter
     
     return beta, rel_speed
 
-def get_spawn_requests(config_path, 
-                       encounter_settings_path, 
-                       own_ship_initial=None):
+def  get_spawn_requests(config_path, 
+                        encounter_settings_path,
+                        own_ship_sog=None,
+                        own_ship_initial=None):
     
     # Save the base configuration for the Ship in Transit Co-simulation
     config_base     = load_base_config(config_path)
@@ -540,8 +541,8 @@ def get_spawn_requests(config_path,
     ]
     availableEncounterTypes = [
         "head-on", 
-        # "overtaking-give-way",
-        # "overtaking-stand-on",
+        "overtaking-give-way",
+        "overtaking-stand-on",
         "crossing-give-way",
         "crossing-stand-on"
     ]
@@ -550,21 +551,29 @@ def get_spawn_requests(config_path,
     os_init_heading                     = random.choice(initial_own_ship_cog_and_heading)
     
     if own_ship_initial is None:
+        if own_ship_sog is None:
+            sog = 5.0       # Use standard sog value 8.0 m/s
+        elif isinstance(own_ship_sog, float):
+            sog = own_ship_sog
+        elif isinstance(own_ship_sog, list):
+            low_bound = own_ship_sog[0]
+            high_bound = ship_configs[0].get('sogMax', 8.0)     # Own ship sogMax, if not specified use standard max sog value 8.0 m/s
+            sog = random.uniform(low_bound, high_bound)
+        
         own_ship_initial        = {
             "position": {
                 "north": 0.0,
                 "east": 0.0,
             },
-            "sog": 10.0,    # m/s
+            "sog": sog,    # m/s, STANDARD VALUE
             "cog": os_init_heading,
             "heading": os_init_heading,
-            "navStatus": "Under way using engine",
+            "navStatus": "Under way using engine",  # Forced to only use this in Collision encounters
         }
     
     # Sample encounters
-    # vectorTime      = [15, 20, 25, 30, 35]
-    # vector_time     = random.choice(vectorTime)
-    vector_time     = 15
+    vectorTime_low  = 20
+    vectorTime_high = 50
     
     # Generate encounter for target ships only
     encounters      = {}
@@ -576,6 +585,9 @@ def get_spawn_requests(config_path,
         encounter_type = random.choice(availableEncounterTypes)
         beta, rel_speed = sample_beta_and_rel_speed_given_encounter_settings(encounter_type,
                                                                              encounter_settings_path)
+        
+        # Sample vector time
+        vector_time     = random.randint(vectorTime_low, vectorTime_high)
         
         encounter = {
             "desiredEncounterType": encounter_type,
@@ -607,10 +619,11 @@ def generate_spawn_request_bank(
     config_path,
     encounter_settings_path,
     spawn_requests_bank_path,
+    own_ship_sog= 5.0,
     n_cases=100,
     training_case_ratio:float=None,
     overwrite=False,
-    max_total_attempts=1000,
+    max_total_attempts=10000,
     round_step=5000
 ):
     spawn_requests_bank_path = Path(spawn_requests_bank_path)
@@ -633,6 +646,7 @@ def generate_spawn_request_bank(
             spawn_requests, own_ship_initial, encounters = get_spawn_requests(
                 config_path=config_path,
                 encounter_settings_path=encounter_settings_path,
+                own_ship_sog=own_ship_sog
             )
 
             case = {

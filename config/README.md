@@ -124,7 +124,7 @@ These flags control which map layers are rendered.
 These fields are optional and needed only when `Ship Traffic Generator` feature is enabled. But even if these values are not specified, the values will be automatically assigned to default values.
 
 - **sogMax (float)**  
-  Maximum ship speed over ground in m/s. *Default*: 13 m/s
+  Maximum ship speed over ground in m/s. *Default*: 8 m/s
 
 - **mmsi (int)**  
   Maritime Mobile Service Identity (MMSI). *Default*: 100000001
