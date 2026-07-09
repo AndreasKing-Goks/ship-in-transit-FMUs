@@ -113,13 +113,13 @@ def compute_trial_metrics(instance, num_target_ships):
 
     # --- Danger score (same weights and signs as AST terminal reward) -----
     danger_score = 0.0
-    danger_score += 5.0 * own_ship_collision
-    danger_score += 5.0 * own_ship_grounding
+    danger_score += 10.0 * own_ship_collision
+    danger_score += 8.0 * own_ship_grounding
     danger_score += 3.0 * own_ship_navigation_failure
     danger_score -= 2.0 * own_ship_reaches_end_waypoint
-    danger_score -= 2.0 * tar_ships_collision
-    danger_score -= 2.0 * tar_ships_grounding
-    danger_score -= 1.0 * tar_ships_navigation_failure
+    danger_score -= 10.0 * tar_ships_collision
+    danger_score -= 8.0 * tar_ships_grounding
+    danger_score -= 3.0 * tar_ships_navigation_failure
     danger_score -= 1.0 * tar_ships_reaches_end_waypoint
     danger_score += nearest_distance_shaping
 
