@@ -7,7 +7,7 @@
 #SBATCH --mem=256G
 #SBATCH --time=12-00:00:00
 #SBATCH --array=0-2
-#SBATCH --output=logs/%x_%A_%a.out
+#SBATCH --output=/dev/null
 #SBATCH --error=logs/%x_%A_%a.err
 
 echo "Running on node: $(hostname)"
