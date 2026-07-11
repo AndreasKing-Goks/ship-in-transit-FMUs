@@ -6,7 +6,7 @@
 #SBATCH --cpus-per-task=64
 #SBATCH --mem=512G
 #SBATCH --time=12-00:00:00
-#SBATCH --output=logs/ppo/%x_%j.out
+#SBATCH --output=/dev/null
 #SBATCH --error=logs/ppo/%x_%j.err
 
 echo "Running on node: $(hostname)"
