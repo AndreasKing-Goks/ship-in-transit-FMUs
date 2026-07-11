@@ -3,11 +3,11 @@
 #SBATCH --account=share-ie-itk
 #SBATCH --partition=GPUQ
 #SBATCH --gres=gpu:1
-#SBATCH --cpus-per-task=32
-#SBATCH --mem=256G
+#SBATCH --cpus-per-task=64
+#SBATCH --mem=512G
 #SBATCH --time=12-00:00:00
-#SBATCH --output=logs/%x_%j.out
-#SBATCH --error=logs/%x_%j.err
+#SBATCH --output=logs/sac/%x_%j.out
+#SBATCH --error=logs/sac/%x_%j.err
 
 echo "Running on node: $(hostname)"
 echo "Job ID: $SLURM_JOB_ID"
@@ -29,6 +29,6 @@ nvidia-smi
 
 echo "Starting training..."
 
-python -u EBASTv2_train/argparse_train_vec_sac.py --run_trained_episode=False --animate=False --plot=False --animation_show=False --animation_block=False --n_envs=32
+python -u EBASTv2_train/argparse_train_vec_sac.py --run_trained_episode=False --animate=False --plot=False --animation_show=False --animation_block=False --n_envs=64
 
 echo "Finished at: $(date)"

@@ -82,8 +82,8 @@ def parse_cli_args():
                         help="ENV: toogle on env debug mode (default: False)")
     
     # Environment vectorization
-    parser.add_argument("--n_envs", type=int, default=32, metavar="N_ENVS",
-                        help="VEC_ENV: The number of environment instances for computating parallelization (default: 32)")
+    parser.add_argument("--n_envs", type=int, default=64, metavar="N_ENVS",
+                        help="VEC_ENV: The number of environment instances for computating parallelization (default: 64)")
 
     # Soft Actor-Critic core
     parser.add_argument('--total_timesteps', type=int, default=10_240_000, metavar='TOTAL_TIMESTEPS',
@@ -105,9 +105,9 @@ def parse_cli_args():
     parser.add_argument('--train_freq', type=int, default=10, metavar='TRAIN_FREQ',
                         help='AST: Update the model every train_freq steps. \
                             alternatively pass a tuple of frequency and unit like (5, "step") or (2, "episode") (default: 10)')
-    parser.add_argument('--gradient_steps', type=int, default=320, metavar='GRADIENT_STEPS',
+    parser.add_argument('--gradient_steps', type=int, default=128, metavar='GRADIENT_STEPS',
                         help='AST: How many gradient steps to do after each rollout (see train_freq). \
-                            Set to -1 means to do as many gradient steps as steps done in the environment during the rollout (default: 320)')
+                            Set to -1 means to do as many gradient steps as steps done in the environment during the rollout (default: 128)')
     parser.add_argument('--n_steps', type=int, default=1, metavar='N_STEPS',
                         help='AST: When n_steps > 1, uses n-step return (with the NStepReplayBuffer) when updating the Q-value network (default:1)')
     parser.add_argument('--ent_coef', type=str, default="auto", metavar='ENT_COEF',

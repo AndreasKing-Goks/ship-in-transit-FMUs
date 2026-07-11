@@ -82,8 +82,8 @@ def parse_cli_args():
                         help="ENV: toogle on env debug mode (default: False)")
     
     # Environment vectorization
-    parser.add_argument("--n_envs", type=int, default=32, metavar="N_ENVS",
-                        help="VEC_ENV: The number of environment instances for computating parallelization (default: 32)")
+    parser.add_argument("--n_envs", type=int, default=64, metavar="N_ENVS",
+                        help="VEC_ENV: The number of environment instances for computating parallelization (default: 64)")
 
     # Proximal Policy Optimization core
     parser.add_argument("--total_timesteps", type=int, default=10_240_000, metavar="TOTAL_TIMESTEPS",
