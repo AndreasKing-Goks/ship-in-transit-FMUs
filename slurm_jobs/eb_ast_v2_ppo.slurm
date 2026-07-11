@@ -4,7 +4,7 @@
 #SBATCH --partition=GPUQ
 #SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=64
-#SBATCH --mem=512G
+#SBATCH --mem=256G
 #SBATCH --time=12-00:00:00
 #SBATCH --output=/dev/null
 #SBATCH --error=logs/ppo/%x_%j.err
