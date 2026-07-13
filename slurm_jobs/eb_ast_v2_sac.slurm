@@ -19,7 +19,7 @@ module purge
 module load Anaconda3/2024.02-1
 source $(conda info --base)/etc/profile.d/conda.sh
 conda activate sit-cosim
-export LD_LIBRARY_PATH=$CONDA_PREFIX/lib:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH="$CONDA_PREFIX/lib:${LD_LIBRARY_PATH:-}"
 
 cd /cluster/work/arsitoru/projects/ship-in-transit-FMUs
 
