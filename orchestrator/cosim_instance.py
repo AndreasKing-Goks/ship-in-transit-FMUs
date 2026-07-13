@@ -22,6 +22,7 @@ from libcosimpy.CosimSlave import CosimLocalSlave
 from libcosimpy.CosimManipulator import CosimManipulator
 from libcosimpy.CosimObserver import CosimObserver
 from libcosimpy.CosimEnums import CosimVariableType
+from libcosimpy.CosimLogging import log_output_level, CosimLogLevel
 
 
 def GetVariableIndex(variables, name):
@@ -59,7 +60,10 @@ class CoSimInstance:
         stopTime is the stop time of the co-simulation (seconds)
         stepSize is the macro step size of the co-simulation (seconds)
     '''
-    def __init__(self, instanceName: str="simulation", stopTime: float=1.0, stepSize: float = 0.01):
+    def __init__(self, instanceName: str="simulation", stopTime: float=1.0, stepSize: float = 0.01, debug=False):
+        if not debug:
+            log_output_level(CosimLogLevel.FATAL)
+        
         self.instanceName = instanceName
         self.stopTime = int(stopTime*1e9)
         self.stepSize = int(stepSize*1e9)

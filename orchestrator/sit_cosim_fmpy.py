@@ -31,7 +31,9 @@ class ShipInTransitCoSimulation(CoSimInstance):
                  ROOT                   : Path,
                  spawn_requests         : dict=None,
                  IW_sampling_animated   : bool=False,
-                 skip_map_evaluation    : bool=True
+                 skip_map_evaluation    : bool=True,
+                 debug                  : bool=False,
+                 simu_output_print      : bool=False,
                  ):
         # =========================
         # Instantiate the Parent Class
@@ -78,6 +80,8 @@ class ShipInTransitCoSimulation(CoSimInstance):
         # All ship ids
         self.ship_ids               = [ship_config["id"] for ship_config in ship_configs]
         
+        # Simulation output printout
+        self.simu_output_print  = simu_output_print
         
         # =========================
         # Set the Map (if given)
@@ -769,7 +773,8 @@ class ShipInTransitCoSimulation(CoSimInstance):
                     slaveVar="scope_angle_deg",
                     value=scope_angle_deg
                 )
-                print(f"  -> injecting scope angle {scope_angle_deg} deg")
+                if self.simu_output_print:
+                    print(f"  -> injecting scope angle {scope_angle_deg} deg")
                 i += 1
             
         return
@@ -993,7 +998,8 @@ class ShipInTransitCoSimulation(CoSimInstance):
                 
                 push_flag(ship_id=ship_id, flag_name="grounding", value=grounded)
                 if grounded:
-                    print(f"{ship_id} experiences grounding")
+                    if self.simu_output_print:
+                        print(f"{ship_id} experiences grounding")
                     
                 # Outside Horizon
                 outside = check_condition.is_ship_outside_horizon(
@@ -1003,7 +1009,8 @@ class ShipInTransitCoSimulation(CoSimInstance):
                 )
                 push_flag(ship_id=ship_id, flag_name="outside_horizon", value=outside)
                 if outside:
-                    print(f"{ship_id} goes outside the map horizon")
+                    if self.simu_output_print:
+                        print(f"{ship_id} goes outside the map horizon")
         
         else:
             grounded    = False
@@ -1045,7 +1052,8 @@ class ShipInTransitCoSimulation(CoSimInstance):
                 navigational_failure = True
                 nav_warn_now         = False # Once failed, no longer "warning"
                 if not getattr(self, f'_navfail_printed_{ship_id}', False):
-                    print(f"{ship_id} experiences navigational failure")
+                    if self.simu_output_print:
+                        print(f"{ship_id} experiences navigational failure")
                     setattr(self, f"_navfail_printed_{ship_id}", True)
         
         # If manages to recover
@@ -1066,7 +1074,8 @@ class ShipInTransitCoSimulation(CoSimInstance):
         reaches_end_waypoint = self.update_ship_reach_end_point_status(ship_id)
         push_flag(ship_id=ship_id, flag_name="reaches_end_waypoint", value=reaches_end_waypoint)
         if reaches_end_waypoint and not getattr(self, f'_{ship_id}_rew_printed', False):
-            print(f"{ship_id} reaches its final trajectory's waypoint")
+            if self.simu_output_print:
+                print(f"{ship_id} reaches its final trajectory's waypoint")
             setattr(self, f'_{ship_id}_rew_printed', True)
         
         # ==================================
@@ -1109,7 +1118,8 @@ class ShipInTransitCoSimulation(CoSimInstance):
             collision = bool(colliders)
             push_flag(ship_id=ship_id, flag_name="collision", value=collision, detail=(colliders if colliders else None))
             if collision:
-                print(f"{ship_id} collides with {', '.join(colliders)}")
+                if self.simu_output_print:
+                    print(f"{ship_id} collides with {', '.join(colliders)}")
             
             # Get the colav active sign
             colav_active, candidate_idx = self.update_colav_active_flag(ship_id)
@@ -1255,7 +1265,8 @@ class ShipInTransitCoSimulation(CoSimInstance):
         # Compute elapsed time
         elapsed_time = end_time -start_time
         
-        print(f"Simulation took {elapsed_time:.6f} seconds.")
+        if self.simu_output_print:
+            print(f"Simulation took {elapsed_time:.6f} seconds.")
 
 
 # =============================================================================================================

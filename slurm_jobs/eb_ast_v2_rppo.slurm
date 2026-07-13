@@ -6,8 +6,10 @@
 #SBATCH --cpus-per-task=64
 #SBATCH --mem=256G
 #SBATCH --time=12-00:00:00
-#SBATCH --output=/dev/null
+#SBATCH --output=logs/rppo/%x_%A_%a.out
 #SBATCH --error=logs/rppo/%x_%j.err
+
+set -euo pipefail
 
 echo "Running on node: $(hostname)"
 echo "Job ID: $SLURM_JOB_ID"
@@ -29,6 +31,6 @@ nvidia-smi
 
 echo "Starting training..."
 
-python -u EBASTv2_train/argparse_train_vec_rppo.py --run_trained_episode=False --animate=False --plot=False --animation_show=False --animation_block=False --n_envs=64
+python -u EBASTv2_train/argparse_train_vec_rppo.py --use_fmpy=False --run_trained_episode=False --animate=False --plot=False --animation_show=False --animation_block=False --n_envs=64
 
 echo "Finished at: $(date)"

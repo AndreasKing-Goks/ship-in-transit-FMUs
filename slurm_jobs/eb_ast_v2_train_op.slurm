@@ -1,12 +1,12 @@
 #!/bin/bash
-#SBATCH --job-name=EBAST_v2_all
+#SBATCH --job-name=EBAST_v2_on_policy
 #SBATCH --account=share-ie-itk
 #SBATCH --partition=GPUQ
 #SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=64
 #SBATCH --mem=256G
 #SBATCH --time=12-00:00:00
-#SBATCH --array=0-2
+#SBATCH --array=0-1
 #SBATCH --output=logs/%x_%A_%a.out
 #SBATCH --error=logs/%x_%A_%a.err
 
@@ -38,9 +38,6 @@ if [ "$SLURM_ARRAY_TASK_ID" -eq 0 ]; then
 elif [ "$SLURM_ARRAY_TASK_ID" -eq 1 ]; then
     ALG="rppo"
     SCRIPT="EBASTv2_train/argparse_train_vec_rppo.py"
-elif [ "$SLURM_ARRAY_TASK_ID" -eq 2 ]; then
-    ALG="sac"
-    SCRIPT="EBASTv2_train/argparse_train_vec_sac.py"
 else
     echo "Unknown array task ID: $SLURM_ARRAY_TASK_ID"
     exit 1
