@@ -18,9 +18,10 @@ if str(ROOT) not in sys.path:
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
 # Important to keep to prevent sb3-contrib importing torch from ARS that causes error
+import numpy as np
 import torch
 
-from stable_baselines3 import PPO
+from sb3_contrib import RecurrentPPO
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.callbacks import CheckpointCallback
 from stable_baselines3.common.vec_env import SubprocVecEnv
@@ -56,16 +57,16 @@ def str2bool(value):
 
 def print_debug(msg, debug):
     if debug:
-        print(msg, flush=True)
+        print(msg)
 
 def parse_cli_args():
-    parser = argparse.ArgumentParser(description="EB-ASTv2 with Proximal Policy Optimization model")
+    parser = argparse.ArgumentParser(description="EB-ASTv2 with RecurrentPPO model")
 
     # Run setup
-    parser.add_argument("--model_name", type=str, default="EB-ASTv2_train_ppo", metavar="MODEL_NAME",
-                        help="RUN: model/run name used for output folders (default: EB-ASTv2_train_ppo)")
-    parser.add_argument("--save_anim_filename", type=str, default="EBASTv2_train_ppo.gif", metavar="SAVE_ANIM_FILENAME",
-                        help="RUN: animation filename to save (default: EBASTv2_train_ppo.gif)")
+    parser.add_argument("--model_name", type=str, default="EB-ASTv2_train_rppo", metavar="MODEL_NAME",
+                        help="RUN: model/run name used for output folders (default: EB-ASTv2_train_rppo)")
+    parser.add_argument("--save_anim_filename", type=str, default="EBASTv2_train_rppo.gif", metavar="SAVE_ANIM_FILENAME",
+                        help="RUN: animation filename to save (default: EBASTv2_train_rppo.gif)")
     parser.add_argument("--save_reward_function", type=str2bool, default=True, metavar="SAVE_REWARD_FUNCTION",
                         help="RUN: save the reward function and automatically store it the log (default: True)")
 
@@ -85,11 +86,14 @@ def parse_cli_args():
     parser.add_argument("--n_envs", type=int, default=64, metavar="N_ENVS",
                         help="VEC_ENV: The number of environment instances for computating parallelization (default: 64)")
 
-    # Proximal Policy Optimization core
-    parser.add_argument("--total_timesteps", type=int, default=2_000_000, metavar="TOTAL_TIMESTEPS",
+    # RecurrentPPO core
+    parser.add_argument("--total_timesteps", type=int, default=10_000_000, metavar="TOTAL_TIMESTEPS",
                         help="AST: total model training timesteps. Ideally bigger than n_steps (default: 10_000_000)")
-    parser.add_argument("--policy", type=str, default="MultiInputPolicy", metavar="POLICY",
-                        help="AST: RecurrentPPO policy name (default: MultiInputPolicy)")
+    parser.add_argument("--chunk_timesteps", type=int, default=1_000_000, metavar="CHUNK_TIMESTEPS",
+                        help="AST: Approximate number of timesteps to train before recycling the vectorized environment.\
+                            Ideally bigger than n_steps (default: 1_000_000)")
+    parser.add_argument("--policy", type=str, default="MultiInputLstmPolicy", metavar="POLICY",
+                        help="AST: RecurrentPPO policy name (default: MultiInputLstmPolicy)")
     parser.add_argument("--learning_rate", type=float, default=3e-4, metavar="LEARNING_RATE",
                         help="AST: learning rate (default: 3e-4)")
     parser.add_argument("--n_steps", type=int, default=512, metavar="N_STEPS",
@@ -143,6 +147,7 @@ def parse_cli_args():
 
 
 def main():
+    
     # =========================
     # PATH HELPER
     # =========================
@@ -200,9 +205,15 @@ def main():
     
     # Vectorized the Env
     n_envs = args.n_envs
-    vec_env = SubprocVecEnv([
-        make_env(rank) for rank in range(n_envs)
-    ])
+    
+    def make_vec_env():
+        """Create a fresh pool of SubprocVecEnv workers."""
+        return SubprocVecEnv([
+            make_env(rank) for rank in range(n_envs)
+        ])
+    
+    vec_env = make_vec_env()
+    
     print_debug("[MAIN] VecEnv created",
                 debug=args.debug)
 
@@ -211,7 +222,7 @@ def main():
     # =========================
     tb_dir = tb_path if args.tensorboard_log else None
 
-    ppo_model = PPO(
+    recurrent_ppo_model = RecurrentPPO(
         policy=args.policy,
         env=vec_env,
         learning_rate=args.learning_rate,
@@ -236,7 +247,7 @@ def main():
         seed=args.seed,
         device=args.device,
     )
-    print_debug("[MAIN] PPO model created",
+    print_debug("[MAIN] RPPO model created",
                 debug=args.debug)
     
     # Log training settings
@@ -263,24 +274,111 @@ def main():
     # For tensorboard logging
     if tb_dir is not None:
         learn_kwargs["tb_log_name"] = args.model_name
-
     
-    print("[MAIN] Starting learn()", flush=True)
-    ppo_model.learn(total_timesteps=args.total_timesteps, **learn_kwargs)
-    print("[MAIN] Finished learn()", flush=True)
+    # =========================
+    # Chunk Training
+    # =========================
+    
+    target_timesteps    = args.total_timesteps
+    chunk_timesteps     = args.chunk_timesteps
+    chunk_idx           = 0
+    
+    print(
+        f"[MAIN] Starting chunked training\n"
+        f"[MAIN] Target timesteps : {target_timesteps:,}\n"
+        f"[MAIN] Chunk timesteps  : {chunk_timesteps:,}\n"
+        f"[MAIN] Number of envs   : {args.n_envs}",
+        flush=True)
+    
+    try:
+        while recurrent_ppo_model.num_timesteps < target_timesteps:
+            # Advance the chunk training index
+            chunk_idx += 1
+            
+            # Compute the remaining timesteps before the target timesteps
+            remaining_timesteps = (target_timesteps - recurrent_ppo_model.num_timesteps)
+            
+            # Do not intentionally requests more than what remains
+            current_chunk_timesteps = min(chunk_timesteps, remaining_timesteps)
+            
+            print(
+                f"\n[MAIN] ===============================\n"
+                f"[MAIN] Starting chunk {chunk_idx}\n"
+                f"[MAIN] Current timesteps   : "
+                f"{recurrent_ppo_model.num_timesteps:,}\n"
+                f"[MAIN] Requested this chunk: "
+                f"{current_chunk_timesteps:,}\n"
+                f"[MAIN] Remaining to target : "
+                f"{remaining_timesteps:,}\n"
+                f"[MAIN] ===============================",
+                flush=True,
+            )
+            
+            # Continue the training the SAME model
+            recurrent_ppo_model.learn(total_timesteps=current_chunk_timesteps,
+                                      reset_num_timesteps=False,
+                                      **learn_kwargs)
+            
+            print(
+                f"[MAIN] Chunk {chunk_idx} finished at ",
+                f"{recurrent_ppo_model.num_timesteps:,} timesteps", 
+                flush=True
+            )
+            
+            # Stop if target has been reached
+            if recurrent_ppo_model.num_timesteps >= target_timesteps:
+                break
+            
+            # -------------------------
+            # Recycle all environment worker processes
+            # -------------------------
+            print(
+                "[MAIN] Closing current VecEnv workers...",
+                flush=True,
+            )
 
-    ppo_model.save(model_path)
+            vec_env.close()
+
+            print(
+                "[MAIN] Creating fresh VecEnv workers...",
+                flush=True,
+            )
+
+            vec_env = make_vec_env()
+
+            # Attach the fresh worker pool to the SAME model
+            recurrent_ppo_model.set_env(
+                vec_env,
+                force_reset=True,
+            )
+
+            print(
+                "[MAIN] Fresh VecEnv attached to model",
+                flush=True,
+            )
+            
+    finally:        
+        # Always clean up the final environment pool
+        print("[MAIN] Closing final VecEnv...", flush=True)
+        
+        vec_env.close()
+        
+    # Final save after the end of the training
+    recurrent_ppo_model.save(model_path)
     print(f"[MAIN] Model saved to: {model_path}", flush=True)
-    
-    # Close the vec_env
-    vec_env.close()
+        
+    print(
+        f"[MAIN] Training finished at "
+        f"{recurrent_ppo_model.num_timesteps:,} timesteps",
+        flush=True,
+    )
 
     # =========================
     # Run the trained model and log the episode
     # =========================
     if args.run_trained_episode:
-        del ppo_model
-        ppo_model = PPO.load(model_path)
+        del recurrent_ppo_model
+        recurrent_ppo_model = RecurrentPPO.load(model_path)
         
         eval_env = EBASTv2Env(
             ROOT=ROOT,
@@ -292,15 +390,21 @@ def main():
         )
 
         obs, _ = eval_env.reset()
+        lstm_states = None
+        num_envs = 1
+        episode_starts = np.ones((num_envs,), dtype=bool)
 
         while True:
-            action, _ = ppo_model.predict(
+            action, lstm_states = recurrent_ppo_model.predict(
                 obs,
+                state=lstm_states,
+                episode_start=episode_starts,
                 deterministic=True,
             )
             obs, _, terminated, truncated, _ = eval_env.step(action)
+            episode_starts = terminated or truncated
 
-            if terminated or truncated:
+            if episode_starts:
                 break
         
         # Log the simulation episode using the trained policy

@@ -60,16 +60,45 @@ def get_RL_model_path(root: Path, model_name: str, unique: bool = True, save_ani
 
     return model_path, train_args_log_path, episode_log_path, tb_path, saved_anim_path, checkpoint_dir
 
-def get_re_trained_RL_model_path(root: Path, results_ID: str, model_name:str, unique: bool = True, save_anim_filename: str = None):
+def get_next_continue_name(results_ID: str) -> str:
+    """
+        Helper function for the first re-training attempt
+    """
+    # re.search(pattern, string)
+    match = re.search(r"_continue_(\d+)$", results_ID)
+
+    if match:
+        current_number = int(match.group(1))
+        next_number = current_number + 1
+
+        # re.sub(pattern, replacement, string)
+        return re.sub(
+            r"_continue_\d+$",
+            f"_continue_{next_number:02d}",
+            results_ID,
+        )
+
+    return f"{results_ID}_continue_01"
+
+def get_re_trained_RL_model_path(root: Path, results_ID: str, unique: bool = True, save_anim_filename: str = None):
     """
     Use the model path name that will be used for retraining, and modify to create new directories
     
-    Example:
+    - "wxyz" is a unique string
+    
+    Example 1:
         old run:
-        EB-ASTv2_train_2026-06-06_11-58-34_f00e/
+        EB-ASTv2_train_yyyy-mm-dd_hh-mm-ss_wxyz/
 
         continued run:
-        EB-ASTv2_train_continue_xx_2026-06-06_11-58-34_f00e/
+        EB-ASTv2_train_yyyy-mm-dd_hh-mm-ss_wxyz_continue_01/
+        
+    Example 2:
+        old run:
+        EB-ASTv2_train_yyyy-mm-dd_hh-mm-ss_wxyz_continue_01/
+
+        continued run:
+        EB-ASTv2_train_yyyy-mm-dd_hh-mm-ss_wxyz_continue_02/
     """
     # Base directory
     base_dir = Path(root) / "EBASTv2_train" / "trained_model"
@@ -77,20 +106,9 @@ def get_re_trained_RL_model_path(root: Path, results_ID: str, model_name:str, un
     
     # Retrieve the train results ID and modify it
     if unique:
-        short_id            = uuid.uuid4().hex[:2]  # short unique string
-        tag                 = f"_continue_{short_id}"
-        old_name            = results_ID
-        model_name_unique   = old_name.replace(
-            model_name,
-            f"{model_name}{tag}"
-        )
+        model_name_unique   = get_next_continue_name(results_ID)
     else:
-        tag                 = "_continue"
-        old_name            = results_ID
-        model_name_unique   = old_name.replace(
-            model_name,
-            f"{model_name}{tag}"
-        )
+        model_name_unique   = f"{results_ID}_continue"
 
     # Full paths
     model_dir = base_dir / model_name_unique / "model"

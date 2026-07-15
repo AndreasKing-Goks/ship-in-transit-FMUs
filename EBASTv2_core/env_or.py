@@ -734,40 +734,13 @@ class EBASTv2Env(gym.Env):
         return observation, reward, terminated, truncated, info
     
     
-    def _discard_instance(self):
-        """
-        Drop the current simulator instance.
-
-        For libcosimpy, this does not guarantee immediate release of all
-        native allocations. Full process termination remains the strongest
-        cleanup boundary.
-        """
-        self.instance = None
-    
-    
-    def close(self):
-        """
-        Clean up the environment when the environment itself is destroyed.
-
-        Note:
-            For the libcosimpy backend, dropping the Python reference does not
-            guarantee that all native memory is returned while the worker process
-            remains alive. The definitive cleanup boundary is termination of the
-            SubprocVecEnv worker process.
-        """
-        if getattr(self, "instance", None) is not None:
-            self._discard_instance()
-
-        super().close()
-        
-    
     def reset(self, seed: Optional[int] = None, options: Optional[dict] = None, specific_case_idx=None):
         """
             Reset the environment all together
         """
-        # # First empty the instance if it exists already
-        # if getattr(self, "instance", None) is not None:
-        #     self.instance = None
+        # First empty the instance if it exists already
+        if getattr(self, "instance", None) is not None:
+            self.instance = None
         
         # IMPORTANT: Seed the random number generator
         if self.debug:
@@ -831,9 +804,7 @@ class EBASTv2Env(gym.Env):
             # Instantiate the ShipInTransitCoSimulation
             if self.debug:
                 print("[RESET] before orchestrator instantiate/reset", flush=True)
-            # -------------------------
-            # FMPy backend
-            # -------------------------
+            # FMPy
             if self.use_fmpy:
                 if self.instance is None:
                     self.instance = self.orchestrator(
@@ -851,14 +822,8 @@ class EBASTv2Env(gym.Env):
                                                   ROOT=self.ROOT)
                     if self.debug:
                         print("[RESET] FMPy ShipInTransitCosimulation reset", flush=True)
-            # -------------------------
-            # Libcosimpy backend
-            # -------------------------
+            # Libcosimpy
             else:
-                # libcosimpy backend cannot reset the existing FMUs.
-                # Drop the old simulator and construct a completely new one.
-                self._discard_instance()
-                
                 self.instance = self.orchestrator(
                     config=config,
                     spawn_requests=spawn_requests,

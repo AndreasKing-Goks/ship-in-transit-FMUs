@@ -38,8 +38,8 @@ if sys.platform.startswith("win"):
         print(f"Warning: libcosim DLL directory not found: {dll_dir}")
 
 from EBASTv2_core.env import EBASTv2Env
-from EBASTv2_core.episode_logger import log_episode_recap, log_training_args
-from EBASTv2_core.path_utils import get_RL_model_path
+from EBASTv2_core.episode_logger import log_training_args
+from EBASTv2_core.path_utils import get_re_trained_RL_model_path
 from orchestrator.scenario_config import load_spawn_requests_bank_path
 
 
@@ -88,36 +88,6 @@ def parse_cli_args():
     # Proximal Policy Optimization core
     parser.add_argument("--total_timesteps", type=int, default=2_000_000, metavar="TOTAL_TIMESTEPS",
                         help="AST: total model training timesteps. Ideally bigger than n_steps (default: 10_000_000)")
-    parser.add_argument("--policy", type=str, default="MultiInputPolicy", metavar="POLICY",
-                        help="AST: RecurrentPPO policy name (default: MultiInputPolicy)")
-    parser.add_argument("--learning_rate", type=float, default=3e-4, metavar="LEARNING_RATE",
-                        help="AST: learning rate (default: 3e-4)")
-    parser.add_argument("--n_steps", type=int, default=512, metavar="N_STEPS",
-                        help="AST: number of steps to run for each environment per update (default: 512)")
-    parser.add_argument("--batch_size", type=int, default=1024, metavar="BATCH_SIZE",
-                        help="AST: minibatch size (default: 1024)")
-    parser.add_argument("--n_epochs", type=int, default=5, metavar="N_EPOCHS",
-                        help="AST: number of epoch when optimizing surrogate loss (default: 5)")
-    parser.add_argument("--gamma", type=float, default=1.00, metavar="GAMMA",
-                        help="AST: discount factor (default: 1.00)")
-    parser.add_argument("--gae_lambda", type=float, default=0.95, metavar="GAE_LAMBDA",
-                        help="AST: GAE lambda parameter (default: 0.95)")
-    parser.add_argument("--clip_range", type=float, default=0.2, metavar="CLIP_RANGE",
-                        help="AST: PPO clipping parameter (default: 0.2)")
-    parser.add_argument("--normalize_advantage", type=str2bool, default=True, metavar="NORMALIZE_ADVANTAGE",
-                        help="AST: normalize advantage estimates (default: True)")
-    parser.add_argument("--ent_coef", type=float, default=0.005, metavar="ENT_COEF",
-                        help="AST: entropy coefficient (default: 0.005)")
-    parser.add_argument("--vf_coef", type=float, default=0.5, metavar="VF_COEF",
-                        help="AST: value function coefficient (default: 0.5)")
-    parser.add_argument("--max_grad_norm", type=float, default=0.5, metavar="MAX_GRAD_NORM",
-                        help="AST: maximum gradient norm (default: 0.5)")
-    parser.add_argument("--use_sde", type=str2bool, default=False, metavar="USE_SDE",
-                        help="AST: use generalized State Dependent Exploration (default: False)")
-    parser.add_argument("--sde_sample_freq", type=int, default=-1, metavar="SDE_SAMPLE_FREQ",
-                        help="AST: SDE sample frequency (default: -1)")
-    parser.add_argument("--stats_window_size", type=int, default=100, metavar="STATS_WINDOW_SIZE",
-                        help="AST: rollout logging window size (default: 100)")
     parser.add_argument("--tensorboard_log", type=str2bool, default=True, metavar="TENSORBOARD_LOG",
                         help="AST: enable tensorboard logging to training folder (default: True)")
     parser.add_argument("--verbose", type=int, default=0, metavar="VERBOSE",
@@ -126,18 +96,6 @@ def parse_cli_args():
                         help="AST: random seed (default: None)")
     parser.add_argument("--device", type=str, default="cuda", metavar="DEVICE",
                         help="AST: device to use, e.g. cpu, cuda, auto (default: cuda)")
-
-    # Post-training run / plotting
-    parser.add_argument("--run_trained_episode", type=str2bool, default=False, metavar="RUN_TRAINED_EPISODE",
-                        help="RESULT: run the trained model once after saving/loading (default: False)")
-    parser.add_argument("--animate", type=str2bool, default=False, metavar="ANIMATE",
-                        help="RESULT: create/show/save trajectory animation (default: False)")
-    parser.add_argument("--plot", type=str2bool, default=False, metavar="PLOT",
-                        help="RESULT: plot fleet trajectory after animation (default: False)")
-    parser.add_argument("--animation_show", type=str2bool, default=False, metavar="ANIMATION_SHOW",
-                        help="RESULT: show animation window (default: False)")
-    parser.add_argument("--animation_block", type=str2bool, default=False, metavar="ANIMATION_BLOCK",
-                        help="RESULT: block execution while showing animation (default: False)")
 
     return parser.parse_args()
 
@@ -162,18 +120,16 @@ def main():
     # =========================
     # Handle paths
     # =========================
+    # Desired PPO model to retrained
+    results_ID=""
+    
     # Paths
     config_path                 = ROOT / "EBASTv2_train" / "EBASTv2_train_2.yaml"
     encounter_settings_path     = ROOT / "EBASTv2_train" / "encounter_settings.json"
     spawn_requests_bank_path    = ROOT / "EBASTv2_train" / "spawn_request_bank_1000.pkl"
     
     (model_path, train_args_log_path, 
-     episode_log_path, tb_path, 
-     saved_animation_path, checkpoint_dir) = get_RL_model_path(
-        root=ROOT,
-        model_name=args.model_name,
-        save_anim_filename=args.save_anim_filename,
-    )
+     _, tb_path, _, checkpoint_dir)     = get_re_trained_RL_model_path(root=ROOT,results_ID=results_ID)
 
     # =========================
     # Instantiate the environment wrapper - parallelized
@@ -207,37 +163,33 @@ def main():
                 debug=args.debug)
 
     # =========================
-    # Instantiate the RL Model
+    # Load the existing PPO model
     # =========================
     tb_dir = tb_path if args.tensorboard_log else None
+    
+    old_model_path      = ROOT / "EBASTv2_train" / "trained_model" / results_ID / "model" / "model.zip"
+    
+    if not old_model_path.exists():
+        raise FileNotFoundError(f"Existing RPPO model not found: {old_model_path}")
 
-    ppo_model = PPO(
-        policy=args.policy,
+    ppo_model = PPO.load(
+        str(old_model_path),
         env=vec_env,
-        learning_rate=args.learning_rate,
-        n_steps=args.n_steps,
-        batch_size=args.batch_size,
-        n_epochs=args.n_epochs,
-        gamma=args.gamma,
-        gae_lambda=args.gae_lambda,
-        clip_range=args.clip_range,
-        clip_range_vf=None,
-        normalize_advantage=args.normalize_advantage,
-        ent_coef=args.ent_coef,
-        vf_coef=args.vf_coef,
-        max_grad_norm=args.max_grad_norm,
-        use_sde=args.use_sde,
-        sde_sample_freq=args.sde_sample_freq,
-        target_kl=None,
-        stats_window_size=args.stats_window_size,
-        tensorboard_log=tb_dir,
-        policy_kwargs=None,
-        verbose=args.verbose,
-        seed=args.seed,
         device=args.device,
+        force_reset=True
     )
-    print_debug("[MAIN] PPO model created",
-                debug=args.debug)
+    # The loaded model may retain the TensorBoard path from its original run.
+    # Explicitly redirect logging to the new continued-run folder.
+    ppo_model.tensorboard_log = tb_dir
+
+    print(
+        f"[MAIN] Existing RPPO model loaded\n"
+        f"[MAIN] Source model       : {old_model_path}\n"
+        f"[MAIN] Existing timesteps : {ppo_model.num_timesteps:,}\n"
+        f"[MAIN] Number of envs     : {ppo_model.n_envs}\n"
+        f"[MAIN] RPPO n_steps       : {ppo_model.n_steps}",
+        flush=True,
+    )
     
     # Log training settings
     log_training_args(ROOT=ROOT, args=args, log_path=train_args_log_path, 
@@ -248,8 +200,8 @@ def main():
     # =========================
     learn_kwargs = {}
     
-    # For checkpoint training, Record for every one-fifth of the total timesteps
-    checkpoint_freq = max((args.total_timesteps // 5) // args.n_envs, 1)
+    # For checkpoint training, Record for every half of the total timesteps
+    checkpoint_freq = max((args.total_timesteps // 2) // args.n_envs, 1)
     checkpoint_callback = CheckpointCallback(
         save_freq=checkpoint_freq,
         save_path=str(checkpoint_dir),
@@ -263,10 +215,14 @@ def main():
     # For tensorboard logging
     if tb_dir is not None:
         learn_kwargs["tb_log_name"] = args.model_name
-
     
     print("[MAIN] Starting learn()", flush=True)
-    ppo_model.learn(total_timesteps=args.total_timesteps, **learn_kwargs)
+    
+    # Continue to retrain the same mode by setting reset_num_timesteps to False
+    ppo_model.learn(total_timesteps=args.total_timesteps,
+                    reset_num_timesteps=False,
+                    **learn_kwargs)
+    
     print("[MAIN] Finished learn()", flush=True)
 
     ppo_model.save(model_path)
@@ -274,70 +230,6 @@ def main():
     
     # Close the vec_env
     vec_env.close()
-
-    # =========================
-    # Run the trained model and log the episode
-    # =========================
-    if args.run_trained_episode:
-        del ppo_model
-        ppo_model = PPO.load(model_path)
-        
-        eval_env = EBASTv2Env(
-            ROOT=ROOT,
-            config_path=args.config_path,
-            encounter_settings_path=args.encounter_settings_path,
-            spawn_requests_bank=spawn_requests_bank,
-            use_fmpy=args.use_fmpy,
-            debug=args.debug
-        )
-
-        obs, _ = eval_env.reset()
-
-        while True:
-            action, _ = ppo_model.predict(
-                obs,
-                deterministic=True,
-            )
-            obs, _, terminated, truncated, _ = eval_env.step(action)
-
-            if terminated or truncated:
-                break
-        
-        # Log the simulation episode using the trained policy
-        log_episode_recap(env=eval_env, log_path=episode_log_path)
-
-    # =========================
-    # Animation and Plot
-    # =========================
-    if args.animate and args.run_trained_episode:
-        eval_env.instance.AnimateFleetTrajectory(
-            ship_ids=None,
-            show=args.animation_show,
-            block=args.animation_block,
-            mode="quick",
-            fig_width=10.0,
-            margin_frac=0.08,
-            equal_aspect=True,
-            interval_ms=20,
-            frame_step=10,
-            trail_len=50,
-            plot_routes=True,
-            plot_waypoints=True,
-            plot_roa=True,
-            plot_start_end=True,
-            plot_inter_wp_roa=True,
-            plot_inter_wp_proj=False,
-            with_labels=True,
-            precompute_ship_outlines=True,
-            save_path=saved_animation_path,
-            writer_fps=20,
-            palette=None,
-            blit=True,
-            ship_scale=1.0,
-        )
-
-    if args.plot and args.run_trained_episode:
-        eval_env.instance.PlotFleetTrajectory(mode="quick", ship_scale=1.0)
 
 
 if __name__ == "__main__":

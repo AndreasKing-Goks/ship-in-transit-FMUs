@@ -86,8 +86,8 @@ def parse_cli_args():
                         help="VEC_ENV: The number of environment instances for computating parallelization (default: 64)")
 
     # Soft Actor-Critic core
-    parser.add_argument('--total_timesteps', type=int, default=10_240_000, metavar='TOTAL_TIMESTEPS',
-                        help='AST: total timesteps for overall AST training [start_steps + train_steps] (default=10_240_000)')
+    parser.add_argument('--total_timesteps', type=int, default=2_000_000, metavar='TOTAL_TIMESTEPS',
+                        help='AST: total timesteps for overall AST training [start_steps + train_steps] (default=10_000_000)')
     parser.add_argument("--policy", type=str, default="MultiInputPolicy", metavar="POLICY",
                         help="AST: SAC policy name (default: MultiInputPolicy)")
     parser.add_argument('--learning_rate', type=float, default=3e-4, metavar='LEARNING_RATE',
@@ -249,14 +249,15 @@ def main():
     # =========================
     learn_kwargs = {}
     
-    # For checkpoint training, Record for every one-fourth of the total timesteps
-    checkpoint_freq = max((args.total_timesteps // 4) // args.n_envs, 1)
+    # For checkpoint training, Record for every one-fifth of the total timesteps
+    checkpoint_freq = max((args.total_timesteps // 5) // args.n_envs, 1)
     checkpoint_callback = CheckpointCallback(
         save_freq=checkpoint_freq,
         save_path=str(checkpoint_dir),
         name_prefix=args.model_name,
         save_replay_buffer=False,
-        save_vecnormalize=True
+        save_vecnormalize=True,
+        verbose=2
     )
     learn_kwargs["callback"] = checkpoint_callback
     
