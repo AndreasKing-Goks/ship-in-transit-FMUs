@@ -20,7 +20,7 @@ os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 # Important to keep to prevent sb3-contrib importing torch from ARS that causes error
 import torch
 
-from stable_baselines3 import PPO
+from stable_baselines3 import SAC
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.callbacks import CheckpointCallback
 from stable_baselines3.common.vec_env import SubprocVecEnv
@@ -56,16 +56,16 @@ def str2bool(value):
 
 def print_debug(msg, debug):
     if debug:
-        print(msg, flush=True)
+        print(msg)
 
 def parse_cli_args():
-    parser = argparse.ArgumentParser(description="EB-ASTv2 with Proximal Policy Optimization model")
+    parser = argparse.ArgumentParser(description="EB-ASTv2 with Soft Actor-Critic model")
 
     # Run setup
-    parser.add_argument("--model_name", type=str, default="EB-ASTv2_train_ppo", metavar="MODEL_NAME",
-                        help="RUN: model/run name used for output folders (default: EB-ASTv2_train_ppo)")
-    parser.add_argument("--save_anim_filename", type=str, default="EBASTv2_train_ppo.gif", metavar="SAVE_ANIM_FILENAME",
-                        help="RUN: animation filename to save (default: EBASTv2_train_ppo.gif)")
+    parser.add_argument("--model_name", type=str, default="EB-ASTv2_train_sac", metavar="MODEL_NAME",
+                        help="RUN: model/run name used for output folders (default: EB-ASTv2_train_sac)")
+    parser.add_argument("--save_anim_filename", type=str, default="EBASTv2_train_sac.gif", metavar="SAVE_ANIM_FILENAME",
+                        help="RUN: animation filename to save (default: EBASTv2_train_sac.gif)")
     parser.add_argument("--save_reward_function", type=str2bool, default=True, metavar="SAVE_REWARD_FUNCTION",
                         help="RUN: save the reward function and automatically store it the log (default: True)")
 
@@ -85,22 +85,24 @@ def parse_cli_args():
     parser.add_argument("--n_envs", type=int, default=64, metavar="N_ENVS",
                         help="VEC_ENV: The number of environment instances for computating parallelization (default: 64)")
 
-    # Proximal Policy Optimization core
-    parser.add_argument("--total_timesteps", type=int, default=2_000_000, metavar="TOTAL_TIMESTEPS",
-                        help="AST: total model training timesteps. Ideally bigger than n_steps (default: 10_000_000)")
-    parser.add_argument("--tensorboard_log", type=str2bool, default=True, metavar="TENSORBOARD_LOG",
-                        help="AST: enable tensorboard logging to training folder (default: True)")
-    parser.add_argument("--verbose", type=int, default=0, metavar="VERBOSE",
-                        help="AST: verbosity level (default: 0)")
-    parser.add_argument("--seed", type=int, default=None, metavar="SEED",
-                        help="AST: random seed (default: None)")
-    parser.add_argument("--device", type=str, default="cuda", metavar="DEVICE",
-                        help="AST: device to use, e.g. cpu, cuda, auto (default: cuda)")
+    # Soft Actor-Critic core
+    parser.add_argument('--total_timesteps', type=int, default=2_000_000, metavar='TOTAL_TIMESTEPS',
+                        help='AST: total timesteps for overall AST training [start_steps + train_steps] (default=10_000_000)')
+    parser.add_argument('--tensorboard_log', type=str2bool, default=True, metavar='TENSORBOARD_LOG',
+                        help='AST: do tensorboard log. The log will be stored inside the training folder (default: True)')
+    parser.add_argument('--verbose', type=int, default=1, metavar='VERBOSE',
+                        help='AST: verbosity level: 0 for no output, 1 for info messages (such as device or wrappers used), \
+                            2 for debug messages (default: 1)')
+    parser.add_argument('--seed', type=int, default=None, metavar='SEED',
+                        help='AST: seed for the pseudo random generators (default: None)')
+    parser.add_argument('--device', type=str, default="cuda", metavar='DEVICE',
+                        help='AST: device (cpu, cuda, …) on which the code should be run. \
+                            Setting it to auto, the code will be run on the GPU if possible. (default: "cuda)')
 
     return parser.parse_args()
 
 
-def main():
+def main():   
     # =========================
     # PATH HELPER
     # =========================
@@ -120,7 +122,7 @@ def main():
     # =========================
     # Handle paths
     # =========================
-    # Desired PPO model to retrained
+    # Desired RPPO model to retrained
     results_ID=""
     
     # Paths
@@ -163,16 +165,16 @@ def main():
                 debug=args.debug)
 
     # =========================
-    # Load the existing PPO model
+    # Load the existing SAC model
     # =========================
     tb_dir = tb_path if args.tensorboard_log else None
-    
+
     old_model_path      = ROOT / "EBASTv2_train" / "trained_model" / results_ID / "model" / "model.zip"
     
     if not old_model_path.exists():
         raise FileNotFoundError(f"Existing RPPO model not found: {old_model_path}")
-
-    ppo_model = PPO.load(
+    
+    sac_model = SAC.load(
         str(old_model_path),
         env=vec_env,
         device=args.device,
@@ -180,14 +182,14 @@ def main():
     )
     # The loaded model may retain the TensorBoard path from its original run.
     # Explicitly redirect logging to the new continued-run folder.
-    ppo_model.tensorboard_log = tb_dir
-
+    sac_model.tensorboard_log = tb_dir
+    
     print(
-        f"[MAIN] Existing PPO model loaded\n"
+        f"[MAIN] Existing SAC model loaded\n"
         f"[MAIN] Source model       : {old_model_path}\n"
-        f"[MAIN] Existing timesteps : {ppo_model.num_timesteps:,}\n"
-        f"[MAIN] Number of envs     : {ppo_model.n_envs}\n"
-        f"[MAIN] PPO n_steps        : {ppo_model.n_steps}",
+        f"[MAIN] Existing timesteps : {sac_model.num_timesteps:,}\n"
+        f"[MAIN] Number of envs     : {sac_model.n_envs}\n"
+        f"[MAIN] SAC n_steps        : {sac_model.n_steps}",
         flush=True,
     )
     
@@ -200,7 +202,7 @@ def main():
     # =========================
     learn_kwargs = {}
     
-    # For checkpoint training, Record for every half of the total timesteps
+    # For checkpoint training, Record for every one-fifth of the total timesteps
     checkpoint_freq = max((args.total_timesteps // 2) // args.n_envs, 1)
     checkpoint_callback = CheckpointCallback(
         save_freq=checkpoint_freq,
@@ -215,17 +217,19 @@ def main():
     # For tensorboard logging
     if tb_dir is not None:
         learn_kwargs["tb_log_name"] = args.model_name
-    
+
     print("[MAIN] Starting learn()", flush=True)
     
+    sac_model.learn(total_timesteps=args.total_timesteps, **learn_kwargs)
+    
     # Continue to retrain the same mode by setting reset_num_timesteps to False
-    ppo_model.learn(total_timesteps=args.total_timesteps,
+    sac_model.learn(total_timesteps=args.total_timesteps,
                     reset_num_timesteps=False,
                     **learn_kwargs)
     
     print("[MAIN] Finished learn()", flush=True)
 
-    ppo_model.save(model_path)
+    sac_model.save(model_path)
     print(f"[MAIN] Model saved to: {model_path}", flush=True)
     
     # Close the vec_env
