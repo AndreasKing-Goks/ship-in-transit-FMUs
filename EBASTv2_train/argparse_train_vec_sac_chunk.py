@@ -205,9 +205,15 @@ def main():
     
     # Vectorized the Env
     n_envs = args.n_envs
-    vec_env = SubprocVecEnv([
-        make_env(rank) for rank in range(n_envs)
-    ])
+    
+    def make_vec_env():
+        """Create a fresh pool of SubprocVecEnv workers."""
+        return SubprocVecEnv([
+            make_env(rank) for rank in range(n_envs)
+        ])
+    
+    vec_env = make_vec_env()
+    
     print_debug("[MAIN] VecEnv created",
                 debug=args.debug)
 
