@@ -88,6 +88,9 @@ def parse_cli_args():
     # Soft Actor-Critic core
     parser.add_argument('--total_timesteps', type=int, default=10_000_000, metavar='TOTAL_TIMESTEPS',
                         help='AST: total timesteps for overall AST training [start_steps + train_steps] (default=10_000_000)')
+    parser.add_argument("--chunk_timesteps", type=int, default=1_000_000, metavar="CHUNK_TIMESTEPS",
+                        help="AST: Approximate number of timesteps to train before recycling the vectorized environment.\
+                            Ideally bigger than n_steps (default: 1_000_000)")
     parser.add_argument("--policy", type=str, default="MultiInputPolicy", metavar="POLICY",
                         help="AST: SAC policy name (default: MultiInputPolicy)")
     parser.add_argument('--learning_rate', type=float, default=3e-4, metavar='LEARNING_RATE',
