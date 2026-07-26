@@ -56,7 +56,7 @@ def str2bool(value):
 
 def print_debug(msg, debug):
     if debug:
-        print(msg)
+        print(msg, flush=True)
 
 def parse_cli_args():
     parser = argparse.ArgumentParser(description="EB-ASTv2 with Soft Actor-Critic model")
