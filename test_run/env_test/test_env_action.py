@@ -51,25 +51,33 @@ env = EBASTv2Env(
     ROOT=ROOT,
     config_path=config_path,
     encounter_settings_path=encounter_settings_path,
-    spawn_requests_bank=spawn_requests_bank
+    spawn_requests_bank=spawn_requests_bank,
+    use_fmpy=True,
+    detailed_reward=True
     )
 
-# env.set_for_evaluation()
+env.set_for_evaluation()
 
 case_idx    = 82
 obs, info   = env.reset(seed=250, specific_case_idx=case_idx)
 
-action_list = [[-13,2500],
-               [-13,3500],
-               [-23,3500],
-               [-23,4500],
-               [-23,4500]]
+# action_list = [[-13,2500],
+#                [-13,3500],
+#                [-23,3500],
+#                [-23,4500],
+#                [-23,4500]]
 
 # action_list = [[-13,2500],
 #                [-13,3500],
 #                [-13,3500],
 #                [-23,4500],
 #                [-23,4500]] # Collision
+
+action_list = [[-13,2500],
+               [13,3500],
+               [-13,3500],
+               [23,4500],
+               [-23,4500]]
 
 # action_list = [[30,2500],
 #                [30,2000],

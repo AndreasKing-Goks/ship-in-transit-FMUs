@@ -54,7 +54,8 @@ env = EBASTv2Env(
     config_path=config_path,
     encounter_settings_path=encounter_settings_path,
     spawn_requests_bank=spawn_requests_bank,
-    use_fmpy=False
+    use_fmpy=True,
+    detailed_reward=True
     )
 
 env.set_for_evaluation()
@@ -68,11 +69,17 @@ action_list_1 = [[25,3500],
                  [25,3500],
                  [25,3500]]
 
-action_list_2 = [[-13,500],
-                 [-13,2500],
-                 [-13,2500],
+action_list_2 = [[-15,500],
                  [-15,2500],
-                 [-15,2500]]
+                 [-25,2500],
+                 [-25,2500],
+                 [-25,5500]]
+
+# action_list_2 = [[-13,500],
+#                  [-13,2500],
+#                  [-15,2500],
+#                  [-15,2500],
+#                  [-15,5500]]
 
 term = False
 i_ts1   = 0
@@ -122,7 +129,7 @@ env.instance.AnimateFleetTrajectory(
         margin_frac=0.08,
         equal_aspect=True,
         interval_ms=20,
-        frame_step=1,
+        frame_step=10,
         trail_len=50,
         plot_routes=True,
         plot_waypoints=True,

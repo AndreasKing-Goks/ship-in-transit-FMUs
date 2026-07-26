@@ -22,6 +22,9 @@ from EBASTv2_core.reward_designs import (
 x_min = -60
 x_max = 60
 
+# x_min = 0
+# x_max = 2000
+
 # Generate x values
 x = np.linspace(x_min, x_max, 1000)
 
@@ -29,7 +32,7 @@ x = np.linspace(x_min, x_max, 1000)
 designs = [
     RewardDesign1(target=0, offset_param=500),
     RewardDesign2(target=1000, offset_param1=10000, offset_param2=10000000),
-    RewardDesign3(target=3000, offset_param=1250000),
+    RewardDesign3(target=1000, offset_param=150000),
     RewardDesign4(target=100, offset_param=15000000),
     RewardDesign5(target_bound_low=40, target_bound_high=60, offset_param=100),
     RewardDesign6(target1=30, target2=70, second_peak=0.8, flat_zone=0.5,

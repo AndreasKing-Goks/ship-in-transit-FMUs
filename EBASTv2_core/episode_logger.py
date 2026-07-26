@@ -94,28 +94,25 @@ def format_episode_recap(env: EBASTv2Env, episode_name="Episode Recap", time_dec
         truncated = env.truncated_list[k]
         
         reward = env.reward_list[k]
-        own_ship_collision_reward = env.reward_components["own_ship_collision_rewards"][k]
-        own_ship_grounding_reward = env.reward_components["own_ship_grounding_rewards"][k]
-        own_ship_navigational_failure_reward = env.reward_components["own_ship_navigational_failure_rewards"][k]
-        own_ship_reaches_end_waypoint_reward = env.reward_components["own_ship_reaches_end_waypoint_rewards"][k]
 
-        tar_ships_collision_reward = env.reward_components["tar_ships_collision_rewards"][k]
-        tar_ships_grounding_reward = env.reward_components["tar_ships_grounding_rewards"][k]
-        tar_ships_navigation_failure_reward = env.reward_components["tar_ships_navigation_failure_rewards"][k]
-        tar_ships_reaches_end_waypoint_reward = env.reward_components["tar_ships_reaches_end_waypoint_rewards"][k]
-
-        close_proximity_reward = env.reward_components["total_distance_rewards"][k]
-        nearest_distance_reward = env.reward_components["nearest_distance_rewards"][k]
-        nearest_distance_iw_reward = env.reward_components["nearest_distance_iw_rewards"][k]
-        nearest_distance_roa_reward = env.reward_components["nearest_distance_roa_rewards"][k]
-
-        scope_angle_request_done_reward = env.reward_components["scope_angle_request_done_rewards"][k]
-        scope_angle_change_log_likelihood_reward = env.reward_components["scope_angle_change_log_likelihood_rewards"][k]
+        termination_reward                      = env.reward_components["termination_reward"][k]
+        non_termination_reward                  = env.reward_components["non_termination_reward"][k]
         
-        intercept_scope_angle_reward = env.reward_components["intercept_scope_angle_rewards"][k]
+        if env.detailed_reward:
+            if k < (n_transitions-1):
+                final_distance_reward           = None
+            else:
+                final_distance_reward           = env.reward_components["final_distance_reward"]
+            intercept_scope_angle_reward                = env.reward_components["intercept_scope_angle_rewards"][k]
+            scope_angle_change_log_likelihood_reward    = env.reward_components["scope_angle_change_log_likelihood_rewards"][k]
         
-        timestamp_before = round(env.event_timestamp_list[k] * 1e-9, time_decimals)
-        timestamp_after = round(env.event_timestamp_list[k + 1] * 1e-9, time_decimals)
+        if env.use_fmpy:
+            timestamp_before = round(env.event_timestamp_list[k], time_decimals)
+            timestamp_after = round(env.event_timestamp_list[k + 1], time_decimals)
+        else:
+            timestamp_before = round(env.event_timestamp_list[k] * 1e-9, time_decimals)
+            timestamp_after = round(env.event_timestamp_list[k + 1] * 1e-9, time_decimals)
+            
 
         action_phys = env._denormalize_action(action_norm)
 
@@ -127,28 +124,13 @@ def format_episode_recap(env: EBASTv2Env, episode_name="Episode Recap", time_dec
         lines.append(f"Terminated                               : {terminated}")
         lines.append(f"Truncated                                : {truncated}")
         lines.append(f"Total Reward                             : {reward}")
-        lines.append("  > Termination Rewards")
-        lines.append(f"    - Own Ship Collision                 : {own_ship_collision_reward}")
-        lines.append(f"    - Own Ship Grounding                 : {own_ship_grounding_reward}")
-        lines.append(f"    - Own Ship Navigational Failure      : {own_ship_navigational_failure_reward}")
-        lines.append(f"    - Own Ship Reaches End Waypoint      : {own_ship_reaches_end_waypoint_reward}")
-        lines.append(f"    - Target Ships Collision             : {tar_ships_collision_reward}")
-        lines.append(f"    - Target Ships Grounding             : {tar_ships_grounding_reward}")
-        lines.append(f"    - Target Ships Navigation Failure    : {tar_ships_navigation_failure_reward}")
-        lines.append(f"    - Target Ships Reaches End Waypoint  : {tar_ships_reaches_end_waypoint_reward}")
-
-        lines.append("  > Non-termination Rewards")
-        lines.append(f"    - Scope Angle Request Done           : {scope_angle_request_done_reward:.4f}")
-        lines.append(f"    - Scope Angle Change Log Likelihood  : {scope_angle_change_log_likelihood_reward}")
-        lines.append(f"    - Intercepting Scope Angle           : {intercept_scope_angle_reward}")
-        lines.append(f"    - Proximity based                    : {close_proximity_reward}")
-        lines.append("      Average of three reward components")
-        lines.append("      > Nearest Distance")
-        lines.append(f"        {nearest_distance_reward}")
-        lines.append("      > Nearest Distance IW")
-        lines.append(f"        {nearest_distance_iw_reward}")
-        lines.append("      > Nearest Distance ROA")
-        lines.append(f"        {nearest_distance_roa_reward}")
+        lines.append(f"  > Termination Rewards                  : {termination_reward}")
+        if env.detailed_reward:
+            lines.append(f"     - Final Distance Rewards            : {final_distance_reward}")
+        lines.append(f"  > Non-termination Rewards              : {non_termination_reward}")
+        if env.detailed_reward:
+            lines.append(f"    - Scope Angle Change Log Likelihood  : {scope_angle_change_log_likelihood_reward}")
+            lines.append(f"    - Intercepting Scope Angle           : {intercept_scope_angle_reward}")
         lines.append("")
 
         lines.append("[OBSERVATION BEFORE ACTION - DENORMALIZED]")
@@ -181,6 +163,13 @@ def format_episode_recap(env: EBASTv2Env, episode_name="Episode Recap", time_dec
 
         lines.append("[OBSERVATION AFTER ACTION - DENORMALIZED]")
         _append_observation_recap(lines, env, obs_after)
+    
+    lines.append("-" * 100)
+    lines.append("ACCUMULATED REWARD RECAPITULATION")
+    lines.append("-" * 100)
+    lines.append(f"Episodic accumulated total rewards       : {np.sum(env.reward_list)}")
+    lines.append(f"Mean rewards per state-action transition : {np.mean(env.reward_list)}")
+    
 
     return "\n".join(lines)
 

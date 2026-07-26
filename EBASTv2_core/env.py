@@ -31,7 +31,8 @@ class EBASTv2Env(gym.Env):
                  skip_map_evaluation: bool=True,
                  custom_pos_bound: dict=None,
                  use_fmpy: bool=True,
-                 debug: bool=False):
+                 debug: bool=False,
+                 detailed_reward=False):
         # Decide which orchestrator to use
         # If FMPy
         if use_fmpy:
@@ -102,6 +103,9 @@ class EBASTv2Env(gym.Env):
         
         # Initialize observation space
         self._init_observation_space(custom_pos_bound)
+        
+        # Flag for detailed reward
+        self.detailed_reward    = detailed_reward
         
         # For Debug
         self.debug              = debug
@@ -698,16 +702,16 @@ class EBASTv2Env(gym.Env):
         # Reward computation
         scope_angles            = [act[0] for act in action]
         prev_scope_angles       = self.prev_scope_angels
-        IW_sampling_data        = [self.instance.IW_sampling_data[sid] for sid in self.ts_iw_id]
-        last_frame              = [next(reversed(datum)) for datum in IW_sampling_data]
-        IW_coordinates          = [datum[frame]["sampled_inter_wps"][-1] for datum, frame in zip(IW_sampling_data, last_frame)]
+        # IW_sampling_data        = [self.instance.IW_sampling_data[sid] for sid in self.ts_iw_id]
+        # last_frame              = [next(reversed(datum)) for datum in IW_sampling_data]
+        # IW_coordinates          = [datum[frame]["sampled_inter_wps"][-1] for datum, frame in zip(IW_sampling_data, last_frame)]
         args                    = (self.os_id, self.ts_id, self.ts_iw_idx,
                                    self.instance.stop_info, self.n_ts,
-                                   self.reward_components, self.finish_intercept_flags,
+                                   self.reward_components,
                                    self.skip_map_evaluation,
                                    self.ts_iw_id , self.nearest_dist_dict,
                                    self.remaining_requests_bound,
-                                   self.max_scope_angles, IW_coordinates,
+                                   self.max_scope_angles, self.detailed_reward,
                                    scope_angles, prev_scope_angles,
                                    action_masks, self.routes_cog_ned_deg)
         reward                  = compute_reward(self._denormalize_observation(observation), args)     # Use denormalized observation
@@ -813,9 +817,6 @@ class EBASTv2Env(gym.Env):
             # Spawn request
             self.routes_cog_ned_deg     = []
             
-            # Initial intercept scope angle pass flag
-            self.finish_intercept_flags = [False] * self.n_ts_iw
-            
             for ts_id in self.ts_iw_id:
                 north_route         = spawn_requests[ts_id]["north_route"]
                 east_route          = spawn_requests[ts_id]["east_route"]
@@ -879,24 +880,20 @@ class EBASTv2Env(gym.Env):
             self.event_timestamp_list       = []
             
             # Reward container
-            self.reward_list                            = []
-            self.reward_components = {
-                "own_ship_collision_rewards"                : [],
-                "own_ship_grounding_rewards"                : [],
-                "own_ship_navigational_failure_rewards"     : [],
-                "own_ship_reaches_end_waypoint_rewards"     : [],
-                "tar_ships_collision_rewards"               : [],
-                "tar_ships_grounding_rewards"               : [],
-                "tar_ships_navigation_failure_rewards"      : [],
-                "tar_ships_reaches_end_waypoint_rewards"    : [],
-                "nearest_distance_rewards"                  : [],
-                "nearest_distance_iw_rewards"               : [],
-                "nearest_distance_roa_rewards"              : [],
-                "total_distance_rewards"                    : [],
-                "scope_angle_request_done_rewards"          : [],
-                "scope_angle_change_log_likelihood_rewards" : [],  
-                "intercept_scope_angle_rewards"             : [],
-            }
+            self.reward_list                = []
+            if self.detailed_reward:
+                self.reward_components = {
+                    "termination_reward"                        : [],
+                    "final_distance_reward"                     : None,
+                    "non_termination_reward"                    : [],
+                    "scope_angle_change_log_likelihood_rewards" : [],
+                    "intercept_scope_angle_rewards"             : []
+                }
+            else:
+                self.reward_components = {
+                    "termination_reward"        : [],
+                    "non_termination_reward"    : [],
+                }
             
             # Prev_action recorder (initiated at 0.0 degree)
             self.prev_scope_angels          = [0.0] * self.n_ts_iw
