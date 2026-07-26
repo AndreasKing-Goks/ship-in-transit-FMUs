@@ -564,8 +564,8 @@ def  get_spawn_requests(config_path,
         }
     
     # Sample encounters
-    vectorTime_low  = 20
-    vectorTime_high = 50
+    vectorTime_low  = 40
+    vectorTime_high = 80
     
     # Generate encounter for target ships only
     encounters      = {}

@@ -29,7 +29,7 @@ saved_animation_folder_path     = ROOT / "pre_generated_spawn_requests_bank" / "
 saved_animation_folder_path.mkdir(parents=True, exist_ok=True)
 
 # Case Index
-case_idxs                       = range(10)
+case_idxs                       = range(20)
 
 # Print and save encounter description
 description_lines = []
@@ -49,7 +49,7 @@ for case_idx in case_idxs:
     encounter_settings_path         = ROOT / "EBASTv2_train" / "encounter_settings.json"
 
     # Spawn requests bank path
-    spawn_requests_bank_path        = ROOT / "pre_generated_spawn_requests_bank" / "spawn_request_bank_1000.pkl"
+    spawn_requests_bank_path        = ROOT / "pre_generated_spawn_requests_bank" / "spawn_request_bank_ebastv2.pkl"
 
     # Get the save path for animation
     saved_animation_path            = ROOT / "pre_generated_spawn_requests_bank" / "animation" / f"case_{case_idx}.gif"

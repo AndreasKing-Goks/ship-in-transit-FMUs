@@ -168,7 +168,7 @@ def main():
     # Paths
     config_path                 = ROOT / "EBASTv2_train" / "EBASTv2_train_2.yaml"
     encounter_settings_path     = ROOT / "EBASTv2_train" / "encounter_settings.json"
-    spawn_requests_bank_path    = ROOT / "EBASTv2_train" / "spawn_request_bank_1000.pkl"
+    spawn_requests_bank_path    = ROOT / "EBASTv2_train" / "spawn_request_bank_ebastv2.pkl"
     
     (model_path, train_args_log_path, 
      episode_log_path, tb_path, 

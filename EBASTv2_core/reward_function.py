@@ -78,10 +78,6 @@ def find_collision_heading(pos_own, vel_own, pos_tar, speed_tar):
     A = np.dot(v_o, v_o) - speed_tar**2
     B = 2 * np.dot(r, v_o)
     C = np.dot(r, r)
-    
-    print("A    : ", A)
-    print("B    : ", B)
-    print("C    : ", C)
 
     eps = 1e-12
 
@@ -93,12 +89,10 @@ def find_collision_heading(pos_own, vel_own, pos_tar, speed_tar):
         if abs(B) < eps:
             return None
         t = -C / B
-        print("t    : ", t)
         if t > eps:
             times.append(t)
     else:
         disc = B**2 - 4*A*C
-        print("disc : ", disc)
 
         # If discriminant < 0, no feasible solution for t_collision
         if disc < 0:
@@ -109,12 +103,10 @@ def find_collision_heading(pos_own, vel_own, pos_tar, speed_tar):
         # All feasible solution
         t1 = (-B + sqrt_disc) / (2*A)
         t2 = (-B - sqrt_disc) / (2*A)
-        
-        print("t1   : ", t1)
-        print("t2   : ", t2)
 
         # Safe guard for realistic collision times
-        max_collision_time = 7200.0  # example: 120 minutes
+        max_collision_time_minute   = 45.0                              # example: 120 minutes
+        max_collision_time          = max_collision_time_minute * 60    # in seconds
         
         for t in [t1, t2]:
             if t > 0 and t <= max_collision_time:
@@ -292,8 +284,6 @@ def compute_reward(observation, args):
         # Reward is based on the normalized scope angle change likelihood
         rew_sac             = ((ll_sac - ll_sac_min) / (ll_sac_min - ll_sac_max)) * rew_sac_coeff
         
-        print("rew_sac : ", rew_sac)
-        
         rews_sac.append(rew_sac)
         
     scope_angle_change_log_likelihood_rewards   = np.mean(rews_sac)
@@ -318,9 +308,6 @@ def compute_reward(observation, args):
         if bool(am) != True:
             continue
         
-        print(f"TS {idx}")
-        print(f"list index {i}")
-        
         ts_idx              = idx - 1
         tar_ship_pos        = rel_tar_ships_pos[ts_idx] + own_ship_pos
         tar_ship_speed      = tar_ships_speed[ts_idx]
@@ -335,8 +322,6 @@ def compute_reward(observation, args):
         speed_tar           = tar_ship_speed
         
         return_val          = find_collision_heading(pos_own, vel_own, pos_tar, speed_tar)
-        
-        print("return_val :", return_val)
 
         if return_val is not None:
             # When collision is feasible
@@ -359,8 +344,6 @@ def compute_reward(observation, args):
             # closer reward zero. Far encounter, really negative reward)
             
             rew_isa         = nearest_distance_reward_func(n_dist_iw) * passing_factor
-
-            print("rew_isa : ", rew_isa)
             
         rews_isa.append(rew_isa)
         
