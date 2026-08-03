@@ -31,6 +31,6 @@ nvidia-smi
 
 echo "Starting training..."
 
-python -u EBASTv2_train/argparse_multi_config_retrain_vec_rppo.py --use_fmpy=False --n_envs=64
+python -u EBASTv2_train/argparse_multi_configs_retrain_vec_rppo.py --use_fmpy=False --n_envs=64
 
 echo "Finished at: $(date)"
