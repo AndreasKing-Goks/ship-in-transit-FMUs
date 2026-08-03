@@ -68,7 +68,7 @@ env.set_for_evaluation()
 
 case_idx    = 82
 obs, info   = env.reset(seed=None, specific_case_idx=case_idx,  # Seed = 250
-                        specific_config_idx=0)               # DELETE THIS FOR NON-MULTI-CONFIGS OPTIONS
+                        specific_config_idx=None)               # DELETE THIS FOR NON-MULTI-CONFIGS OPTIONS
 
 action_list_1 = [[25,3500],
                  [25,3500],
