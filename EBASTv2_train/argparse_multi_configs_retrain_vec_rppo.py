@@ -128,6 +128,7 @@ def main():
     results_ID="EB-ASTv2_train_rppo_2026-07-26_21-08-37_330c"
     
     # Paths
+    # IT IS REQUIRED SO THAT BOTH CONFIGURATIONS HAVE THE SAME AMOUNT OF TARGET SHIPS
     config_path = [
         ROOT / "EBASTv2_train" / "EBASTv2_train_2.yaml",
         ROOT / "EBASTv2_train" / "EBASTv2_train_2_reversed.yaml"

@@ -61,18 +61,85 @@ class EBASTv2EnvMultiConfigs(gym.Env):
         self.config_path                = config_path
         self.encounter_settings_path    = encounter_settings_path
         
+        # Custom bound
+        self.custom_pos_bound           = custom_pos_bound
+        
+        # Absolute config index
+        self.absolute_config_idx        = absolute_config_idx
+        
         # Store the spawn requests to generate finite encounter cases
         self.spawn_requests_bank        = spawn_requests_bank
         self.n_spawn_cases              = self.spawn_requests_bank["n_cases"]
         self.start_eval_case_id         = self.spawn_requests_bank["start_eval_case_id"]
         self.spawn_cases                = self.spawn_requests_bank["cases"]
         self.srb_rel_path               = Path(self.spawn_requests_bank["path"])
+            
+        # Uniformly sample the config_path drawn from the self.config_path
+        if not self.config_path:
+            raise ValueError("config_path must not be empty")
+
+        # Select the configuration path.
+        # A single Path is used directly
+        if isinstance(self.config_path, Path):
+            config_path = self.config_path
+
+        # A list of Paths supports indexed or random selection.
+        elif isinstance(self.config_path, (list, tuple)):
+            if not self.config_path:
+                raise ValueError("self.config_path must not be empty")
+
+            # Absoulte config index overrides other selection
+            if self.absolute_config_idx is not None:
+                config_idx  = self.absolute_config_idx
+                config_path = self.config_path[config_idx]
+            else:
+                config_path = np.random.choice(config_path)
+                print(config_path)
+
+        else:
+            raise TypeError(
+                "self.config_path must be a pathlib.Path, list, or tuple, "
+                f"not {type(self.config_path).__name__}"
+            )
         
-        # Custom bound
-        self.custom_pos_bound           = custom_pos_bound
+        # Save the base configuration for the Ship in Transit Co-simulation
+        config              = load_base_config(config_path)
+        self.simu_config    = config["simulation"]
+        self.ship_configs   = config["ships"]
         
-        # Absolute config index
-        self.absolute_config_idx        = absolute_config_idx
+        # Count all of the ship assets
+        self.n_s            = len(self.ship_configs)
+        self.n_ts           = self.n_s - 1           # Minus the own ship
+        
+        # Compile own ship ID and target ship IDs
+        self.ts_id          = []
+        
+        # List and count target ships that enables IW sampling
+        self.ts_iw_id       = []
+        self.ts_iw_idx      = []
+        for idx, ship_config in enumerate(self.ship_configs):
+            if idx==0:
+                self.os_id = (ship_config["id"])
+            else:
+                self.ts_id.append(ship_config["id"])
+            
+            IW_sampling_cfg = ship_config.get("IW_sampling", None)
+            
+            has_IW_sampling = False
+            if isinstance(IW_sampling_cfg, dict):
+                has_IW_sampling = True
+                
+            if has_IW_sampling:
+                self.ts_iw_id.append(ship_config["id"])
+                self.ts_iw_idx.append(idx)
+        
+        self.n_ts_iw        = len(self.ts_iw_id)
+        
+        # Initialize action space
+        self._init_action_space()
+        
+        # Initialize observation space
+        self._init_observation_space(self.custom_pos_bound)
         
         # Flag for detailed reward
         self.detailed_reward            = detailed_reward
