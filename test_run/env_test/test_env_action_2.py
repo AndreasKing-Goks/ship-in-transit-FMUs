@@ -11,7 +11,8 @@ os.add_dll_directory(str(dll_dir))
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
-from EBASTv2_core.env import EBASTv2Env
+# from EBASTv2_core.env import EBASTv2Env
+from EBASTv2_core.env_multi_configs import EBASTv2EnvMultiConfigs as EBASTv2Env
 from EBASTv2_core.episode_logger import log_episode_recap
 from orchestrator.scenario_config import generate_spawn_request_bank, load_spawn_requests_bank_path
 
@@ -22,6 +23,10 @@ import numpy as np
 # =========================
 # Get the config path
 config_path = ROOT / "test_run" / "env_test" / "test_env_2.yaml"
+config_path = [
+    ROOT / "EBASTv2_train" / "EBASTv2_train_2.yaml",
+    ROOT / "EBASTv2_train" / "EBASTv2_train_2_reversed.yaml"
+]
 
 # Get the save path for animation
 save_path = ROOT / "saved_animation" / "test_env_action_ts_2_RF.mp4"
@@ -55,13 +60,15 @@ env = EBASTv2Env(
     encounter_settings_path=encounter_settings_path,
     spawn_requests_bank=spawn_requests_bank,
     use_fmpy=True,
-    detailed_reward=True
+    detailed_reward=True,
+    absolute_config_idx=None        # DELETE THIS FOR NON-MULTI-CONFIGS OPTIONS
     )
 
 env.set_for_evaluation()
 
 case_idx    = 82
-obs, info   = env.reset(seed=250, specific_case_idx=case_idx)
+obs, info   = env.reset(seed=None, specific_case_idx=case_idx,  # Seed = 250
+                        specific_config_idx=0)               # DELETE THIS FOR NON-MULTI-CONFIGS OPTIONS
 
 action_list_1 = [[25,3500],
                  [25,3500],
@@ -75,11 +82,11 @@ action_list_2 = [[-15,500],
                  [-25,2500],
                  [-25,5500]]
 
-# action_list_2 = [[-13,500],
-#                  [-13,2500],
-#                  [-15,2500],
-#                  [-15,2500],
-#                  [-15,5500]]
+action_list_2 = [[-13,500],
+                 [-13,2500],
+                 [-15,2500],
+                 [-15,2500],
+                 [-15,5500]]
 
 term = False
 i_ts1   = 0

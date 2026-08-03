@@ -108,9 +108,9 @@ def parse_cli_args():
     parser.add_argument('--train_freq', type=int, default=10, metavar='TRAIN_FREQ',
                         help='AST: Update the model every train_freq steps. \
                             alternatively pass a tuple of frequency and unit like (5, "step") or (2, "episode") (default: 10)')
-    parser.add_argument('--gradient_steps', type=int, default=64, metavar='GRADIENT_STEPS',
+    parser.add_argument('--gradient_steps', type=int, default=128, metavar='GRADIENT_STEPS',
                         help='AST: How many gradient steps to do after each rollout (see train_freq). \
-                            Set to -1 means to do as many gradient steps as steps done in the environment during the rollout (default: 64)')
+                            Set to -1 means to do as many gradient steps as steps done in the environment during the rollout (default: 128)')
     parser.add_argument('--n_steps', type=int, default=1, metavar='N_STEPS',
                         help='AST: When n_steps > 1, uses n-step return (with the NStepReplayBuffer) when updating the Q-value network (default:1)')
     parser.add_argument('--ent_coef', type=str, default="auto", metavar='ENT_COEF',
@@ -121,9 +121,9 @@ def parse_cli_args():
                         help='AST: update the target network every target_network_update_freq gradient steps (default: 1)')
     parser.add_argument('--target_entropy', type=str, default="auto", metavar='TARGET_ENTROPY',
                         help='AST: target entropy when learning ent_coef. Can be set to auto (default: "auto")')
-    parser.add_argument('--stats_window_size', type=int, default=25, metavar='TARGET_UPDATE_INTERVAL',
+    parser.add_argument('--stats_window_size', type=int, default=100, metavar='TARGET_UPDATE_INTERVAL',
                         help='AST: window size for the rollout logging, specifying the number of episodes to average \
-                            the reported success rate, mean episode length, and mean reward over (default: 25)')
+                            the reported success rate, mean episode length, and mean reward over (default: 100)')
     parser.add_argument('--tensorboard_log', type=str2bool, default=True, metavar='TENSORBOARD_LOG',
                         help='AST: do tensorboard log. The log will be stored inside the training folder (default: True)')
     parser.add_argument('--verbose', type=int, default=1, metavar='VERBOSE',
