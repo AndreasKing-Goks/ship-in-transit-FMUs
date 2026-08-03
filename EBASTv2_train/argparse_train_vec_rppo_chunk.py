@@ -279,7 +279,7 @@ def main():
     # Chunk Training
     # =========================
     
-    target_timesteps    = args.total_timesteps
+    target_timesteps    = args.total_timesteps + 
     chunk_timesteps     = args.chunk_timesteps
     chunk_idx           = 0
     

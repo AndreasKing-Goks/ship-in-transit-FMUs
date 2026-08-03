@@ -234,7 +234,10 @@ def main():
     # Chunk Training
     # =========================
     
-    target_timesteps    = args.total_timesteps
+    starting_timesteps = recurrent_ppo_model.num_timesteps
+    additional_timesteps = args.total_timesteps
+    target_timesteps = starting_timesteps + additional_timesteps
+    
     chunk_timesteps     = args.chunk_timesteps
     chunk_idx           = 0
     

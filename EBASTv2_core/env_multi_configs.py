@@ -94,7 +94,6 @@ class EBASTv2EnvMultiConfigs(gym.Env):
                 config_path = self.config_path[config_idx]
             else:
                 config_path = np.random.choice(config_path)
-                print(config_path)
 
         else:
             raise TypeError(
