@@ -30,7 +30,7 @@ import numpy as np
 # Handle paths
 # =========================
 # Trained Model Name
-model_name                      = ""
+model_name                      = "EB-ASTv2_train_sac_2026-07-26_21-08-37_acea"
 
 # Get the config path
 config_path                     = ROOT / "EBASTv2_train" / "EBASTv2_train_2.yaml"
@@ -39,10 +39,11 @@ config_path                     = ROOT / "EBASTv2_train" / "EBASTv2_train_2.yaml
 encounter_settings_path         = ROOT / "EBASTv2_train" / "encounter_settings.json"
 
 # Spawn requests bank path
-spawn_requests_bank_path        = ROOT / "EBASTv2_train" / "spawn_request_bank_1000.pkl"
+spawn_requests_bank_path        = ROOT / "EBASTv2_train" / "spawn_request_bank_ebastv2.pkl"
 
 # Get the trained model
 model_path                      = ROOT / "EBASTv2_train" / "trained_model" / model_name / "model" / "model.zip"
+# model_path                      = ROOT / "EBASTv2_train" / "trained_model" / "checkpoints" / "EB-ASTv2_train_sac_8000000_steps.zip"
 
 # Log path
 log_path                        = ROOT / "EBASTv2_train" / "simulated_trained_model" / "episode_recap_sac.txt"
@@ -75,14 +76,15 @@ env = EBASTv2Env(
 # Run the trained model and log the episode
 # =========================
 # Set the environment to evaluation mode
-env.set_for_evaluation()
+# env.set_for_evaluation()
 
 # Load the trained model
 sac_model = SAC.load(model_path)
 
 # Reset the trained model
 case_idx    = None
-obs, _   = env.reset(specific_case_idx=case_idx)
+set         = None
+obs, _      = env.reset(seed=None, specific_case_idx=case_idx)
 
 # Episode start signals are used to reset the states
 while True:
