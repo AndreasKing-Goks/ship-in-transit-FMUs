@@ -61,7 +61,7 @@ own_ship_initial = {
         "north": 0.0,
         "east": 0.0,
     },
-    "sog": 10.0,    # m/s
+    "sog": 6.0,    # m/s
     "cog": os_init_heading,
     "heading": os_init_heading,
     "navStatus": "Under way using engine",

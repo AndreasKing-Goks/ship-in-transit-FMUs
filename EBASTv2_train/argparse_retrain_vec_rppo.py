@@ -87,7 +87,7 @@ def parse_cli_args():
                         help="VEC_ENV: The number of environment instances for computating parallelization (default: 64)")
 
     # RecurrentPPO core
-    parser.add_argument("--total_timesteps", type=int, default=2_000_000, metavar="TOTAL_TIMESTEPS",
+    parser.add_argument("--total_timesteps", type=int, default=10_000_000, metavar="TOTAL_TIMESTEPS",
                         help="AST: total model training timesteps. Ideally bigger than n_steps (default: 10_000_000)")
     parser.add_argument("--tensorboard_log", type=str2bool, default=True, metavar="TENSORBOARD_LOG",
                         help="AST: enable tensorboard logging to training folder (default: True)")
@@ -122,7 +122,7 @@ def main():
     # Handle paths
     # =========================
     # Desired RPPO model to retrained
-    results_ID=""
+    results_ID="EB-ASTv2_train_rppo_2026-07-26_21-08-37_330c"
     
     # Paths
     config_path                 = ROOT / "EBASTv2_train" / "EBASTv2_train_2.yaml"

@@ -29,7 +29,7 @@ saved_animation_folder_path     = ROOT / "pre_generated_spawn_requests_bank" / "
 saved_animation_folder_path.mkdir(parents=True, exist_ok=True)
 
 # Case Index
-case_idxs                       = range(20)
+case_idxs                       = [30, 40, 50] #range(20)
 
 # Print and save encounter description
 description_lines = []
@@ -105,7 +105,7 @@ for case_idx in case_idxs:
             ship_ids=None,
             show=False,
             block=True,
-            mode="quick",
+            mode="paper",
             fig_width=10.0,
             margin_frac=0.08,
             equal_aspect=True,
