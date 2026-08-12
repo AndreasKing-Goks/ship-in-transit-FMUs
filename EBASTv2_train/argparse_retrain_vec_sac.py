@@ -158,9 +158,15 @@ def main():
     
     # Vectorized the Env
     n_envs = args.n_envs
-    vec_env = SubprocVecEnv([
-        make_env(rank) for rank in range(n_envs)
-    ])
+    
+    def make_vec_env():
+        """Create a fresh pool of SubprocVecEnv workers."""
+        return SubprocVecEnv([
+            make_env(rank) for rank in range(n_envs)
+        ])
+    
+    vec_env = make_vec_env()
+    
     print_debug("[MAIN] VecEnv created",
                 debug=args.debug)
 
@@ -218,22 +224,103 @@ def main():
     if tb_dir is not None:
         learn_kwargs["tb_log_name"] = args.model_name
 
-    print("[MAIN] Starting learn()", flush=True)
+    # =========================
+    # Chunk Training
+    # =========================
     
-    sac_model.learn(total_timesteps=args.total_timesteps, **learn_kwargs)
+    target_timesteps    = args.total_timesteps
+    chunk_timesteps     = args.chunk_timesteps
+    chunk_idx           = 0
     
-    # Continue to retrain the same mode by setting reset_num_timesteps to False
-    sac_model.learn(total_timesteps=args.total_timesteps,
-                    reset_num_timesteps=False,
-                    **learn_kwargs)
+    print(
+        f"[MAIN] Starting chunked training\n"
+        f"[MAIN] Target timesteps : {target_timesteps:,}\n"
+        f"[MAIN] Chunk timesteps  : {chunk_timesteps:,}\n"
+        f"[MAIN] Number of envs   : {args.n_envs}",
+        flush=True)
     
-    print("[MAIN] Finished learn()", flush=True)
+    try:
+        while sac_model.num_timesteps < target_timesteps:
+            # Advance the chunk training index
+            chunk_idx += 1
+            
+            # Compute the remaining timesteps before the target timesteps
+            remaining_timesteps = (target_timesteps - sac_model.num_timesteps)
+            
+            # Do not intentionally requests more than what remains
+            current_chunk_timesteps = min(chunk_timesteps, remaining_timesteps)
+            
+            print(
+                f"\n[MAIN] ===============================\n"
+                f"[MAIN] Starting chunk {chunk_idx}\n"
+                f"[MAIN] Current timesteps   : "
+                f"{sac_model.num_timesteps:,}\n"
+                f"[MAIN] Requested this chunk: "
+                f"{current_chunk_timesteps:,}\n"
+                f"[MAIN] Remaining to target : "
+                f"{remaining_timesteps:,}\n"
+                f"[MAIN] ===============================",
+                flush=True,
+            )
+            
+            # Continue the training the SAME model
+            sac_model.learn(total_timesteps=current_chunk_timesteps,
+                                      reset_num_timesteps=False,
+                                      **learn_kwargs)
+            
+            print(
+                f"[MAIN] Chunk {chunk_idx} finished at ",
+                f"{sac_model.num_timesteps:,} timesteps", 
+                flush=True
+            )
+            
+            # Stop if target has been reached
+            if sac_model.num_timesteps >= target_timesteps:
+                break
+            
+            # -------------------------
+            # Recycle all environment worker processes
+            # -------------------------
+            print(
+                "[MAIN] Closing current VecEnv workers...",
+                flush=True,
+            )
 
+            vec_env.close()
+
+            print(
+                "[MAIN] Creating fresh VecEnv workers...",
+                flush=True,
+            )
+
+            vec_env = make_vec_env()
+
+            # Attach the fresh worker pool to the SAME model
+            sac_model.set_env(
+                vec_env,
+                force_reset=True,
+            )
+
+            print(
+                "[MAIN] Fresh VecEnv attached to model",
+                flush=True,
+            )
+            
+    finally:        
+        # Always clean up the final environment pool
+        print("[MAIN] Closing final VecEnv...", flush=True)
+        
+        vec_env.close()
+        
+    # Final save after the end of the training
     sac_model.save(model_path)
     print(f"[MAIN] Model saved to: {model_path}", flush=True)
-    
-    # Close the vec_env
-    vec_env.close()
+        
+    print(
+        f"[MAIN] Training finished at "
+        f"{sac_model.num_timesteps:,} timesteps",
+        flush=True,
+    )
 
 
 if __name__ == "__main__":
