@@ -89,6 +89,9 @@ def parse_cli_args():
     # RecurrentPPO core
     parser.add_argument("--total_timesteps", type=int, default=10_000_000, metavar="TOTAL_TIMESTEPS",
                         help="AST: total model training timesteps. Ideally bigger than n_steps (default: 10_000_000)")
+    parser.add_argument("--chunk_timesteps", type=int, default=1_000_000, metavar="CHUNK_TIMESTEPS",
+                        help="AST: Approximate number of timesteps to train before recycling the vectorized environment.\
+                            Ideally bigger than n_steps (default: 1_000_000)")
     parser.add_argument("--tensorboard_log", type=str2bool, default=True, metavar="TENSORBOARD_LOG",
                         help="AST: enable tensorboard logging to training folder (default: True)")
     parser.add_argument("--verbose", type=int, default=0, metavar="VERBOSE",
