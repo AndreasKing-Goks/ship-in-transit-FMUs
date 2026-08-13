@@ -229,9 +229,12 @@ def main():
     # Chunk Training
     # =========================
     
-    target_timesteps    = args.total_timesteps
-    chunk_timesteps     = args.chunk_timesteps
-    chunk_idx           = 0
+    starting_timesteps      = ppo_model.num_timesteps
+    additional_timesteps    = args.total_timesteps
+    target_timesteps        = starting_timesteps + additional_timesteps
+    
+    chunk_timesteps         = args.chunk_timesteps
+    chunk_idx               = 0
     
     print(
         f"[MAIN] Starting chunked training\n"
