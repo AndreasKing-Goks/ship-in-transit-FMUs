@@ -738,10 +738,6 @@ class EBASTv2Env(gym.Env):
         """
             Reset the environment all together
         """
-        # First empty the instance if it exists already
-        if getattr(self, "instance", None) is not None:
-            self.instance = None
-        
         # IMPORTANT: Seed the random number generator
         if self.debug:
             print("[RESET] start", flush=True)
