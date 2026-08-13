@@ -1129,8 +1129,9 @@ class ShipInTransitCoSimulation(CoSimInstance):
     def _reset_per_ship_state(self):
         """
             Rebuild the SIT-level per-ship bookkeeping (stop_info, ship_reach_end_waypoint,
-            ship_delayed, per-ship nav-warning flags) that the base CoSimInstance.Reset()
-            does not know about, mirroring how __init__ sets it up the first time.
+            ship_delayed, per-ship nav-warning flags, IW_sampling_data/current_frame_<id>)
+            that the base CoSimInstance.Reset() does not know about, mirroring how __init__
+            sets it up the first time.
             Must run after super().Reset(), since it relies on self.time being back at 0.0.
         """
         self.ship_delayed               = {}
@@ -1165,6 +1166,54 @@ class ShipInTransitCoSimulation(CoSimInstance):
                 'reaches_end_waypoint'  : [],
                 'outside_horizon'       : [],
             }
+
+        # =========================
+        # For IW sampling
+        # =========================
+        self.ship_with_IW_sampling  = []
+        self.IW_sampling_data       = {}
+
+        if self.IW_sampling_animated:
+            any_IW_sampling_animated = False
+
+        for ship_config in self.ship_configs:
+            ship_id = ship_config["id"]
+
+            # Normalize IW_sampling config
+            IW_sampling_cfg = ship_config.get("IW_sampling", None)
+
+            has_IW_sampling = False
+            animate_ship_IW = False
+
+            if isinstance(IW_sampling_cfg, dict):
+                has_IW_sampling = True
+                animate_ship_IW = IW_sampling_cfg.get("animated", False)
+
+            # Skip ships without IW sampling
+            if not has_IW_sampling:
+                continue
+
+            self.ship_with_IW_sampling.append(ship_id)
+
+            # Skip animation prep if globally off or per-ship off
+            if not self.IW_sampling_animated or not animate_ship_IW:
+                continue
+
+            any_IW_sampling_animated = True
+
+            data = {
+                "active_path":  list(zip(ship_config["route"].get("north"), ship_config["route"].get("east"))),
+                "sampled_inter_wps": [],
+                "sampled_inter_wp_projs": [],
+            }
+
+            frame = int(self.time / self.stepSize)
+            setattr(self, f"current_frame_{ship_id}", frame)
+            self.IW_sampling_data[ship_id] = {getattr(self, f"current_frame_{ship_id}") : data}
+
+        # Turn off animation if no ship actually uses it
+        if self.IW_sampling_animated and not any_IW_sampling_animated:
+            self.IW_sampling_animated = False
 
 
     def Reset(self):
