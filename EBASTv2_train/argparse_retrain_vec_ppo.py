@@ -210,7 +210,7 @@ def main():
     learn_kwargs = {}
     
     # For checkpoint training, Record for every half of the total timesteps
-    checkpoint_freq = max((args.total_timesteps // 2) // args.n_envs, 1)
+    checkpoint_freq = max((args.total_timesteps // 5) // args.n_envs, 1)
     checkpoint_callback = CheckpointCallback(
         save_freq=checkpoint_freq,
         save_path=str(checkpoint_dir),
