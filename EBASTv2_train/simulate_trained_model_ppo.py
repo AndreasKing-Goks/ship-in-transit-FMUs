@@ -67,7 +67,7 @@ env = EBASTv2Env(
     )
 
 # =========================
-# Run the trained model and log the episode
+# Load the trained model
 # =========================
 # Set the environment to evaluation mode
 # env.set_for_evaluation()
@@ -75,70 +75,148 @@ env = EBASTv2Env(
 # Load the trained model
 ppo_model = PPO.load(model_path)
 
-# Reset the trained model
-case_idx    = None
-set         = None
-obs, _      = env.reset(seed=None, specific_case_idx=case_idx)
+# =========================
+# Run the trained model and log the episode
+# =========================
+simulate    = False
+# simulate    = True
 
-# Episode start signals are used to reset the states
-while True:
-    action, _ = ppo_model.predict(obs,
-                                  deterministic=True)
-    obs, _, terminated, truncated, _ = env.step(action)
-    
-    # Break the loop if it's either terminated or truncated
-    if terminated or truncated:
-        break
+if simulate:
+    # Reset the trained model
+    case_idx    = None
+    seed        = None
+    obs, _      = env.reset(seed=seed, specific_case_idx=case_idx)
+
+    # Episode start signals are used to reset the states
+    while True:
+        action, _ = ppo_model.predict(obs,
+                                    deterministic=True)
+        obs, _, terminated, truncated, _ = env.step(action)
         
-# Log the episodes
-log_episode_recap(env=env, log_path=log_path)
-print(f"Episode recap saved to: {log_path}")
+        # Break the loop if it's either terminated or truncated
+        if terminated or truncated:
+            break
+            
+    # Log the episodes
+    log_episode_recap(env=env, log_path=log_path)
+    print(f"Episode recap saved to: {log_path}")
 
-# =========================
-# Animation and Plot
-# =========================
-# Available formats:
-# - .mp4
-# - .gif
-# - .avi
-# - .mov
+    # =========================
+    # Animation and Plot
+    # =========================
+    # Available formats:
+    # - .mp4
+    # - .gif
+    # - .avi
+    # - .mov
 
-# Animate Simulation
-env.instance.AnimateFleetTrajectory(
-        ship_ids=None,  
-        show=True,
-        block=True,
+    # Animate Simulation
+    env.instance.AnimateFleetTrajectory(
+            ship_ids=None,  
+            show=True,
+            block=True,
+            mode="quick",
+            fig_width=7.0,
+            margin_frac=0.08,
+            equal_aspect=True,
+            interval_ms=20,
+            frame_step=10,
+            trail_len=50,
+            plot_routes=True,
+            exclude_target_ships_route=True, 
+            plot_waypoints=True,
+            plot_roa=True,
+            plot_start_end=True,
+            plot_inter_wp_roa=False,
+            plot_inter_wp_proj=False,
+            with_labels=True,
+            precompute_ship_outlines=True,
+            # save_path=saved_animation_path,
+            writer_fps=20,
+            palette=None,
+            blit=True,
+            ship_scale=1.0
+        )
+
+    # Plot Trajectory
+    env.instance.PlotFleetTrajectory(
         mode="quick",
-        fig_width=7.0,
-        margin_frac=0.08,
-        equal_aspect=True,
-        interval_ms=20,
-        frame_step=10,
-        trail_len=50,
-        plot_routes=True,
+        every_n=100, 
+        fig_width=5.0, 
         exclude_target_ships_route=True, 
-        plot_waypoints=True,
-        plot_roa=True,
-        plot_start_end=True,
-        plot_inter_wp_roa=False,
-        plot_inter_wp_proj=False,
-        with_labels=True,
-        precompute_ship_outlines=True,
-        # save_path=saved_animation_path,
-        writer_fps=20,
-        palette=None,
-        blit=True,
-        ship_scale=1.0
+        plot_IWs=True,
+        plot_IW_names=False,
+        plot_time_line_connection=False,
+        ship_scale=10.0
     )
 
-# Plot Trajectory
-env.instance.PlotFleetTrajectory(
-    mode="quick",
-    every_n=100, 
-    fig_width=5.0, 
-    exclude_target_ships_route=True, 
-    plot_IWs=True,
-    plot_IW_names=False,
-    plot_time_line_connection=False,
-    ship_scale=10.0
-)
+evaluate_failure    = False
+evaluate_failure    = True
+
+if evaluate_failure:
+    # Reset the trained model
+    case_idx        = range(100)
+    
+    status_count    ={
+        "no_collision": 0,
+        "target_collision": 0,
+        "collision": 0,
+        "nav_failure": 0,
+    }
+    
+    for idx in case_idx:
+        seed        = None
+        obs, _      = env.reset(seed=seed, specific_case_idx=idx)
+
+        # Cell and hidden state of the LSTM
+        lstm_states = None
+        num_envs    = 1
+        
+        # Cell and hidden state of the LSTM
+        lstm_states = None
+        num_envs    = 1
+
+        # Episode start signals are used to reset the lstm states
+        episode_starts = np.ones((num_envs,), dtype=bool)
+        while True:
+            action, lstm_states = ppo_model.predict(obs,
+                                                    state=lstm_states,
+                                                    episode_start=episode_starts,
+                                                    deterministic=True)
+            obs, rewards, terminated, truncated, info = env.step(action)
+            episode_starts = terminated or truncated
+            
+            # Evaluate
+            if (not env.instance.any_ship_collides and
+                not env.instance.any_ship_grounding and
+                not env.instance.any_ship_nav_fail and
+                env.instance.all_ship_reaches_end_waypoint):
+                status_count["no_collision"]+=1
+            elif (env.instance.any_ship_collides and
+                  not env.instance.termination_flags["collision_flags"]["OS0"]):
+                status_count["target_collision"]+=1
+            elif (env.instance.any_ship_collides and
+                  env.instance.termination_flags["collision_flags"]["OS0"]):
+                status_count["collision"]+=1
+            elif (env.instance.any_ship_nav_fail and
+                  env.instance.termination_flags["nav_fail_flags"]["OS0"]):
+                status_count["nav_failure"]+=1
+            
+            # Break the loop if it's either terminated or truncated
+            if episode_starts:
+                break
+            
+    # Compute the score
+    each_flag_count = []
+    for val in list(status_count.values()):
+        each_flag_count.append(val)
+        
+    no_collision        = each_flag_count[0] / np.sum(each_flag_count) * 100
+    target_collision    = each_flag_count[1] / np.sum(each_flag_count) * 100
+    collision           = each_flag_count[2] / np.sum(each_flag_count) * 100
+    nav_failure         = each_flag_count[3] / np.sum(each_flag_count) * 100
+    
+    print(f"No Collision        : {no_collision} %")
+    print(f"Target Collision    : {target_collision} %")
+    print(f"Collision           : {collision} %")
+    print(f"Nav Failure         : {nav_failure} %")

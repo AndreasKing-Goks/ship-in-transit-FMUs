@@ -917,20 +917,28 @@ class ShipInTransitCoSimulation(CoSimInstance):
             rew_flags[ship_id]          = reaches_end_waypoint
             collision_flags[ship_id]    = collision
         
-        any_ship_grounding              = np.any([grounding_flags[ship_id] for ship_id in list(grounding_flags.keys())])
-        any_ship_outside                = np.any([outside_flags[ship_id] for ship_id in list(outside_flags.keys())])
-        any_ship_nav_fail               = np.any([nav_fail_flags[ship_id] for ship_id in list(nav_fail_flags.keys())])
-        own_ship_reaches_end_waypoint   = rew_flags[self.ship_configs[0]["id"]]
-        all_ship_reaches_end_waypoint   = np.all([rew_flags[ship_id] for ship_id in list(rew_flags.keys())])
-        any_ship_collides               = np.any([collision_flags[ship_id] for ship_id in list(collision_flags.keys())])
+        self.any_ship_grounding              = np.any([grounding_flags[ship_id] for ship_id in list(grounding_flags.keys())])
+        self.any_ship_outside                = np.any([outside_flags[ship_id] for ship_id in list(outside_flags.keys())])
+        self.any_ship_nav_fail               = np.any([nav_fail_flags[ship_id] for ship_id in list(nav_fail_flags.keys())])
+        self.own_ship_reaches_end_waypoint   = rew_flags[self.ship_configs[0]["id"]]
+        self.all_ship_reaches_end_waypoint   = np.all([rew_flags[ship_id] for ship_id in list(rew_flags.keys())])
+        self.any_ship_collides               = np.any([collision_flags[ship_id] for ship_id in list(collision_flags.keys())])
+        
+        self.termination_flags ={
+            "grounding_flags" : grounding_flags,
+            "outside_flags"   : outside_flags,
+            "nav_fail_flags"  : nav_fail_flags,
+            "rew_flags"       : rew_flags,
+            "collision_flags" : collision_flags
+        }
         
         ## Conclude the stop flag
-        self.stop = (any_ship_grounding
-                     or any_ship_outside
-                     or any_ship_nav_fail
-                     or own_ship_reaches_end_waypoint 
-                     or all_ship_reaches_end_waypoint 
-                     or any_ship_collides)
+        self.stop = (self.any_ship_grounding
+                     or self.any_ship_outside
+                     or self.any_ship_nav_fail
+                     or self.own_ship_reaches_end_waypoint 
+                     or self.all_ship_reaches_end_waypoint 
+                     or self.any_ship_collides)
         
         # ==================================
         # Gather IW sampling animation data
