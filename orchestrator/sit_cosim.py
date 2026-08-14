@@ -16,6 +16,7 @@ if sys.platform.startswith("win"):
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 from matplotlib.animation import FuncAnimation, FFMpegWriter
+from matplotlib.ticker import FuncFormatter
 
 import numpy as np
 
@@ -1211,7 +1212,7 @@ class ShipInTransitCoSimulation(CoSimInstance):
                 "dpi": 500,
                 "waypoint_s": 30,
                 "ship_label_fs": 10,
-                "status_fs": 10,
+                "status_fs": 8,
                 "startend_dy": 500.0,
             }
         elif mode == "quick":
@@ -1219,16 +1220,16 @@ class ShipInTransitCoSimulation(CoSimInstance):
                 "own_lw": 1.2,
                 "route_lw": 1.0,
                 "ship_lw": 1.6,
-                "title_fs": 9,
+                "title_fs": 10,
                 "label_fs": 8,
-                "tick_fs": 7,
+                "tick_fs": 8,
                 "legend_fs": 7,
                 "grid_alpha": 0.8,
                 "roa_alpha": 0.15,
                 "dpi": 110,
                 "waypoint_s": 20,
                 "ship_label_fs": 9,
-                "status_fs": 10,
+                "status_fs": 7,
                 "startend_dy": 500.0,
             }
         else:
@@ -1328,7 +1329,7 @@ class ShipInTransitCoSimulation(CoSimInstance):
             # Title
             if create_title:
                 plt.title(
-                    f"Time series from co-simulation instance \'{self.instanceName}\'",
+                    f"Time series from co-simulation instance \"{self.instanceName}\"",
                     fontsize=style["title_fs"]
                 )
 
@@ -1415,14 +1416,18 @@ class ShipInTransitCoSimulation(CoSimInstance):
         show=True,
         block=True,
         mode="quick",
-        fig_width=10.0,
+        fig_width=7.0,
         every_n=25,
         margin_frac=0.08,
         equal_aspect=True,
         save_path=None,
         plot_routes=True,
+        exclude_target_ships_route= False,
         plot_waypoints=True,
+        plot_IWs=False,
+        plot_IW_names=False,
         plot_outlines=True,
+        plot_time_line_connection=False,
         palette=None,
         ship_scale=1.0,
     ):
@@ -1531,6 +1536,9 @@ class ShipInTransitCoSimulation(CoSimInstance):
         # track global extents (route or traj)
         all_x, all_y = [], []
 
+        # bow positions container
+        bow_positions = {}
+        
         # per-ship plotting
         for k, sid in enumerate(ship_ids):
             color = palette[k % len(palette)]
@@ -1561,15 +1569,21 @@ class ShipInTransitCoSimulation(CoSimInstance):
 
                         all_x.append(rE)
                         all_y.append(rN)
-
-                        ax.plot(
-                            rE, rN,
-                            lw=route_lw,
-                            ls="--",
-                            color=color,
-                            alpha=0.7,
-                            label=f"{sid} route"
-                        )
+                        
+                        if exclude_target_ships_route:
+                            allow_to_plot = sid == "OS0"
+                        else:
+                            allow_to_plot = True
+                        
+                        if allow_to_plot:
+                            ax.plot(
+                                rE, rN,
+                                lw=route_lw,
+                                ls="--",
+                                color=color,
+                                alpha=0.7,
+                                label=f"{sid} route"
+                            )
                         if plot_waypoints:
                             ax.scatter(rE, rN,
                                     s=waypoint_s if mode == "quick" else 30,
@@ -1590,6 +1604,39 @@ class ShipInTransitCoSimulation(CoSimInstance):
                                         alpha=roa_alpha
                                     )
                                     ax.add_patch(circ)
+                        
+                        IW_enabled_ship = cfg.get("IW_sampling", False)
+                        IW_active = False
+                        if isinstance(IW_enabled_ship, dict):
+                            IW_active = IW_enabled_ship.get("active", False)
+                        
+                        if plot_IWs and IW_active:
+                            IW_sampling_data    = next(reversed(self.IW_sampling_data[sid].values()))
+                            sampled_inter_wps   = IW_sampling_data["sampled_inter_wps"]
+                            
+                            rN_IW   = [wp[0] for wp in sampled_inter_wps]
+                            rE_IW   = [wp[1] for wp in sampled_inter_wps]
+                            
+                            ax.scatter(rE_IW, rN_IW,
+                                    s=waypoint_s if mode == "quick" else 30,
+                                    edgecolors="white", color=color)
+                            
+                            if plot_IW_names:
+                                for i, (rN, rE) in enumerate(zip(rN_IW, rE_IW)):
+                                    ax.text(rE, rN+startend_dy, f"w{i}", fontsize=label_fs, weight="bold", va="bottom", ha="center", zorder=12)
+
+                            # RoA circles
+                            ra = cfg["fmu_params"].get("MISSION_MANAGER", {}).get("ra", None)
+                            if ra is not None:
+                                for n_wp, e_wp in zip(rN_IW[1:], rE_IW[1:]):
+                                    circ = patches.Circle(
+                                        (e_wp, n_wp),
+                                        radius=ra,
+                                        fill=True,
+                                        color=color,
+                                        alpha=roa_alpha
+                                    )
+                                    ax.add_patch(circ)  
 
             # ship outlines 
             if plot_outlines:
@@ -1597,11 +1644,55 @@ class ShipInTransitCoSimulation(CoSimInstance):
                 idx = np.arange(0, n, every_n)
                 draw_attr = f"{sid}_draw"
                 draw = getattr(self, draw_attr)
-                for i in idx[::1]:  # extra subsample for speed
+                for i in idx:
+                    # Local ship geometry
                     x, y = draw.local_coords(scale=ship_scale)
-                    x_ned, y_ned = draw.rotate_coords(x, y, yaw[i])
-                    x_tr,  y_tr  = draw.translate_coords(x_ned, y_ned, north[i], east[i])
-                    ax.plot(y_tr, x_tr, lw=ship_lw, color=color, alpha=0.6)
+                    # Rotate according to vessel heading
+                    x_ned, y_ned = draw.rotate_coords(x,y,yaw[i])
+
+                    # Translate to global NED position
+                    x_tr, y_tr = draw.translate_coords(x_ned,y_ned,north[i],east[i])
+
+                    # Draw ship outline
+                    ax.plot(y_tr,x_tr,lw=ship_lw,color=color,alpha=0.6)
+
+                    # -------------------------------------------------
+                    # Save bow position
+                    #
+                    # local_coords:
+                    #     0 = aft-left
+                    #     1 = bow-curve-left
+                    #     2 = BOW
+                    #     3 = bow-curve-right
+                    #     4 = aft-right
+                    # -------------------------------------------------
+                    bow_idx = 2
+
+                    bow_east = y_tr[bow_idx]
+                    bow_north = x_tr[bow_idx]
+
+                    bow_positions.setdefault(i, []).append((bow_east, bow_north))
+        
+        # Connect bows of all ships at the same sampled timestep
+        if plot_time_line_connection:
+            for i, positions in bow_positions.items():
+
+                # Need at least two ships to make a line
+                if len(positions) < 2:
+                    continue
+
+                bow_east = [p[0] for p in positions]
+                bow_north = [p[1] for p in positions]
+
+                ax.plot(
+                    bow_east,
+                    bow_north,
+                    color="0.35",
+                    linestyle="--",
+                    linewidth=1.0,
+                    alpha=0.7,
+                    zorder=3
+                )
 
         # Set figure boundary and add scalebar
         if self.is_map_exists:
@@ -1626,8 +1717,8 @@ class ShipInTransitCoSimulation(CoSimInstance):
         # Styling
         title = f"Fleet trajectories on {self.map_name}" if self.is_map_exists else "Fleet trajectories"
         ax.set_title(title, fontsize=title_fs, pad=4)
-        ax.set_xlabel("East position (m)", fontsize=label_fs)
-        ax.set_ylabel("North position (m)", fontsize=label_fs)
+        ax.set_xlabel("East position (km)", fontsize=label_fs)
+        ax.set_ylabel("North position (km)", fontsize=label_fs)
 
         ax.tick_params(axis="both", which="major", labelsize=tick_fs, length=3)
         ax.grid(True, color="0.82", linestyle="--", linewidth=0.5, alpha=grid_alpha)
@@ -1639,6 +1730,9 @@ class ShipInTransitCoSimulation(CoSimInstance):
         ax.ticklabel_format(style='sci', axis='both', scilimits=(0,0))
         ax.xaxis.get_offset_text().set_fontsize(tick_fs-1)
         ax.yaxis.get_offset_text().set_fontsize(tick_fs-1)
+        
+        ax.xaxis.set_major_formatter(FuncFormatter(lambda value, pos: f'{value / 1000:g}'))
+        ax.yaxis.set_major_formatter(FuncFormatter(lambda value, pos: f'{value / 1000:g}'))
         
         for spine in ax.spines.values():
             spine.set_linewidth(0.8)
@@ -1843,6 +1937,7 @@ class ShipInTransitCoSimulation(CoSimInstance):
         ship_ids,
         mode="quick",
         plot_routes=True,
+        exclude_target_ships_route= False,
         plot_waypoints=True,
         plot_roa=True,
         plot_start_end=True,
@@ -1881,8 +1976,13 @@ class ShipInTransitCoSimulation(CoSimInstance):
 
             rN = np.asarray(rN[:m])
             rE = np.asarray(rE[:m])
-
-            if plot_routes:
+            
+            if exclude_target_ships_route:
+                allow_to_plot = sid == "OS0"
+            else:
+                allow_to_plot = True
+            
+            if plot_routes and allow_to_plot:
                 line, = ax_map.plot(
                     rE, rN,
                     lw=style["route_lw"],
@@ -2021,8 +2121,8 @@ class ShipInTransitCoSimulation(CoSimInstance):
         ## Common styling
         title = f"Fleet trajectories on {self.map_name}" if self.is_map_exists else "Fleet trajectories"
         ax_map.set_title(title, fontsize=style["title_fs"], pad=4)
-        ax_map.set_xlabel("East position (m)", fontsize=style["label_fs"])
-        ax_map.set_ylabel("North position (m)", fontsize=style["label_fs"])
+        ax_map.set_xlabel("East position (km)", fontsize=style["label_fs"])
+        ax_map.set_ylabel("North position (km)", fontsize=style["label_fs"])
 
         ax_map.tick_params(axis="both", which="major", labelsize=style["tick_fs"], length=3)
         ax_map.grid(True, color="0.82", linestyle="--", linewidth=0.5, alpha=style["grid_alpha"])
@@ -2030,6 +2130,9 @@ class ShipInTransitCoSimulation(CoSimInstance):
         ax_map.ticklabel_format(style="sci", axis="both", scilimits=(0, 0))
         ax_map.xaxis.get_offset_text().set_fontsize(style["tick_fs"] - 1)
         ax_map.yaxis.get_offset_text().set_fontsize(style["tick_fs"] - 1)
+        
+        ax_map.xaxis.set_major_formatter(FuncFormatter(lambda value, pos: f'{value / 1000:g}'))
+        ax_map.yaxis.set_major_formatter(FuncFormatter(lambda value, pos: f'{value / 1000:g}'))
 
         for spine in ax_map.spines.values():
             spine.set_linewidth(0.8)
@@ -2131,6 +2234,7 @@ class ShipInTransitCoSimulation(CoSimInstance):
 
         # Optional: tune these based on mode
         title_fs = max(7, style["label_fs"])
+        status_fs = max(6, style["status_fs"]) * 0.8 
         detail_fs = max(6, style["tick_fs"])
 
         # Colors
@@ -2249,7 +2353,7 @@ class ShipInTransitCoSimulation(CoSimInstance):
             "OWN SHIP COLAV\nINACTIVE",
             transform=ax_status.transAxes,
             ha="center", va="center",
-            fontsize=title_fs, weight="bold"
+            fontsize=status_fs, weight="bold"
         )
 
         colav_bot = patches.Rectangle(
@@ -2288,7 +2392,7 @@ class ShipInTransitCoSimulation(CoSimInstance):
             "OWN SHIP COLLISION\nNO",
             transform=ax_status.transAxes,
             ha="center", va="center",
-            fontsize=title_fs, weight="bold"
+            fontsize=status_fs, weight="bold"
         )
 
         collision_bot = patches.Rectangle(
@@ -2327,7 +2431,7 @@ class ShipInTransitCoSimulation(CoSimInstance):
             "OWN SHIP NAVIGATION\nSAFE",
             transform=ax_status.transAxes,
             ha="center", va="center",
-            fontsize=title_fs, weight="bold"
+            fontsize=status_fs, weight="bold"
         )
 
         artists["nav_patch"] = nav_patch
@@ -2349,7 +2453,7 @@ class ShipInTransitCoSimulation(CoSimInstance):
             "OWN SHIP GROUNDING\nNO",
             transform=ax_status.transAxes,
             ha="center", va="center",
-            fontsize=title_fs, weight="bold"
+            fontsize=status_fs, weight="bold"
         )
 
         artists["ground_patch"] = ground_patch
@@ -2489,7 +2593,7 @@ class ShipInTransitCoSimulation(CoSimInstance):
         C_NEUTRAL = "#d9d9d9"
 
         # Always update time text
-        t_sec = i * self.stepSize / 1e9
+        t_sec = i * self.stepSize
         artists["time_text"].set_text(f"TIME\n{int(round(t_sec))} s")
         artists["frame_text"].set_text(f"FRAME\n{i}")
 
@@ -2580,7 +2684,7 @@ class ShipInTransitCoSimulation(CoSimInstance):
         """
         Update time/frame boxes for disabled status panel.
         """
-        t_sec = i * self.stepSize / 1e9
+        t_sec = i * self.stepSize
         artists["time_text"].set_text(f"TIME\n{int(round(t_sec))} s")
         artists["frame_text"].set_text(f"FRAME\n{i}")
         
@@ -2981,7 +3085,7 @@ class ShipInTransitCoSimulation(CoSimInstance):
         show=True,
         block=True,
         mode="quick",
-        fig_width=10.0,
+        fig_width=7.0,
         margin_frac=0.08,
         equal_aspect=True,
         interval_ms=20,
@@ -2989,6 +3093,7 @@ class ShipInTransitCoSimulation(CoSimInstance):
         show_status_panel=True,
         trail_len=300,
         plot_routes=True,
+        exclude_target_ships_route= False,
         plot_waypoints=True,
         plot_roa=True,
         plot_start_end=True,
@@ -3133,6 +3238,7 @@ class ShipInTransitCoSimulation(CoSimInstance):
             ship_ids=ship_ids,
             mode=mode,
             plot_routes=plot_routes,
+            exclude_target_ships_route=exclude_target_ships_route,
             plot_waypoints=plot_waypoints,
             plot_roa=plot_roa,
             plot_start_end=plot_start_end,

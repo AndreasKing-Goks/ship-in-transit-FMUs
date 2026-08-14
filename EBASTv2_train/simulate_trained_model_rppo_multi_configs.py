@@ -22,7 +22,7 @@ sys.path.insert(0, str(ROOT))
 
 from EBASTv2_core.env_multi_configs import EBASTv2EnvMultiConfigs as EBASTv2Env
 from EBASTv2_core.episode_logger import log_episode_recap
-from orchestrator.scenario_config import generate_spawn_request_bank, load_spawn_requests_bank_path
+from orchestrator.scenario_config import load_spawn_requests_bank_path
 
 import numpy as np
 
@@ -65,7 +65,8 @@ env = EBASTv2Env(
     ROOT=ROOT,
     config_path=config_path,
     encounter_settings_path=encounter_settings_path,
-    spawn_requests_bank=spawn_requests_bank
+    spawn_requests_bank=spawn_requests_bank,
+    use_fmpy=True
     )
 
 # =========================
@@ -116,17 +117,18 @@ print(f"Episode recap saved to: {log_path}")
 
 # Animate Simulation
 env.instance.AnimateFleetTrajectory(
-        ship_ids=None,
+        ship_ids=None,  
         show=True,
         block=True,
         mode="quick",
-        fig_width=10.0,
+        fig_width=7.0,
         margin_frac=0.08,
         equal_aspect=True,
         interval_ms=20,
         frame_step=10,
         trail_len=50,
         plot_routes=True,
+        exclude_target_ships_route=True, 
         plot_waypoints=True,
         plot_roa=True,
         plot_start_end=True,
@@ -142,4 +144,13 @@ env.instance.AnimateFleetTrajectory(
     )
 
 # Plot Trajectory
-env.instance.PlotFleetTrajectory(mode="quick", ship_scale=1.0)
+env.instance.PlotFleetTrajectory(
+    mode="quick",
+    every_n=100, 
+    fig_width=5.0, 
+    exclude_target_ships_route=True, 
+    plot_IWs=True,
+    plot_IW_names=False,
+    plot_time_line_connection=False,
+    ship_scale=10.0
+)

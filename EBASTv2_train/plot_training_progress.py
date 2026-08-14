@@ -97,35 +97,6 @@ def million_formatter(x, pos):
         return "0"
     return f"{x / 1_000_000:.0f}M"
 
-# tb_run_dir = (
-#     ROOT
-#     / "EBASTv2_train"
-#     / "trained_model"
-#     / "EB-ASTv2_train_ppo_2026-07-26_21-54-50_3ace"
-#     / "tb"
-#     / "EB-ASTv2_train_ppo_0"
-# )
-
-tb_run_dir = (
-    ROOT
-    / "EBASTv2_train"
-    / "trained_model"
-    / "EB-ASTv2_train_rppo_2026-07-26_21-08-37_330c"
-    / "tb"
-    / "EB-ASTv2_train_rppo_0"
-)
-
-# tb_run_dir = (
-#     ROOT
-#     / "EBASTv2_train"
-#     / "trained_model"
-#     / "EB-ASTv2_train_sac_2026-07-26_21-08-37_acea"
-#     / "tb"
-#     / "EB-ASTv2_train_sac_0"
-# )
-
-tb_runs = get_tensorboard_event_files(tb_run_dir)
-
 # PPO and RPPO
 # Available tags:
 #'rollout/ep_len_mean'
@@ -153,72 +124,257 @@ tb_runs = get_tensorboard_event_files(tb_run_dir)
 #'train/learning_rate'
 #'train/n_updates'
 
-tags_to_plot = ['rollout/ep_len_mean', 'rollout/ep_rew_mean', 'train/loss', 'train/policy_gradient_loss', 'train/value_loss']   # PPO and RPPO
-# tags_to_plot = ['rollout/ep_len_mean', 'rollout/ep_rew_mean', 'train/actor_loss', 'train/critic_loss', 'train/learning_rate']   # SAC
+# Single plot
+single_plot = False
+# single_plot = True
 
-all_rows = []
-
-for tag in tags_to_plot:
-    step_offset = 0
-
-    for run_idx, run_dir in enumerate(tb_runs):
-        ea = event_accumulator.EventAccumulator(str(run_dir))
-        ea.Reload()
-
-        events = ea.Scalars(tag)
-
-        if not events:
-            continue
-
-        min_step = min(e.step for e in events)
-        max_step = max(e.step for e in events)
-
-        for e in events:
-            all_rows.append({
-                "run_idx": run_idx,
-                "tag": tag,
-                "step_original": e.step,
-                "step": (e.step - min_step) + step_offset,
-                "value": e.value,
-                "wall_time": e.wall_time,
-            })
-
-        step_offset += (max_step - min_step) + 1
-
-df = pd.DataFrame(all_rows)
-
-for tag in tags_to_plot:
-    plot_df = df[df["tag"] == tag].sort_values("step")
-
-    # # Reduce SAC plot density
-    # # Use 50_000 or 100_000 depending on how smooth you want it.
-    # plot_df = reduce_plot_density(
-    #     plot_df,
-    #     bin_size=50_000,
-    #     agg="mean",
+if single_plot:
+    
+    # tb_run_dir = (
+    #     ROOT
+    #     / "EBASTv2_train"
+    #     / "trained_model"
+    #     / "EB-ASTv2_train_ppo_2026-07-26_21-54-50_3ace"
+    #     / "tb"
+    #     / "EB-ASTv2_train_ppo_0"
     # )
 
-    fig, ax = plt.subplots(figsize=(10, 4))
-    ax.plot(
-        plot_df["step"],
-        plot_df["value"],
-        linewidth=1.2,
-        label=tag,
+    # tb_run_dir = (
+    #     ROOT
+    #     / "EBASTv2_train"
+    #     / "trained_model"
+    #     / "EB-ASTv2_train_rppo_2026-07-26_21-08-37_330c"
+    #     / "tb"
+    #     / "EB-ASTv2_train_rppo_0"
+    # )
+
+    tb_run_dir = (
+        ROOT
+        / "EBASTv2_train"
+        / "trained_model"
+        / "EB-ASTv2_train_sac_2026-08-04_19-10-27_c531"
+        / "tb"
+        / "EB-ASTv2_train_sac_0"
     )
 
-    ax.set_xlim(left=0)
-    ax.xaxis.set_major_locator(MultipleLocator(1_000_000))
-    ax.xaxis.set_major_formatter(FuncFormatter(million_formatter))
+    tb_runs = get_tensorboard_event_files(tb_run_dir)
 
-    ax.set_xlabel("Step (Millions)")
-    ax.set_ylabel("Value")
+    # tags_to_plot = ['rollout/ep_len_mean', 'rollout/ep_rew_mean', 'train/loss', 'train/policy_gradient_loss', 'train/value_loss']   # PPO and RPPO
+    tags_to_plot = ['rollout/ep_len_mean', 'rollout/ep_rew_mean', 'train/actor_loss', 'train/critic_loss', 'train/learning_rate']   # SAC
 
-    ax.legend(loc="lower right", frameon=False)
+    all_rows = []
 
-    ax.grid(True, alpha=0.3)
-    ax.tick_params(axis="x", labelsize=9)
-    ax.tick_params(axis="y", labelsize=9)
+    for tag in tags_to_plot:
+        step_offset = 0
 
-    fig.tight_layout()
+        for run_idx, run_dir in enumerate(tb_runs):
+            ea = event_accumulator.EventAccumulator(str(run_dir))
+            ea.Reload()
 
-plt.show()
+            events = ea.Scalars(tag)
+
+            if not events:
+                continue
+
+            min_step = min(e.step for e in events)
+            max_step = max(e.step for e in events)
+
+            for e in events:
+                all_rows.append({
+                    "run_idx": run_idx,
+                    "tag": tag,
+                    "step_original": e.step,
+                    "step": (e.step - min_step) + step_offset,
+                    "value": e.value,
+                    "wall_time": e.wall_time,
+                })
+
+            step_offset += (max_step - min_step) + 1
+
+    df = pd.DataFrame(all_rows)
+
+    for tag in tags_to_plot:
+        plot_df = df[df["tag"] == tag].sort_values("step")
+
+        # Reduce SAC plot density
+        # Use 50_000 or 100_000 depending on how smooth you want it.
+        plot_df = reduce_plot_density(
+            plot_df,
+            bin_size=50_000,
+            agg="mean",
+        )
+
+        fig, ax = plt.subplots(figsize=(10, 4))
+        ax.plot(
+            plot_df["step"],
+            plot_df["value"],
+            linewidth=1.2,
+            label=tag,
+        )
+
+        ax.set_xlim(left=0)
+        ax.xaxis.set_major_locator(MultipleLocator(1_000_000))
+        ax.xaxis.set_major_formatter(FuncFormatter(million_formatter))
+
+        ax.set_xlabel("Step (Millions)")
+        ax.set_ylabel("Value")
+
+        ax.legend(loc="lower right", frameon=False)
+
+        ax.grid(True, alpha=0.3)
+        ax.tick_params(axis="x", labelsize=9)
+        ax.tick_params(axis="y", labelsize=9)
+
+        fig.tight_layout()
+
+    plt.show()
+    
+multi_plots = True
+# multi_plots = False
+
+if multi_plots:
+    
+    tags_to_plot = ['rollout/ep_len_mean', 'rollout/ep_rew_mean']
+    
+    tb_run_dir_rppo = ROOT / "EBASTv2_train" / "trained_model" / "EB-ASTv2_train_rppo_2026-07-26_21-08-37_330c" / "tb" / "EB-ASTv2_train_rppo_0"
+    tb_run_dir_sac  = ROOT / "EBASTv2_train" / "trained_model" / "EB-ASTv2_train_sac_2026-08-04_19-10-27_c531" / "tb" / "EB-ASTv2_train_sac_0"
+    tb_run_dir_ppo  = ROOT / "EBASTv2_train" / "trained_model" / "EB-ASTv2_train_ppo_2026-07-26_21-54-50_3ace" / "tb" / "EB-ASTv2_train_ppo_0"
+    
+    tb_run_dirs_and_params =   {
+        'rppo' : [tb_run_dir_rppo, 'b'],
+        # 'sac'  : [tb_run_dir_sac, 'r'],
+        'ppo'  : [tb_run_dir_ppo, 'g']
+    }
+    
+    all_rows = []
+
+    for method in tb_run_dirs_and_params.keys():
+
+        for tag in tags_to_plot:
+
+            step_offset = 0
+
+            tb_runs = get_tensorboard_event_files(tb_run_dirs_and_params[method][0])
+
+            for run_idx, run_dir in enumerate(tb_runs):
+
+                ea = event_accumulator.EventAccumulator(str(run_dir))
+                ea.Reload()
+
+                events = ea.Scalars(tag)
+
+                if not events:
+                    continue
+
+                min_step = min(e.step for e in events)
+                max_step = max(e.step for e in events)
+
+                for e in events:
+
+                    all_rows.append({
+                        "method": method,
+                        "run_idx": run_idx,
+                        "tag": tag,
+                        "step_original": e.step,
+                        "step": (e.step - min_step) + step_offset,
+                        "value": e.value,
+                        "wall_time": e.wall_time,
+                    })
+
+                step_offset += (max_step - min_step) + 1
+
+    df_all = pd.DataFrame(all_rows)
+    
+    BIN_SIZE = 50_000
+
+    for tag in tags_to_plot:
+
+        fig, ax = plt.subplots(figsize=(6.5, 3.5))
+        
+        for method in tb_run_dirs_and_params.keys():
+
+            plot_df = df_all[
+                (df_all["method"] == method) &
+                (df_all["tag"] == tag)
+            ].sort_values("step")
+
+            # if method == "sac":
+            #     plot_df = reduce_plot_density(
+            #         plot_df,
+            #         bin_size=50_000,
+            #         agg="mean",
+            #     )
+
+            # ax.plot(
+            #     plot_df["step"],
+            #     plot_df["value"],
+            #     linewidth=1.8,
+            #     # linestyle=linestyle,
+            #     label=method.upper(),
+            # )
+            
+            # Assign every observation to a training-step bin
+            plot_df["bin"] = (
+                plot_df["step"] // BIN_SIZE
+            ) * BIN_SIZE
+            
+            stats = (
+                plot_df.groupby("bin")["value"]
+                .agg(
+                    mean="mean",
+                    q25=lambda x: x.quantile(0.25),
+                    q75=lambda x: x.quantile(0.75),
+                )
+                .reset_index()
+            )
+
+            ax.plot(
+                stats["bin"],
+                stats["mean"],
+                linewidth=1.8,
+                label=method.upper(),
+                color=tb_run_dirs_and_params[method][1]
+            )
+
+            ax.fill_between(
+                stats["bin"],
+                stats["q25"],
+                stats["q75"],
+                alpha=0.3,
+            )
+
+        ax.set_xlim(left=0)
+
+        ax.xaxis.set_major_locator(MultipleLocator(1_000_000))
+        ax.xaxis.set_major_formatter(FuncFormatter(million_formatter))
+
+        ax.set_xlabel("Training steps (millions)", fontsize=11)
+        ax.set_ylabel("Value", fontsize=11)
+
+        ax.tick_params(
+            axis="both",
+            which="major",
+            labelsize=10,
+            direction="in",
+        )
+
+        ax.legend(
+            loc="best",
+            frameon=False,
+            fontsize=10,
+        )
+
+        ax.grid(
+            True,
+            linestyle=":",
+            linewidth=0.6,
+            alpha=0.5,
+        )
+
+        # Cleaner paper-style axes
+        ax.spines["top"].set_visible(False)
+        ax.spines["right"].set_visible(False)
+
+        fig.tight_layout()
+
+    plt.show()
