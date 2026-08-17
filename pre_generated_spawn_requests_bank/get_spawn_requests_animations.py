@@ -29,7 +29,7 @@ saved_animation_folder_path     = ROOT / "pre_generated_spawn_requests_bank" / "
 saved_animation_folder_path.mkdir(parents=True, exist_ok=True)
 
 # Case Index
-case_idxs                       = [30, 40, 50] #range(20)
+case_idxs                       = [40, 50] #range(20)
 
 # Print and save encounter description
 description_lines = []
@@ -76,20 +76,20 @@ for case_idx in case_idxs:
     # =========================
     instance.Simulate()
     
-    i = 0
+    # i = 0
 
-    # Print encounter description
-    for ship_id in instance.ship_ids[1:]:   # Exclude the own ship
-        description_lines.append(f"{ship_id}")
-        description_lines.append(f"Encounter type  : {encounters[ship_id]['desiredEncounterType']}")
-        description_lines.append(f"Vector time     : {encounters[ship_id]['vectorTime']}")
-        description_lines.append(f"Bearing heading : {encounters[ship_id]['beta']}")
-        description_lines.append(f"Relative speed  : {encounters[ship_id]['relativeSpeed']}")
+    # # Print encounter description
+    # for ship_id in instance.ship_ids[1:]:   # Exclude the own ship
+    #     description_lines.append(f"{ship_id}")
+    #     description_lines.append(f"Encounter type  : {encounters[ship_id]['desiredEncounterType']}")
+    #     description_lines.append(f"Vector time     : {encounters[ship_id]['vectorTime']}")
+    #     description_lines.append(f"Bearing heading : {encounters[ship_id]['beta']}")
+    #     description_lines.append(f"Relative speed  : {encounters[ship_id]['relativeSpeed']}")
         
-        if i == (len(instance.ship_ids)-1):
-            description_lines.append("==================================================================")
-        else:
-            description_lines.append("------------------------------------------------------------------")
+    #     if i == (len(instance.ship_ids)-1):
+    #         description_lines.append("==================================================================")
+    #     else:
+    #         description_lines.append("------------------------------------------------------------------")
             
     # =========================
     # Animation and Plot
@@ -100,36 +100,64 @@ for case_idx in case_idxs:
     # - .avi
     # - .mov
 
-    # Animate Simulation
-    instance.AnimateFleetTrajectory(
-            ship_ids=None,
-            show=False,
-            block=True,
-            mode="paper",
-            fig_width=10.0,
-            margin_frac=0.08,
-            equal_aspect=True,
-            interval_ms=20,
-            frame_step=10,
-            trail_len=50,
-            plot_routes=True,
-            plot_waypoints=True,
-            plot_roa=True,
-            plot_start_end=True,
-            plot_inter_wp_roa=False,
-            plot_inter_wp_proj=False,
-            with_labels=True,
-            precompute_ship_outlines=True,
-            save_path=saved_animation_path,
-            writer_fps=20,
-            palette=None,
-            blit=True,
-            ship_scale=5.0
-        )
+    # # Animate Simulation
+    # instance.AnimateFleetTrajectory(
+    #         ship_ids=None,
+    #         show=False,
+    #         block=True,
+    #         mode="paper",
+    #         fig_width=10.0,
+    #         margin_frac=0.08,
+    #         equal_aspect=True,
+    #         interval_ms=20,
+    #         frame_step=10,
+    #         trail_len=50,
+    #         plot_routes=True,
+    #         plot_waypoints=True,
+    #         plot_roa=True,
+    #         plot_start_end=True,
+    #         plot_inter_wp_roa=False,
+    #         plot_inter_wp_proj=False,
+    #         with_labels=True,
+    #         precompute_ship_outlines=True,
+    #         save_path=saved_animation_path,
+    #         writer_fps=20,
+    #         palette=None,
+    #         blit=True,
+    #         ship_scale=5.0
+    #     )
+    
+    # Legend Location
+    # +--------------+--------------+---------------+
+    # | 'upper left' |'upper center'| 'upper right' |
+    # +--------------+--------------+---------------+
+    # |'center left' |   'center'   |'center right' |
+    # +--------------+--------------+---------------+
+    # | 'lower left' |'lower center'| 'lower right' |
+    # +--------------+--------------+---------------+
+    
+    # Plot Trajectory
+    saved_figure_path = ROOT / "EBASTv2_train" / "simulated_trained_model" / "plots_for_paper" / f"{case_idx}_scenario.pdf"
+    # saved_figure_path = None
+    # fig_widt = 5.0 for 'quick', 2.3 for 'paper'
+    instance.PlotFleetTrajectory(
+        mode="paper",
+        every_n=100, 
+        fig_width=3.4,
+        exclude_target_ships_route=True,
+        disable_title=True,
+        plot_IWs=False,
+        plot_IW_names=False,
+        plot_time_line_connection=False,
+        ship_scale=10.0,
+        legend_loc='upper right',
+        save_path=saved_figure_path,
+        show=False,
+    )
 
-# Compile and write the description text
-description_text = "\n".join(description_lines)
+# # Compile and write the description text
+# description_text = "\n".join(description_lines)
 
-with open(case_description_path, "a", encoding="utf-8") as f:
-    f.write(description_text)
-    f.write("\n\n")
+# with open(case_description_path, "a", encoding="utf-8") as f:
+#     f.write(description_text)
+#     f.write("\n\n")

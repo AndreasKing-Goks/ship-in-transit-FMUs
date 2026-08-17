@@ -10,9 +10,9 @@ from orchestrator.scenario_config import generate_spawn_request_bank, load_spawn
 
 config_path                 = ROOT / "EBASTv2_train" / "EBASTv2_train_2.yaml"
 encounter_settings_path     = ROOT / "EBASTv2_train" / "encounter_settings.json"
-spawn_requests_bank_path    = ROOT / "pre_generated_spawn_requests_bank" / "spawn_request_bank_ebastv2.pkl"
+spawn_requests_bank_path    = ROOT / "pre_generated_spawn_requests_bank" / "spawn_request_bank_ebastv2_eval.pkl"
 own_ship_sog                = [5.0]
-n_cases                     = 120
+n_cases                     = 60
 training_case_ratio         = 5/6
 
 # ATTENTION

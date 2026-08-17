@@ -233,19 +233,80 @@ multi_plots = True
 # multi_plots = False
 
 if multi_plots:
-    
-    tags_to_plot = ['rollout/ep_len_mean', 'rollout/ep_rew_mean']
-    
-    tb_run_dir_rppo = ROOT / "EBASTv2_train" / "trained_model" / "EB-ASTv2_train_rppo_2026-07-26_21-08-37_330c" / "tb" / "EB-ASTv2_train_rppo_0"
-    tb_run_dir_sac  = ROOT / "EBASTv2_train" / "trained_model" / "EB-ASTv2_train_sac_2026-08-04_19-10-27_c531" / "tb" / "EB-ASTv2_train_sac_0"
-    tb_run_dir_ppo  = ROOT / "EBASTv2_train" / "trained_model" / "EB-ASTv2_train_ppo_2026-07-26_21-54-50_3ace" / "tb" / "EB-ASTv2_train_ppo_0"
-    
-    tb_run_dirs_and_params =   {
-        'rppo' : [tb_run_dir_rppo, 'b'],
-        # 'sac'  : [tb_run_dir_sac, 'r'],
-        'ppo'  : [tb_run_dir_ppo, 'g']
+
+    tags_to_plot = [
+        "rollout/ep_len_mean",
+        "rollout/ep_rew_mean",
+    ]
+
+    # ---------------------------------------------------------
+    # TensorBoard directories
+    # ---------------------------------------------------------
+    tb_run_dir_rppo = (
+        ROOT
+        / "EBASTv2_train"
+        / "trained_model"
+        / "EB-ASTv2_train_rppo_2026-07-26_21-08-37_330c"
+        / "tb"
+        / "EB-ASTv2_train_rppo_0"
+    )
+
+    tb_run_dir_sac = (
+        ROOT
+        / "EBASTv2_train"
+        / "trained_model"
+        / "EB-ASTv2_train_sac_2026-08-04_19-10-27_c531"
+        / "tb"
+        / "EB-ASTv2_train_sac_0"
+    )
+
+    tb_run_dir_ppo = (
+        ROOT
+        / "EBASTv2_train"
+        / "trained_model"
+        / "EB-ASTv2_train_ppo_2026-07-26_21-54-50_3ace"
+        / "tb"
+        / "EB-ASTv2_train_ppo_0"
+    )
+
+    # ---------------------------------------------------------
+    # Methods
+    # ---------------------------------------------------------
+    tb_run_dirs_and_params = {
+        "rppo": [tb_run_dir_rppo, "b"],
+        "sac": [tb_run_dir_sac, "r"],
+        # "ppo":  [tb_run_dir_ppo, "g"],
     }
-    
+
+    # ---------------------------------------------------------
+    # Output directory
+    # ---------------------------------------------------------
+    save_dir = (
+        ROOT
+        / "EBASTv2_train"
+        / "simulated_trained_model"
+        / "plots_for_paper"
+    )
+
+    save_dir.mkdir(parents=True, exist_ok=True)
+
+    # ---------------------------------------------------------
+    # Plot-specific names
+    # ---------------------------------------------------------
+    plot_settings = {
+        "rollout/ep_rew_mean": {
+            "filename": "rppo_v_sac_reward.pdf",
+            "ylabel": "Mean episode reward",
+        },
+        "rollout/ep_len_mean": {
+            "filename": "rppo_v_sac_eps_len.pdf",
+            "ylabel": "Mean episode length",
+        },
+    }
+
+    # ---------------------------------------------------------
+    # Read TensorBoard data
+    # ---------------------------------------------------------
     all_rows = []
 
     for method in tb_run_dirs_and_params.keys():
@@ -254,11 +315,15 @@ if multi_plots:
 
             step_offset = 0
 
-            tb_runs = get_tensorboard_event_files(tb_run_dirs_and_params[method][0])
+            tb_runs = get_tensorboard_event_files(
+                tb_run_dirs_and_params[method][0]
+            )
 
             for run_idx, run_dir in enumerate(tb_runs):
 
-                ea = event_accumulator.EventAccumulator(str(run_dir))
+                ea = event_accumulator.EventAccumulator(
+                    str(run_dir)
+                )
                 ea.Reload()
 
                 events = ea.Scalars(tag)
@@ -276,105 +341,174 @@ if multi_plots:
                         "run_idx": run_idx,
                         "tag": tag,
                         "step_original": e.step,
-                        "step": (e.step - min_step) + step_offset,
+                        "step": (
+                            e.step - min_step
+                        ) + step_offset,
                         "value": e.value,
                         "wall_time": e.wall_time,
                     })
 
-                step_offset += (max_step - min_step) + 1
+                step_offset += (
+                    max_step - min_step
+                ) + 1
 
     df_all = pd.DataFrame(all_rows)
-    
+
+    # ---------------------------------------------------------
+    # Bin size
+    # ---------------------------------------------------------
     BIN_SIZE = 50_000
 
+    # ---------------------------------------------------------
+    # Create one figure per TensorBoard tag
+    # ---------------------------------------------------------
     for tag in tags_to_plot:
 
-        fig, ax = plt.subplots(figsize=(6.5, 3.5))
-        
+        # Sized for two figures side-by-side in the thesis
+        fig, ax = plt.subplots(
+            figsize=(3.4, 1.9),
+            dpi=150,
+        )
+
         for method in tb_run_dirs_and_params.keys():
 
             plot_df = df_all[
-                (df_all["method"] == method) &
-                (df_all["tag"] == tag)
-            ].sort_values("step")
+                (df_all["method"] == method)
+                & (df_all["tag"] == tag)
+            ].sort_values("step").copy()
 
-            # if method == "sac":
-            #     plot_df = reduce_plot_density(
-            #         plot_df,
-            #         bin_size=50_000,
-            #         agg="mean",
-            #     )
+            if plot_df.empty:
+                continue
 
-            # ax.plot(
-            #     plot_df["step"],
-            #     plot_df["value"],
-            #     linewidth=1.8,
-            #     # linestyle=linestyle,
-            #     label=method.upper(),
-            # )
-            
-            # Assign every observation to a training-step bin
+            # -------------------------------------------------
+            # Assign observations to training-step bins
+            # -------------------------------------------------
             plot_df["bin"] = (
                 plot_df["step"] // BIN_SIZE
             ) * BIN_SIZE
-            
+
+            # -------------------------------------------------
+            # Mean and interquartile range
+            # -------------------------------------------------
             stats = (
                 plot_df.groupby("bin")["value"]
                 .agg(
                     mean="mean",
-                    q25=lambda x: x.quantile(0.25),
-                    q75=lambda x: x.quantile(0.75),
+                    q25=lambda x: x.quantile(0.0), #(0.25),
+                    q75=lambda x: x.quantile(1.0), #(0.75),
                 )
                 .reset_index()
             )
 
+            color = tb_run_dirs_and_params[method][1]
+
+            # Mean
             ax.plot(
                 stats["bin"],
                 stats["mean"],
-                linewidth=1.8,
+                linewidth=1.1,
                 label=method.upper(),
-                color=tb_run_dirs_and_params[method][1]
+                color=color,
             )
 
+            # Interquartile range
             ax.fill_between(
                 stats["bin"],
                 stats["q25"],
                 stats["q75"],
-                alpha=0.3,
+                color=color,
+                alpha=0.18,
+                linewidth=0,
             )
 
+        # -----------------------------------------------------
+        # Axes
+        # -----------------------------------------------------
         ax.set_xlim(left=0)
 
-        ax.xaxis.set_major_locator(MultipleLocator(1_000_000))
-        ax.xaxis.set_major_formatter(FuncFormatter(million_formatter))
+        ax.xaxis.set_major_locator(
+            MultipleLocator(1_000_000)
+        )
 
-        ax.set_xlabel("Training steps (millions)", fontsize=11)
-        ax.set_ylabel("Value", fontsize=11)
+        ax.xaxis.set_major_formatter(
+            FuncFormatter(million_formatter)
+        )
 
+        ax.set_xlabel(
+            "Training steps (millions)",
+            fontsize=7.5,
+            labelpad=1,
+        )
+
+        ax.set_ylabel(
+            plot_settings[tag]["ylabel"],
+            fontsize=7.5,
+            labelpad=1,
+        )
+
+        # -----------------------------------------------------
+        # Ticks
+        # -----------------------------------------------------
         ax.tick_params(
             axis="both",
             which="major",
-            labelsize=10,
+            labelsize=6.5,
             direction="in",
+            length=2.5,
+            pad=1,
         )
 
+        # -----------------------------------------------------
+        # Legend
+        # -----------------------------------------------------
         ax.legend(
             loc="best",
             frameon=False,
-            fontsize=10,
+            fontsize=6.0,
+            handlelength=1.5,
+            handletextpad=0.4,
+            labelspacing=0.25,
         )
 
+        # -----------------------------------------------------
+        # Grid
+        # -----------------------------------------------------
         ax.grid(
             True,
             linestyle=":",
-            linewidth=0.6,
-            alpha=0.5,
+            linewidth=0.45,
+            alpha=0.4,
         )
 
         # Cleaner paper-style axes
         ax.spines["top"].set_visible(False)
         ax.spines["right"].set_visible(False)
 
-        fig.tight_layout()
+        ax.spines["left"].set_linewidth(0.7)
+        ax.spines["bottom"].set_linewidth(0.7)
+
+        # -----------------------------------------------------
+        # Compact layout
+        # -----------------------------------------------------
+        fig.tight_layout(
+            pad=0.15
+        )
+
+        # -----------------------------------------------------
+        # Save as vector PDF
+        # -----------------------------------------------------
+        save_path = (
+            save_dir
+            / plot_settings[tag]["filename"]
+        )
+
+        fig.savefig(
+            save_path,
+            format="pdf",
+            bbox_inches="tight",
+            pad_inches=0.01,
+        )
+
+        print(f"Saved: {save_path}")
 
     plt.show()

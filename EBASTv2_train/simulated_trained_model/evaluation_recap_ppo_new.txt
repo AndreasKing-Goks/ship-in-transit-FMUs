@@ -1,0 +1,225 @@
+========================================
+EBASTv2 FAILURE EVALUATION RECAP
+========================================
+
+Number of evaluated episodes: 19
+
+EPISODE RESULTS
+----------------------------------------
+Episode      : 1
+Case index   : 100
+Status       : no_collision
+Steps        : 7
+Terminated   : True
+Truncated    : False
+OS collision : False
+OS nav fail  : False
+Any collision: False
+Reached end  : True
+----------------------------------------
+Episode      : 2
+Case index   : 101
+Status       : no_collision
+Steps        : 7
+Terminated   : True
+Truncated    : False
+OS collision : False
+OS nav fail  : False
+Any collision: False
+Reached end  : True
+----------------------------------------
+Episode      : 3
+Case index   : 102
+Status       : no_collision
+Steps        : 9
+Terminated   : True
+Truncated    : False
+OS collision : False
+OS nav fail  : False
+Any collision: False
+Reached end  : True
+----------------------------------------
+Episode      : 4
+Case index   : 103
+Status       : no_collision
+Steps        : 6
+Terminated   : True
+Truncated    : False
+OS collision : False
+OS nav fail  : False
+Any collision: False
+Reached end  : True
+----------------------------------------
+Episode      : 5
+Case index   : 104
+Status       : no_collision
+Steps        : 8
+Terminated   : True
+Truncated    : False
+OS collision : False
+OS nav fail  : False
+Any collision: False
+Reached end  : True
+----------------------------------------
+Episode      : 6
+Case index   : 105
+Status       : no_collision
+Steps        : 8
+Terminated   : True
+Truncated    : False
+OS collision : False
+OS nav fail  : False
+Any collision: False
+Reached end  : True
+----------------------------------------
+Episode      : 7
+Case index   : 106
+Status       : no_collision
+Steps        : 9
+Terminated   : True
+Truncated    : False
+OS collision : False
+OS nav fail  : False
+Any collision: False
+Reached end  : True
+----------------------------------------
+Episode      : 8
+Case index   : 107
+Status       : no_collision
+Steps        : 7
+Terminated   : True
+Truncated    : False
+OS collision : False
+OS nav fail  : False
+Any collision: False
+Reached end  : True
+----------------------------------------
+Episode      : 9
+Case index   : 108
+Status       : no_collision
+Steps        : 9
+Terminated   : True
+Truncated    : False
+OS collision : False
+OS nav fail  : False
+Any collision: False
+Reached end  : True
+----------------------------------------
+Episode      : 10
+Case index   : 109
+Status       : no_collision
+Steps        : 9
+Terminated   : True
+Truncated    : False
+OS collision : False
+OS nav fail  : False
+Any collision: False
+Reached end  : True
+----------------------------------------
+Episode      : 11
+Case index   : 110
+Status       : no_collision
+Steps        : 6
+Terminated   : True
+Truncated    : False
+OS collision : False
+OS nav fail  : False
+Any collision: False
+Reached end  : True
+----------------------------------------
+Episode      : 12
+Case index   : 111
+Status       : no_collision
+Steps        : 6
+Terminated   : True
+Truncated    : False
+OS collision : False
+OS nav fail  : False
+Any collision: False
+Reached end  : True
+----------------------------------------
+Episode      : 13
+Case index   : 112
+Status       : collision
+Steps        : 7
+Terminated   : True
+Truncated    : False
+OS collision : True
+OS nav fail  : False
+Any collision: True
+Reached end  : False
+----------------------------------------
+Episode      : 14
+Case index   : 113
+Status       : no_collision
+Steps        : 7
+Terminated   : True
+Truncated    : False
+OS collision : False
+OS nav fail  : False
+Any collision: False
+Reached end  : True
+----------------------------------------
+Episode      : 15
+Case index   : 114
+Status       : no_collision
+Steps        : 8
+Terminated   : True
+Truncated    : False
+OS collision : False
+OS nav fail  : False
+Any collision: False
+Reached end  : True
+----------------------------------------
+Episode      : 16
+Case index   : 115
+Status       : no_collision
+Steps        : 7
+Terminated   : True
+Truncated    : False
+OS collision : False
+OS nav fail  : False
+Any collision: False
+Reached end  : True
+----------------------------------------
+Episode      : 17
+Case index   : 116
+Status       : no_collision
+Steps        : 7
+Terminated   : True
+Truncated    : False
+OS collision : False
+OS nav fail  : False
+Any collision: False
+Reached end  : True
+----------------------------------------
+Episode      : 18
+Case index   : 117
+Status       : no_collision
+Steps        : 9
+Terminated   : True
+Truncated    : False
+OS collision : False
+OS nav fail  : False
+Any collision: False
+Reached end  : True
+----------------------------------------
+Episode      : 19
+Case index   : 119
+Status       : no_collision
+Steps        : 6
+Terminated   : True
+Truncated    : False
+OS collision : False
+OS nav fail  : False
+Any collision: False
+Reached end  : True
+----------------------------------------
+
+SUMMARY
+========================================
+no_collision        :   18/  19 (  94.74 %)
+target_collision    :    0/  19 (   0.00 %)
+collision           :    1/  19 (   5.26 %)
+nav_failure         :    0/  19 (   0.00 %)
+other               :    0/  19 (   0.00 %)

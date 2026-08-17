@@ -22,6 +22,7 @@ sys.path.insert(0, str(ROOT))
 
 from EBASTv2_core.env import EBASTv2Env
 from EBASTv2_core.episode_logger import log_episode_recap
+from EBASTv2_train.evaluate_failure_cases import evaluate_failure_cases
 from orchestrator.scenario_config import load_spawn_requests_bank_path
 
 import numpy as np
@@ -51,6 +52,9 @@ log_path                        = ROOT / "EBASTv2_train" / "simulated_trained_mo
 # Get the save path for animation
 saved_animation_path            = ROOT / "EBASTv2_train" / "simulated_trained_model" / "simulated_trained_model_sac.gif"
 
+# Evaluation recap
+recap_path                      = ROOT / "EBASTv2_train" / "simulated_trained_model" / "evaluation_recap_sac.txt"
+
 # =========================
 # Instantiate the environment wrapper
 # =========================
@@ -69,9 +73,6 @@ env = EBASTv2Env(
 # =========================
 # Load the trained model
 # =========================
-# Set the environment to evaluation mode
-# env.set_for_evaluation()
-
 # Load the trained model
 sac_model = SAC.load(model_path)
 
@@ -82,8 +83,11 @@ simulate    = False
 # simulate    = True
 
 if simulate:
+    # Set the environment to evaluation mode
+    # env.set_for_evaluation()
+    
     # Reset the trained model
-    case_idx    = None
+    case_idx    = 96 #None
     seed        = None
     obs, _      = env.reset(seed=seed, specific_case_idx=case_idx)
 
@@ -138,85 +142,42 @@ if simulate:
             ship_scale=1.0
         )
 
+    # Legend Location
+    # +--------------+--------------+---------------+
+    # | 'upper left' |'upper center'| 'upper right' |
+    # +--------------+--------------+---------------+
+    # |'center left' |   'center'   |'center right' |
+    # +--------------+--------------+---------------+
+    # | 'lower left' |'lower center'| 'lower right' |
+    # +--------------+--------------+---------------+
+    
     # Plot Trajectory
+    saved_figure_path = ROOT / "EBASTv2_train" / "simulated_trained_model" / "plots_for_paper" / f"{case_idx}_sac.pdf"
+    # saved_figure_path = None
+    # fig_widt = 5.0 for 'quick', 2.3 for 'paper'
     env.instance.PlotFleetTrajectory(
-        mode="quick",
+        mode="paper",
         every_n=100, 
-        fig_width=5.0, 
-        exclude_target_ships_route=True, 
+        fig_width=3.4,
+        exclude_target_ships_route=True,
+        disable_title=True,
         plot_IWs=True,
         plot_IW_names=False,
         plot_time_line_connection=False,
-        ship_scale=10.0
+        ship_scale=10.0,
+        legend_loc='upper right',
+        save_path=saved_figure_path,
+        show=False,
     )
     
-evaluate_failure    = False
+evaluate_failure    = False    
 evaluate_failure    = True
 
 if evaluate_failure:
-    # Reset the trained model
-    case_idx        = range(100)
-    
-    status_count    ={
-        "no_collision": 0,
-        "target_collision": 0,
-        "collision": 0,
-        "nav_failure": 0,
-    }
-    
-    for idx in case_idx:
-        seed        = None
-        obs, _      = env.reset(seed=seed, specific_case_idx=idx)
-
-        # Cell and hidden state of the LSTM
-        lstm_states = None
-        num_envs    = 1
-        
-        # Cell and hidden state of the LSTM
-        lstm_states = None
-        num_envs    = 1
-
-        # Episode start signals are used to reset the lstm states
-        episode_starts = np.ones((num_envs,), dtype=bool)
-        while True:
-            action, lstm_states = sac_model.predict(obs,
-                                                    state=lstm_states,
-                                                    episode_start=episode_starts,
-                                                    deterministic=True)
-            obs, rewards, terminated, truncated, info = env.step(action)
-            episode_starts = terminated or truncated
-            
-            # Evaluate
-            if (not env.instance.any_ship_collides and
-                not env.instance.any_ship_grounding and
-                not env.instance.any_ship_nav_fail and
-                env.instance.all_ship_reaches_end_waypoint):
-                status_count["no_collision"]+=1
-            elif (env.instance.any_ship_collides and
-                  not env.instance.termination_flags["collision_flags"]["OS0"]):
-                status_count["target_collision"]+=1
-            elif (env.instance.any_ship_collides and
-                  env.instance.termination_flags["collision_flags"]["OS0"]):
-                status_count["collision"]+=1
-            elif (env.instance.any_ship_nav_fail and
-                  env.instance.termination_flags["nav_fail_flags"]["OS0"]):
-                status_count["nav_failure"]+=1
-            
-            # Break the loop if it's either terminated or truncated
-            if episode_starts:
-                break
-            
-    # Compute the score
-    each_flag_count = []
-    for val in list(status_count.values()):
-        each_flag_count.append(val)
-        
-    no_collision        = each_flag_count[0] / np.sum(each_flag_count) * 100
-    target_collision    = each_flag_count[1] / np.sum(each_flag_count) * 100
-    collision           = each_flag_count[2] / np.sum(each_flag_count) * 100
-    nav_failure         = each_flag_count[3] / np.sum(each_flag_count) * 100
-    
-    print(f"No Collision        : {no_collision} %")
-    print(f"Target Collision    : {target_collision} %")
-    print(f"Collision           : {collision} %")
-    print(f"Nav Failure         : {nav_failure} %")
+    indices=list(range(100))
+    evaluate_failure_cases(env,
+        model=sac_model,
+        recap_path=recap_path,
+        case_indices=indices,
+        deterministic=True,
+    )

@@ -1336,21 +1336,27 @@ class ShipInTransitCoSimulation(CoSimInstance):
         """
         if mode == "paper":
             return {
-                "own_lw": 2.4,
-                "route_lw": 1.8,
-                "ship_lw": 2.0,
-                "title_fs": 12,
-                "label_fs": 11,
-                "tick_fs": 10,
-                "legend_fs": 9,
-                "grid_alpha": 1.0,
-                "roa_alpha": 0.25,
-                "dpi": 500,
-                "waypoint_s": 30,
-                "ship_label_fs": 10,
-                "status_fs": 8,
+                "own_lw": 1.4,
+                "route_lw": 1.1,
+                "ship_lw": 1.5,
+
+                "title_fs": 8,       # irrelevant if title disabled
+                "label_fs": 7.5,
+                "tick_fs": 6.5,
+                "legend_fs": 5.8,
+
+                "grid_alpha": 0.45,
+                "roa_alpha": 0.15,
+
+                "dpi": 400,
+
+                "waypoint_s": 12,
+                "ship_label_fs": 6.5,
+                "status_fs": 6.0,
+
                 "startend_dy": 500.0,
             }
+
         elif mode == "quick":
             return {
                 "own_lw": 1.2,
@@ -1368,6 +1374,7 @@ class ShipInTransitCoSimulation(CoSimInstance):
                 "status_fs": 7,
                 "startend_dy": 500.0,
             }
+
         else:
             raise ValueError("mode must be 'quick' or 'paper'")
 
@@ -1559,6 +1566,7 @@ class ShipInTransitCoSimulation(CoSimInstance):
         save_path=None,
         plot_routes=True,
         exclude_target_ships_route= False,
+        disable_title=False,
         plot_waypoints=True,
         plot_IWs=False,
         plot_IW_names=False,
@@ -1566,6 +1574,7 @@ class ShipInTransitCoSimulation(CoSimInstance):
         plot_time_line_connection=False,
         palette=None,
         ship_scale=1.0,
+        legend_loc='upper left',
     ):
         """
             Plot the fleet trajectories for one or more ships, with optional support
@@ -1848,19 +1857,39 @@ class ShipInTransitCoSimulation(CoSimInstance):
             ax.set_ylim(y_min, y_max)
             
         # Add scalebar on map
-        self.add_scalebar(ax=ax, length_m=None, label_fs=style["label_fs"])
+        self.add_scalebar(ax=ax, 
+                          length_m=None, 
+                          label_fs=style["label_fs"], 
+                        #   location=(0.68, 0.06)
+                          )
 
         # Styling
-        title = f"Fleet trajectories on {self.map_name}" if self.is_map_exists else "Fleet trajectories"
-        ax.set_title(title, fontsize=title_fs, pad=4)
-        ax.set_xlabel("East position (km)", fontsize=label_fs)
-        ax.set_ylabel("North position (km)", fontsize=label_fs)
+        if not disable_title:
+            title = f"Fleet trajectories on {self.map_name}" if self.is_map_exists else "Fleet trajectories"
+            ax.set_title(title, fontsize=title_fs, pad=4)
+        ax.set_xlabel("East position (km)", fontsize=label_fs, labelpad=0.1)
+        ax.set_ylabel("North position (km)", fontsize=label_fs, labelpad=0.1)
 
         ax.tick_params(axis="both", which="major", labelsize=tick_fs, length=3)
         ax.grid(True, color="0.82", linestyle="--", linewidth=0.5, alpha=grid_alpha)
 
-        leg = ax.legend(fontsize=legend_fs, frameon=True, framealpha=0.75,
-                        borderpad=0.4, handlelength=2.2, loc="upper left")
+        # x = 0   left
+        # x = 1   right
+
+        # y = 0   bottom
+        # y = 1   top
+        
+        leg = ax.legend(
+            fontsize=legend_fs,
+            frameon=True,
+            framealpha=0.75,
+            borderpad=0.25,
+            handlelength=1.8,
+            handletextpad=0.4,
+            labelspacing=0.25,
+            loc=legend_loc,
+            # bbox_to_anchor=(1.0, 0.62),
+        )
         leg.get_frame().set_linewidth(0.6)
 
         ax.ticklabel_format(style='sci', axis='both', scilimits=(0,0))
@@ -1880,7 +1909,7 @@ class ShipInTransitCoSimulation(CoSimInstance):
         fig.tight_layout(pad=0.05)
 
         if save_path:
-            fig.savefig(save_path, dpi=dpi, bbox_inches="tight")
+            fig.savefig(save_path, dpi=dpi, bbox_inches="tight", pad_inches=0.02)
 
         if show:
             print("Plot is finished!")

@@ -1,0 +1,1116 @@
+========================================
+EBASTv2 FAILURE EVALUATION RECAP
+========================================
+
+Number of evaluated episodes: 100
+
+EPISODE RESULTS
+----------------------------------------
+Episode      : 1
+Case index   : 0
+Status       : no_collision
+Steps        : 9
+Terminated   : True
+Truncated    : False
+OS collision : False
+OS nav fail  : False
+Any collision: False
+Reached end  : True
+----------------------------------------
+Episode      : 2
+Case index   : 1
+Status       : collision
+Steps        : 5
+Terminated   : True
+Truncated    : False
+OS collision : True
+OS nav fail  : False
+Any collision: True
+Reached end  : False
+----------------------------------------
+Episode      : 3
+Case index   : 2
+Status       : collision
+Steps        : 4
+Terminated   : True
+Truncated    : False
+OS collision : True
+OS nav fail  : False
+Any collision: True
+Reached end  : False
+----------------------------------------
+Episode      : 4
+Case index   : 3
+Status       : no_collision
+Steps        : 8
+Terminated   : True
+Truncated    : False
+OS collision : False
+OS nav fail  : False
+Any collision: False
+Reached end  : True
+----------------------------------------
+Episode      : 5
+Case index   : 4
+Status       : collision
+Steps        : 4
+Terminated   : True
+Truncated    : False
+OS collision : True
+OS nav fail  : False
+Any collision: True
+Reached end  : False
+----------------------------------------
+Episode      : 6
+Case index   : 5
+Status       : collision
+Steps        : 7
+Terminated   : True
+Truncated    : False
+OS collision : True
+OS nav fail  : False
+Any collision: True
+Reached end  : False
+----------------------------------------
+Episode      : 7
+Case index   : 6
+Status       : no_collision
+Steps        : 7
+Terminated   : True
+Truncated    : False
+OS collision : False
+OS nav fail  : False
+Any collision: False
+Reached end  : True
+----------------------------------------
+Episode      : 8
+Case index   : 7
+Status       : no_collision
+Steps        : 9
+Terminated   : True
+Truncated    : False
+OS collision : False
+OS nav fail  : False
+Any collision: False
+Reached end  : True
+----------------------------------------
+Episode      : 9
+Case index   : 8
+Status       : no_collision
+Steps        : 9
+Terminated   : True
+Truncated    : False
+OS collision : False
+OS nav fail  : False
+Any collision: False
+Reached end  : True
+----------------------------------------
+Episode      : 10
+Case index   : 9
+Status       : collision
+Steps        : 9
+Terminated   : True
+Truncated    : False
+OS collision : True
+OS nav fail  : False
+Any collision: True
+Reached end  : False
+----------------------------------------
+Episode      : 11
+Case index   : 10
+Status       : collision
+Steps        : 7
+Terminated   : True
+Truncated    : False
+OS collision : True
+OS nav fail  : False
+Any collision: True
+Reached end  : False
+----------------------------------------
+Episode      : 12
+Case index   : 11
+Status       : collision
+Steps        : 6
+Terminated   : True
+Truncated    : False
+OS collision : True
+OS nav fail  : False
+Any collision: True
+Reached end  : False
+----------------------------------------
+Episode      : 13
+Case index   : 12
+Status       : collision
+Steps        : 4
+Terminated   : True
+Truncated    : False
+OS collision : True
+OS nav fail  : False
+Any collision: True
+Reached end  : False
+----------------------------------------
+Episode      : 14
+Case index   : 13
+Status       : no_collision
+Steps        : 5
+Terminated   : True
+Truncated    : False
+OS collision : False
+OS nav fail  : False
+Any collision: False
+Reached end  : True
+----------------------------------------
+Episode      : 15
+Case index   : 14
+Status       : collision
+Steps        : 3
+Terminated   : True
+Truncated    : False
+OS collision : True
+OS nav fail  : False
+Any collision: True
+Reached end  : False
+----------------------------------------
+Episode      : 16
+Case index   : 15
+Status       : collision
+Steps        : 3
+Terminated   : True
+Truncated    : False
+OS collision : True
+OS nav fail  : False
+Any collision: True
+Reached end  : False
+----------------------------------------
+Episode      : 17
+Case index   : 16
+Status       : collision
+Steps        : 2
+Terminated   : True
+Truncated    : False
+OS collision : True
+OS nav fail  : False
+Any collision: True
+Reached end  : False
+----------------------------------------
+Episode      : 18
+Case index   : 17
+Status       : collision
+Steps        : 8
+Terminated   : True
+Truncated    : False
+OS collision : True
+OS nav fail  : False
+Any collision: True
+Reached end  : False
+----------------------------------------
+Episode      : 19
+Case index   : 18
+Status       : collision
+Steps        : 6
+Terminated   : True
+Truncated    : False
+OS collision : True
+OS nav fail  : False
+Any collision: True
+Reached end  : False
+----------------------------------------
+Episode      : 20
+Case index   : 19
+Status       : collision
+Steps        : 1
+Terminated   : True
+Truncated    : False
+OS collision : True
+OS nav fail  : False
+Any collision: True
+Reached end  : False
+----------------------------------------
+Episode      : 21
+Case index   : 20
+Status       : no_collision
+Steps        : 8
+Terminated   : True
+Truncated    : False
+OS collision : False
+OS nav fail  : False
+Any collision: False
+Reached end  : True
+----------------------------------------
+Episode      : 22
+Case index   : 21
+Status       : collision
+Steps        : 6
+Terminated   : True
+Truncated    : False
+OS collision : True
+OS nav fail  : False
+Any collision: True
+Reached end  : False
+----------------------------------------
+Episode      : 23
+Case index   : 22
+Status       : collision
+Steps        : 7
+Terminated   : True
+Truncated    : False
+OS collision : True
+OS nav fail  : False
+Any collision: True
+Reached end  : False
+----------------------------------------
+Episode      : 24
+Case index   : 23
+Status       : collision
+Steps        : 9
+Terminated   : True
+Truncated    : False
+OS collision : True
+OS nav fail  : False
+Any collision: True
+Reached end  : False
+----------------------------------------
+Episode      : 25
+Case index   : 24
+Status       : collision
+Steps        : 4
+Terminated   : True
+Truncated    : False
+OS collision : True
+OS nav fail  : False
+Any collision: True
+Reached end  : False
+----------------------------------------
+Episode      : 26
+Case index   : 25
+Status       : collision
+Steps        : 5
+Terminated   : True
+Truncated    : False
+OS collision : True
+OS nav fail  : False
+Any collision: True
+Reached end  : False
+----------------------------------------
+Episode      : 27
+Case index   : 26
+Status       : collision
+Steps        : 3
+Terminated   : True
+Truncated    : False
+OS collision : True
+OS nav fail  : False
+Any collision: True
+Reached end  : False
+----------------------------------------
+Episode      : 28
+Case index   : 27
+Status       : collision
+Steps        : 7
+Terminated   : True
+Truncated    : False
+OS collision : True
+OS nav fail  : False
+Any collision: True
+Reached end  : False
+----------------------------------------
+Episode      : 29
+Case index   : 28
+Status       : collision
+Steps        : 7
+Terminated   : True
+Truncated    : False
+OS collision : True
+OS nav fail  : False
+Any collision: True
+Reached end  : False
+----------------------------------------
+Episode      : 30
+Case index   : 29
+Status       : collision
+Steps        : 6
+Terminated   : True
+Truncated    : False
+OS collision : True
+OS nav fail  : False
+Any collision: True
+Reached end  : False
+----------------------------------------
+Episode      : 31
+Case index   : 30
+Status       : no_collision
+Steps        : 8
+Terminated   : True
+Truncated    : False
+OS collision : False
+OS nav fail  : False
+Any collision: False
+Reached end  : True
+----------------------------------------
+Episode      : 32
+Case index   : 31
+Status       : collision
+Steps        : 3
+Terminated   : True
+Truncated    : False
+OS collision : True
+OS nav fail  : False
+Any collision: True
+Reached end  : False
+----------------------------------------
+Episode      : 33
+Case index   : 32
+Status       : collision
+Steps        : 5
+Terminated   : True
+Truncated    : False
+OS collision : True
+OS nav fail  : False
+Any collision: True
+Reached end  : False
+----------------------------------------
+Episode      : 34
+Case index   : 33
+Status       : collision
+Steps        : 1
+Terminated   : True
+Truncated    : False
+OS collision : True
+OS nav fail  : False
+Any collision: True
+Reached end  : False
+----------------------------------------
+Episode      : 35
+Case index   : 34
+Status       : no_collision
+Steps        : 9
+Terminated   : True
+Truncated    : False
+OS collision : False
+OS nav fail  : False
+Any collision: False
+Reached end  : True
+----------------------------------------
+Episode      : 36
+Case index   : 35
+Status       : collision
+Steps        : 8
+Terminated   : True
+Truncated    : False
+OS collision : True
+OS nav fail  : False
+Any collision: True
+Reached end  : False
+----------------------------------------
+Episode      : 37
+Case index   : 36
+Status       : no_collision
+Steps        : 4
+Terminated   : True
+Truncated    : False
+OS collision : False
+OS nav fail  : False
+Any collision: False
+Reached end  : True
+----------------------------------------
+Episode      : 38
+Case index   : 37
+Status       : collision
+Steps        : 8
+Terminated   : True
+Truncated    : False
+OS collision : True
+OS nav fail  : False
+Any collision: True
+Reached end  : False
+----------------------------------------
+Episode      : 39
+Case index   : 38
+Status       : no_collision
+Steps        : 6
+Terminated   : True
+Truncated    : False
+OS collision : False
+OS nav fail  : False
+Any collision: False
+Reached end  : True
+----------------------------------------
+Episode      : 40
+Case index   : 39
+Status       : collision
+Steps        : 9
+Terminated   : True
+Truncated    : False
+OS collision : True
+OS nav fail  : False
+Any collision: True
+Reached end  : False
+----------------------------------------
+Episode      : 41
+Case index   : 40
+Status       : no_collision
+Steps        : 6
+Terminated   : True
+Truncated    : False
+OS collision : False
+OS nav fail  : False
+Any collision: False
+Reached end  : True
+----------------------------------------
+Episode      : 42
+Case index   : 41
+Status       : collision
+Steps        : 3
+Terminated   : True
+Truncated    : False
+OS collision : True
+OS nav fail  : False
+Any collision: True
+Reached end  : False
+----------------------------------------
+Episode      : 43
+Case index   : 42
+Status       : collision
+Steps        : 7
+Terminated   : True
+Truncated    : False
+OS collision : True
+OS nav fail  : False
+Any collision: True
+Reached end  : False
+----------------------------------------
+Episode      : 44
+Case index   : 43
+Status       : collision
+Steps        : 6
+Terminated   : True
+Truncated    : False
+OS collision : True
+OS nav fail  : False
+Any collision: True
+Reached end  : False
+----------------------------------------
+Episode      : 45
+Case index   : 44
+Status       : no_collision
+Steps        : 6
+Terminated   : True
+Truncated    : False
+OS collision : False
+OS nav fail  : False
+Any collision: False
+Reached end  : True
+----------------------------------------
+Episode      : 46
+Case index   : 45
+Status       : collision
+Steps        : 9
+Terminated   : True
+Truncated    : False
+OS collision : True
+OS nav fail  : False
+Any collision: True
+Reached end  : False
+----------------------------------------
+Episode      : 47
+Case index   : 46
+Status       : collision
+Steps        : 9
+Terminated   : True
+Truncated    : False
+OS collision : True
+OS nav fail  : False
+Any collision: True
+Reached end  : False
+----------------------------------------
+Episode      : 48
+Case index   : 47
+Status       : collision
+Steps        : 8
+Terminated   : True
+Truncated    : False
+OS collision : True
+OS nav fail  : False
+Any collision: True
+Reached end  : False
+----------------------------------------
+Episode      : 49
+Case index   : 48
+Status       : no_collision
+Steps        : 7
+Terminated   : True
+Truncated    : False
+OS collision : False
+OS nav fail  : False
+Any collision: False
+Reached end  : True
+----------------------------------------
+Episode      : 50
+Case index   : 49
+Status       : collision
+Steps        : 3
+Terminated   : True
+Truncated    : False
+OS collision : True
+OS nav fail  : False
+Any collision: True
+Reached end  : False
+----------------------------------------
+Episode      : 51
+Case index   : 50
+Status       : collision
+Steps        : 5
+Terminated   : True
+Truncated    : False
+OS collision : True
+OS nav fail  : False
+Any collision: True
+Reached end  : False
+----------------------------------------
+Episode      : 52
+Case index   : 51
+Status       : no_collision
+Steps        : 4
+Terminated   : True
+Truncated    : False
+OS collision : False
+OS nav fail  : False
+Any collision: False
+Reached end  : True
+----------------------------------------
+Episode      : 53
+Case index   : 52
+Status       : no_collision
+Steps        : 7
+Terminated   : True
+Truncated    : False
+OS collision : False
+OS nav fail  : False
+Any collision: False
+Reached end  : True
+----------------------------------------
+Episode      : 54
+Case index   : 53
+Status       : collision
+Steps        : 3
+Terminated   : True
+Truncated    : False
+OS collision : True
+OS nav fail  : False
+Any collision: True
+Reached end  : False
+----------------------------------------
+Episode      : 55
+Case index   : 54
+Status       : no_collision
+Steps        : 6
+Terminated   : True
+Truncated    : False
+OS collision : False
+OS nav fail  : False
+Any collision: False
+Reached end  : True
+----------------------------------------
+Episode      : 56
+Case index   : 55
+Status       : no_collision
+Steps        : 7
+Terminated   : True
+Truncated    : False
+OS collision : False
+OS nav fail  : False
+Any collision: False
+Reached end  : True
+----------------------------------------
+Episode      : 57
+Case index   : 56
+Status       : no_collision
+Steps        : 6
+Terminated   : True
+Truncated    : False
+OS collision : False
+OS nav fail  : False
+Any collision: False
+Reached end  : True
+----------------------------------------
+Episode      : 58
+Case index   : 57
+Status       : collision
+Steps        : 6
+Terminated   : True
+Truncated    : False
+OS collision : True
+OS nav fail  : False
+Any collision: True
+Reached end  : False
+----------------------------------------
+Episode      : 59
+Case index   : 58
+Status       : collision
+Steps        : 3
+Terminated   : True
+Truncated    : False
+OS collision : True
+OS nav fail  : False
+Any collision: True
+Reached end  : False
+----------------------------------------
+Episode      : 60
+Case index   : 59
+Status       : collision
+Steps        : 4
+Terminated   : True
+Truncated    : False
+OS collision : True
+OS nav fail  : False
+Any collision: True
+Reached end  : False
+----------------------------------------
+Episode      : 61
+Case index   : 60
+Status       : collision
+Steps        : 2
+Terminated   : True
+Truncated    : False
+OS collision : True
+OS nav fail  : False
+Any collision: True
+Reached end  : False
+----------------------------------------
+Episode      : 62
+Case index   : 61
+Status       : collision
+Steps        : 6
+Terminated   : True
+Truncated    : False
+OS collision : True
+OS nav fail  : False
+Any collision: True
+Reached end  : False
+----------------------------------------
+Episode      : 63
+Case index   : 62
+Status       : collision
+Steps        : 8
+Terminated   : True
+Truncated    : False
+OS collision : True
+OS nav fail  : False
+Any collision: True
+Reached end  : False
+----------------------------------------
+Episode      : 64
+Case index   : 63
+Status       : collision
+Steps        : 6
+Terminated   : True
+Truncated    : False
+OS collision : True
+OS nav fail  : False
+Any collision: True
+Reached end  : False
+----------------------------------------
+Episode      : 65
+Case index   : 64
+Status       : no_collision
+Steps        : 3
+Terminated   : True
+Truncated    : False
+OS collision : False
+OS nav fail  : False
+Any collision: False
+Reached end  : True
+----------------------------------------
+Episode      : 66
+Case index   : 65
+Status       : collision
+Steps        : 8
+Terminated   : True
+Truncated    : False
+OS collision : True
+OS nav fail  : False
+Any collision: True
+Reached end  : False
+----------------------------------------
+Episode      : 67
+Case index   : 66
+Status       : collision
+Steps        : 7
+Terminated   : True
+Truncated    : False
+OS collision : True
+OS nav fail  : False
+Any collision: True
+Reached end  : False
+----------------------------------------
+Episode      : 68
+Case index   : 67
+Status       : no_collision
+Steps        : 7
+Terminated   : True
+Truncated    : False
+OS collision : False
+OS nav fail  : False
+Any collision: False
+Reached end  : True
+----------------------------------------
+Episode      : 69
+Case index   : 68
+Status       : no_collision
+Steps        : 4
+Terminated   : True
+Truncated    : False
+OS collision : False
+OS nav fail  : False
+Any collision: False
+Reached end  : True
+----------------------------------------
+Episode      : 70
+Case index   : 69
+Status       : collision
+Steps        : 2
+Terminated   : True
+Truncated    : False
+OS collision : True
+OS nav fail  : False
+Any collision: True
+Reached end  : False
+----------------------------------------
+Episode      : 71
+Case index   : 70
+Status       : collision
+Steps        : 5
+Terminated   : True
+Truncated    : False
+OS collision : True
+OS nav fail  : False
+Any collision: True
+Reached end  : False
+----------------------------------------
+Episode      : 72
+Case index   : 71
+Status       : no_collision
+Steps        : 9
+Terminated   : True
+Truncated    : False
+OS collision : False
+OS nav fail  : False
+Any collision: False
+Reached end  : True
+----------------------------------------
+Episode      : 73
+Case index   : 72
+Status       : collision
+Steps        : 6
+Terminated   : True
+Truncated    : False
+OS collision : True
+OS nav fail  : False
+Any collision: True
+Reached end  : False
+----------------------------------------
+Episode      : 74
+Case index   : 73
+Status       : collision
+Steps        : 3
+Terminated   : True
+Truncated    : False
+OS collision : True
+OS nav fail  : False
+Any collision: True
+Reached end  : False
+----------------------------------------
+Episode      : 75
+Case index   : 74
+Status       : collision
+Steps        : 5
+Terminated   : True
+Truncated    : False
+OS collision : True
+OS nav fail  : False
+Any collision: True
+Reached end  : False
+----------------------------------------
+Episode      : 76
+Case index   : 75
+Status       : no_collision
+Steps        : 6
+Terminated   : True
+Truncated    : False
+OS collision : False
+OS nav fail  : False
+Any collision: False
+Reached end  : True
+----------------------------------------
+Episode      : 77
+Case index   : 76
+Status       : collision
+Steps        : 6
+Terminated   : True
+Truncated    : False
+OS collision : True
+OS nav fail  : False
+Any collision: True
+Reached end  : False
+----------------------------------------
+Episode      : 78
+Case index   : 77
+Status       : no_collision
+Steps        : 5
+Terminated   : True
+Truncated    : False
+OS collision : False
+OS nav fail  : False
+Any collision: False
+Reached end  : True
+----------------------------------------
+Episode      : 79
+Case index   : 78
+Status       : collision
+Steps        : 9
+Terminated   : True
+Truncated    : False
+OS collision : True
+OS nav fail  : False
+Any collision: True
+Reached end  : False
+----------------------------------------
+Episode      : 80
+Case index   : 79
+Status       : collision
+Steps        : 5
+Terminated   : True
+Truncated    : False
+OS collision : True
+OS nav fail  : False
+Any collision: True
+Reached end  : False
+----------------------------------------
+Episode      : 81
+Case index   : 80
+Status       : no_collision
+Steps        : 6
+Terminated   : True
+Truncated    : False
+OS collision : False
+OS nav fail  : False
+Any collision: False
+Reached end  : True
+----------------------------------------
+Episode      : 82
+Case index   : 81
+Status       : collision
+Steps        : 3
+Terminated   : True
+Truncated    : False
+OS collision : True
+OS nav fail  : False
+Any collision: True
+Reached end  : False
+----------------------------------------
+Episode      : 83
+Case index   : 82
+Status       : collision
+Steps        : 2
+Terminated   : True
+Truncated    : False
+OS collision : True
+OS nav fail  : False
+Any collision: True
+Reached end  : False
+----------------------------------------
+Episode      : 84
+Case index   : 83
+Status       : collision
+Steps        : 7
+Terminated   : True
+Truncated    : False
+OS collision : True
+OS nav fail  : False
+Any collision: True
+Reached end  : False
+----------------------------------------
+Episode      : 85
+Case index   : 84
+Status       : collision
+Steps        : 5
+Terminated   : True
+Truncated    : False
+OS collision : True
+OS nav fail  : False
+Any collision: True
+Reached end  : False
+----------------------------------------
+Episode      : 86
+Case index   : 85
+Status       : collision
+Steps        : 9
+Terminated   : True
+Truncated    : False
+OS collision : True
+OS nav fail  : False
+Any collision: True
+Reached end  : False
+----------------------------------------
+Episode      : 87
+Case index   : 86
+Status       : collision
+Steps        : 9
+Terminated   : True
+Truncated    : False
+OS collision : True
+OS nav fail  : False
+Any collision: True
+Reached end  : False
+----------------------------------------
+Episode      : 88
+Case index   : 87
+Status       : collision
+Steps        : 5
+Terminated   : True
+Truncated    : False
+OS collision : True
+OS nav fail  : False
+Any collision: True
+Reached end  : False
+----------------------------------------
+Episode      : 89
+Case index   : 88
+Status       : collision
+Steps        : 4
+Terminated   : True
+Truncated    : False
+OS collision : True
+OS nav fail  : False
+Any collision: True
+Reached end  : False
+----------------------------------------
+Episode      : 90
+Case index   : 89
+Status       : no_collision
+Steps        : 7
+Terminated   : True
+Truncated    : False
+OS collision : False
+OS nav fail  : False
+Any collision: False
+Reached end  : True
+----------------------------------------
+Episode      : 91
+Case index   : 90
+Status       : collision
+Steps        : 4
+Terminated   : True
+Truncated    : False
+OS collision : True
+OS nav fail  : False
+Any collision: True
+Reached end  : False
+----------------------------------------
+Episode      : 92
+Case index   : 91
+Status       : no_collision
+Steps        : 6
+Terminated   : True
+Truncated    : False
+OS collision : False
+OS nav fail  : False
+Any collision: False
+Reached end  : True
+----------------------------------------
+Episode      : 93
+Case index   : 92
+Status       : collision
+Steps        : 7
+Terminated   : True
+Truncated    : False
+OS collision : True
+OS nav fail  : False
+Any collision: True
+Reached end  : False
+----------------------------------------
+Episode      : 94
+Case index   : 93
+Status       : no_collision
+Steps        : 7
+Terminated   : True
+Truncated    : False
+OS collision : False
+OS nav fail  : False
+Any collision: False
+Reached end  : True
+----------------------------------------
+Episode      : 95
+Case index   : 94
+Status       : no_collision
+Steps        : 7
+Terminated   : True
+Truncated    : False
+OS collision : False
+OS nav fail  : False
+Any collision: False
+Reached end  : True
+----------------------------------------
+Episode      : 96
+Case index   : 95
+Status       : no_collision
+Steps        : 6
+Terminated   : True
+Truncated    : False
+OS collision : False
+OS nav fail  : False
+Any collision: False
+Reached end  : True
+----------------------------------------
+Episode      : 97
+Case index   : 96
+Status       : collision
+Steps        : 6
+Terminated   : True
+Truncated    : False
+OS collision : True
+OS nav fail  : False
+Any collision: True
+Reached end  : False
+----------------------------------------
+Episode      : 98
+Case index   : 97
+Status       : collision
+Steps        : 8
+Terminated   : True
+Truncated    : False
+OS collision : True
+OS nav fail  : False
+Any collision: True
+Reached end  : False
+----------------------------------------
+Episode      : 99
+Case index   : 98
+Status       : collision
+Steps        : 9
+Terminated   : True
+Truncated    : False
+OS collision : True
+OS nav fail  : False
+Any collision: True
+Reached end  : False
+----------------------------------------
+Episode      : 100
+Case index   : 99
+Status       : no_collision
+Steps        : 7
+Terminated   : True
+Truncated    : False
+OS collision : False
+OS nav fail  : False
+Any collision: False
+Reached end  : True
+----------------------------------------
+
+SUMMARY
+========================================
+no_collision        :   32/ 100 (  32.00 %)
+target_collision    :    0/ 100 (   0.00 %)
+collision           :   68/ 100 (  68.00 %)
+nav_failure         :    0/ 100 (   0.00 %)
+other               :    0/ 100 (   0.00 %)
