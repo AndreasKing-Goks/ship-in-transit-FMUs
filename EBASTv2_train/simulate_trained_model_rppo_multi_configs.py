@@ -52,9 +52,6 @@ model_path                      = ROOT / "EBASTv2_train" / "trained_model" / mod
 # Log path
 log_path                        = ROOT / "EBASTv2_train" / "simulated_trained_model" / "episode_recap_rppo_multi_configs.txt"
 
-# Get the save path for animation
-saved_animation_path            = ROOT / "EBASTv2_train" / "simulated_trained_model" / "simulated_trained_model_rppo_multi_configs.gif"
-
 # Evaluation recap
 recap_path                      = ROOT / "EBASTv2_train" / "simulated_trained_model" / "evaluation_recap_rppo_multi_configs.txt"
 
@@ -128,6 +125,9 @@ if simulate:
     # - .gif
     # - .avi
     # - .mov
+    
+    # Get the save path for animation
+    saved_animation_path            = ROOT / "EBASTv2_train" / "simulated_trained_model" / "paper_results" / f"{case_idx}_rppo_multi_configs.gif"
 
     # Animate Simulation
     env.instance.AnimateFleetTrajectory(
@@ -150,7 +150,7 @@ if simulate:
             plot_inter_wp_proj=False,
             with_labels=True,
             precompute_ship_outlines=True,
-            # save_path=saved_animation_path,
+            save_path=saved_animation_path,
             writer_fps=20,
             palette=None,
             blit=True,
@@ -167,7 +167,7 @@ if simulate:
     # +--------------+--------------+---------------+
     
     # Plot Trajectory
-    saved_figure_path = ROOT / "EBASTv2_train" / "simulated_trained_model" / "plots_for_paper" / f"{case_idx}_rppo_multi_configs.pdf"
+    saved_figure_path = ROOT / "EBASTv2_train" / "simulated_trained_model" / "paper_results" / f"{case_idx}_rppo_multi_configs.pdf"
     # saved_figure_path = None
     # fig_widt = 5.0 for 'quick', 2.3 for 'paper'
     env.instance.PlotFleetTrajectory(
@@ -186,7 +186,7 @@ if simulate:
     )
 
 evaluate_failure    = False    
-evaluate_failure    = True
+# evaluate_failure    = True
 
 if evaluate_failure:
     indices=list(range(100))

@@ -8,14 +8,14 @@ EPISODE RESULTS
 ----------------------------------------
 Episode      : 1
 Case index   : 0
-Status       : no_collision
+Status       : collision
 Steps        : 9
 Terminated   : True
 Truncated    : False
-OS collision : False
+OS collision : True
 OS nav fail  : False
-Any collision: False
-Reached end  : True
+Any collision: True
+Reached end  : False
 ----------------------------------------
 Episode      : 2
 Case index   : 1
@@ -31,7 +31,7 @@ Reached end  : False
 Episode      : 3
 Case index   : 2
 Status       : collision
-Steps        : 4
+Steps        : 3
 Terminated   : True
 Truncated    : False
 OS collision : True
@@ -41,17 +41,6 @@ Reached end  : False
 ----------------------------------------
 Episode      : 4
 Case index   : 3
-Status       : no_collision
-Steps        : 8
-Terminated   : True
-Truncated    : False
-OS collision : False
-OS nav fail  : False
-Any collision: False
-Reached end  : True
-----------------------------------------
-Episode      : 5
-Case index   : 4
 Status       : collision
 Steps        : 4
 Terminated   : True
@@ -60,6 +49,17 @@ OS collision : True
 OS nav fail  : False
 Any collision: True
 Reached end  : False
+----------------------------------------
+Episode      : 5
+Case index   : 4
+Status       : no_collision
+Steps        : 5
+Terminated   : True
+Truncated    : False
+OS collision : False
+OS nav fail  : False
+Any collision: False
+Reached end  : True
 ----------------------------------------
 Episode      : 6
 Case index   : 5
@@ -85,30 +85,30 @@ Reached end  : True
 ----------------------------------------
 Episode      : 8
 Case index   : 7
-Status       : no_collision
-Steps        : 9
+Status       : collision
+Steps        : 8
 Terminated   : True
 Truncated    : False
-OS collision : False
+OS collision : True
 OS nav fail  : False
-Any collision: False
-Reached end  : True
+Any collision: True
+Reached end  : False
 ----------------------------------------
 Episode      : 9
 Case index   : 8
-Status       : no_collision
-Steps        : 9
+Status       : collision
+Steps        : 2
 Terminated   : True
 Truncated    : False
-OS collision : False
+OS collision : True
 OS nav fail  : False
-Any collision: False
-Reached end  : True
+Any collision: True
+Reached end  : False
 ----------------------------------------
 Episode      : 10
 Case index   : 9
 Status       : collision
-Steps        : 9
+Steps        : 8
 Terminated   : True
 Truncated    : False
 OS collision : True
@@ -119,7 +119,7 @@ Reached end  : False
 Episode      : 11
 Case index   : 10
 Status       : collision
-Steps        : 7
+Steps        : 9
 Terminated   : True
 Truncated    : False
 OS collision : True
@@ -163,7 +163,7 @@ Reached end  : True
 Episode      : 15
 Case index   : 14
 Status       : collision
-Steps        : 3
+Steps        : 2
 Terminated   : True
 Truncated    : False
 OS collision : True
@@ -195,25 +195,25 @@ Reached end  : False
 ----------------------------------------
 Episode      : 18
 Case index   : 17
-Status       : collision
-Steps        : 8
+Status       : no_collision
+Steps        : 9
 Terminated   : True
 Truncated    : False
-OS collision : True
+OS collision : False
 OS nav fail  : False
-Any collision: True
-Reached end  : False
+Any collision: False
+Reached end  : True
 ----------------------------------------
 Episode      : 19
 Case index   : 18
-Status       : collision
-Steps        : 6
+Status       : no_collision
+Steps        : 8
 Terminated   : True
 Truncated    : False
-OS collision : True
+OS collision : False
 OS nav fail  : False
-Any collision: True
-Reached end  : False
+Any collision: False
+Reached end  : True
 ----------------------------------------
 Episode      : 20
 Case index   : 19
@@ -228,14 +228,14 @@ Reached end  : False
 ----------------------------------------
 Episode      : 21
 Case index   : 20
-Status       : no_collision
-Steps        : 8
+Status       : collision
+Steps        : 7
 Terminated   : True
 Truncated    : False
-OS collision : False
+OS collision : True
 OS nav fail  : False
-Any collision: False
-Reached end  : True
+Any collision: True
+Reached end  : False
 ----------------------------------------
 Episode      : 22
 Case index   : 21
@@ -262,7 +262,7 @@ Reached end  : False
 Episode      : 24
 Case index   : 23
 Status       : collision
-Steps        : 9
+Steps        : 3
 Terminated   : True
 Truncated    : False
 OS collision : True
@@ -361,7 +361,7 @@ Reached end  : False
 Episode      : 33
 Case index   : 32
 Status       : collision
-Steps        : 5
+Steps        : 6
 Terminated   : True
 Truncated    : False
 OS collision : True
@@ -394,7 +394,7 @@ Reached end  : True
 Episode      : 36
 Case index   : 35
 Status       : collision
-Steps        : 8
+Steps        : 7
 Terminated   : True
 Truncated    : False
 OS collision : True
@@ -404,14 +404,14 @@ Reached end  : False
 ----------------------------------------
 Episode      : 37
 Case index   : 36
-Status       : no_collision
-Steps        : 4
+Status       : collision
+Steps        : 3
 Terminated   : True
 Truncated    : False
-OS collision : False
+OS collision : True
 OS nav fail  : False
-Any collision: False
-Reached end  : True
+Any collision: True
+Reached end  : False
 ----------------------------------------
 Episode      : 38
 Case index   : 37
@@ -482,7 +482,7 @@ Reached end  : False
 Episode      : 44
 Case index   : 43
 Status       : collision
-Steps        : 6
+Steps        : 5
 Terminated   : True
 Truncated    : False
 OS collision : True
@@ -526,7 +526,7 @@ Reached end  : False
 Episode      : 48
 Case index   : 47
 Status       : collision
-Steps        : 8
+Steps        : 9
 Terminated   : True
 Truncated    : False
 OS collision : True
@@ -547,19 +547,30 @@ Reached end  : True
 ----------------------------------------
 Episode      : 50
 Case index   : 49
-Status       : collision
-Steps        : 3
+Status       : no_collision
+Steps        : 6
 Terminated   : True
 Truncated    : False
-OS collision : True
+OS collision : False
 OS nav fail  : False
-Any collision: True
-Reached end  : False
+Any collision: False
+Reached end  : True
 ----------------------------------------
 Episode      : 51
 Case index   : 50
+Status       : no_collision
+Steps        : 6
+Terminated   : True
+Truncated    : False
+OS collision : False
+OS nav fail  : False
+Any collision: False
+Reached end  : True
+----------------------------------------
+Episode      : 52
+Case index   : 51
 Status       : collision
-Steps        : 5
+Steps        : 4
 Terminated   : True
 Truncated    : False
 OS collision : True
@@ -567,27 +578,16 @@ OS nav fail  : False
 Any collision: True
 Reached end  : False
 ----------------------------------------
-Episode      : 52
-Case index   : 51
-Status       : no_collision
-Steps        : 4
-Terminated   : True
-Truncated    : False
-OS collision : False
-OS nav fail  : False
-Any collision: False
-Reached end  : True
-----------------------------------------
 Episode      : 53
 Case index   : 52
-Status       : no_collision
-Steps        : 7
+Status       : collision
+Steps        : 2
 Terminated   : True
 Truncated    : False
-OS collision : False
+OS collision : True
 OS nav fail  : False
-Any collision: False
-Reached end  : True
+Any collision: True
+Reached end  : False
 ----------------------------------------
 Episode      : 54
 Case index   : 53
@@ -624,14 +624,14 @@ Reached end  : True
 ----------------------------------------
 Episode      : 57
 Case index   : 56
-Status       : no_collision
+Status       : collision
 Steps        : 6
 Terminated   : True
 Truncated    : False
-OS collision : False
+OS collision : True
 OS nav fail  : False
-Any collision: False
-Reached end  : True
+Any collision: True
+Reached end  : False
 ----------------------------------------
 Episode      : 58
 Case index   : 57
@@ -679,14 +679,14 @@ Reached end  : False
 ----------------------------------------
 Episode      : 62
 Case index   : 61
-Status       : collision
+Status       : no_collision
 Steps        : 6
 Terminated   : True
 Truncated    : False
-OS collision : True
+OS collision : False
 OS nav fail  : False
-Any collision: True
-Reached end  : False
+Any collision: False
+Reached end  : True
 ----------------------------------------
 Episode      : 63
 Case index   : 62
@@ -734,17 +734,6 @@ Reached end  : False
 ----------------------------------------
 Episode      : 67
 Case index   : 66
-Status       : collision
-Steps        : 7
-Terminated   : True
-Truncated    : False
-OS collision : True
-OS nav fail  : False
-Any collision: True
-Reached end  : False
-----------------------------------------
-Episode      : 68
-Case index   : 67
 Status       : no_collision
 Steps        : 7
 Terminated   : True
@@ -753,6 +742,17 @@ OS collision : False
 OS nav fail  : False
 Any collision: False
 Reached end  : True
+----------------------------------------
+Episode      : 68
+Case index   : 67
+Status       : collision
+Steps        : 4
+Terminated   : True
+Truncated    : False
+OS collision : True
+OS nav fail  : False
+Any collision: True
+Reached end  : False
 ----------------------------------------
 Episode      : 69
 Case index   : 68
@@ -789,25 +789,25 @@ Reached end  : False
 ----------------------------------------
 Episode      : 72
 Case index   : 71
-Status       : no_collision
-Steps        : 9
-Terminated   : True
-Truncated    : False
-OS collision : False
-OS nav fail  : False
-Any collision: False
-Reached end  : True
-----------------------------------------
-Episode      : 73
-Case index   : 72
 Status       : collision
-Steps        : 6
+Steps        : 9
 Terminated   : True
 Truncated    : False
 OS collision : True
 OS nav fail  : False
 Any collision: True
 Reached end  : False
+----------------------------------------
+Episode      : 73
+Case index   : 72
+Status       : no_collision
+Steps        : 7
+Terminated   : True
+Truncated    : False
+OS collision : False
+OS nav fail  : False
+Any collision: False
+Reached end  : True
 ----------------------------------------
 Episode      : 74
 Case index   : 73
@@ -823,7 +823,7 @@ Reached end  : False
 Episode      : 75
 Case index   : 74
 Status       : collision
-Steps        : 5
+Steps        : 6
 Terminated   : True
 Truncated    : False
 OS collision : True
@@ -844,14 +844,14 @@ Reached end  : True
 ----------------------------------------
 Episode      : 77
 Case index   : 76
-Status       : collision
-Steps        : 6
+Status       : no_collision
+Steps        : 7
 Terminated   : True
 Truncated    : False
-OS collision : True
+OS collision : False
 OS nav fail  : False
-Any collision: True
-Reached end  : False
+Any collision: False
+Reached end  : True
 ----------------------------------------
 Episode      : 78
 Case index   : 77
@@ -878,7 +878,7 @@ Reached end  : False
 Episode      : 80
 Case index   : 79
 Status       : collision
-Steps        : 5
+Steps        : 6
 Terminated   : True
 Truncated    : False
 OS collision : True
@@ -911,7 +911,7 @@ Reached end  : False
 Episode      : 83
 Case index   : 82
 Status       : collision
-Steps        : 2
+Steps        : 3
 Terminated   : True
 Truncated    : False
 OS collision : True
@@ -922,7 +922,7 @@ Reached end  : False
 Episode      : 84
 Case index   : 83
 Status       : collision
-Steps        : 7
+Steps        : 8
 Terminated   : True
 Truncated    : False
 OS collision : True
@@ -932,14 +932,14 @@ Reached end  : False
 ----------------------------------------
 Episode      : 85
 Case index   : 84
-Status       : collision
-Steps        : 5
+Status       : no_collision
+Steps        : 9
 Terminated   : True
 Truncated    : False
-OS collision : True
+OS collision : False
 OS nav fail  : False
-Any collision: True
-Reached end  : False
+Any collision: False
+Reached end  : True
 ----------------------------------------
 Episode      : 86
 Case index   : 85
@@ -965,14 +965,14 @@ Reached end  : False
 ----------------------------------------
 Episode      : 88
 Case index   : 87
-Status       : collision
-Steps        : 5
+Status       : no_collision
+Steps        : 8
 Terminated   : True
 Truncated    : False
-OS collision : True
+OS collision : False
 OS nav fail  : False
-Any collision: True
-Reached end  : False
+Any collision: False
+Reached end  : True
 ----------------------------------------
 Episode      : 89
 Case index   : 88
@@ -999,7 +999,7 @@ Reached end  : True
 Episode      : 91
 Case index   : 90
 Status       : collision
-Steps        : 4
+Steps        : 5
 Terminated   : True
 Truncated    : False
 OS collision : True
@@ -1009,25 +1009,25 @@ Reached end  : False
 ----------------------------------------
 Episode      : 92
 Case index   : 91
-Status       : no_collision
-Steps        : 6
-Terminated   : True
-Truncated    : False
-OS collision : False
-OS nav fail  : False
-Any collision: False
-Reached end  : True
-----------------------------------------
-Episode      : 93
-Case index   : 92
 Status       : collision
-Steps        : 7
+Steps        : 4
 Terminated   : True
 Truncated    : False
 OS collision : True
 OS nav fail  : False
 Any collision: True
 Reached end  : False
+----------------------------------------
+Episode      : 93
+Case index   : 92
+Status       : no_collision
+Steps        : 7
+Terminated   : True
+Truncated    : False
+OS collision : False
+OS nav fail  : False
+Any collision: False
+Reached end  : True
 ----------------------------------------
 Episode      : 94
 Case index   : 93
@@ -1065,7 +1065,7 @@ Reached end  : True
 Episode      : 97
 Case index   : 96
 Status       : collision
-Steps        : 6
+Steps        : 5
 Terminated   : True
 Truncated    : False
 OS collision : True
@@ -1076,7 +1076,7 @@ Reached end  : False
 Episode      : 98
 Case index   : 97
 Status       : collision
-Steps        : 8
+Steps        : 9
 Terminated   : True
 Truncated    : False
 OS collision : True
@@ -1087,7 +1087,7 @@ Reached end  : False
 Episode      : 99
 Case index   : 98
 Status       : collision
-Steps        : 9
+Steps        : 7
 Terminated   : True
 Truncated    : False
 OS collision : True
@@ -1111,6 +1111,6 @@ SUMMARY
 ========================================
 no_collision        :   32/ 100 (  32.00 %) | mean episode length: 6.6
 target_collision    :    0/ 100 (   0.00 %) | mean episode length: 0.0
-collision           :   68/ 100 (  68.00 %) | mean episode length: 5.6
+collision           :   68/ 100 (  68.00 %) | mean episode length: 5.4
 nav_failure         :    0/ 100 (   0.00 %) | mean episode length: 0.0
 other               :    0/ 100 (   0.00 %) | mean episode length: 0.0

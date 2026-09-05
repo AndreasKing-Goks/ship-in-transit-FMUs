@@ -31,7 +31,7 @@ import numpy as np
 # Handle paths
 # =========================
 # Trained Model Name
-model_name                      = "EB-ASTv2_train_rppo_2026-07-26_21-08-37_330c"
+model_name                      = "EB-ASTv2_train_rppo_2026-08-22_04-51-03_4942"
 
 # Get the config path
 config_path                     = ROOT / "EBASTv2_train" / "EBASTv2_train_2.yaml"
@@ -49,11 +49,8 @@ model_path                      = ROOT / "EBASTv2_train" / "trained_model" / mod
 # Log path
 log_path                        = ROOT / "EBASTv2_train" / "simulated_trained_model" / "episode_recap_rppo.txt"
 
-# Get the save path for animation
-saved_animation_path            = ROOT / "EBASTv2_train" / "simulated_trained_model" / "simulated_trained_model_rppo.gif"
-
 # Evaluation recap
-recap_path                      = ROOT / "EBASTv2_train" / "simulated_trained_model" / "evaluation_recap_rppo.txt"
+recap_path                      = ROOT / "EBASTv2_train" / "simulated_trained_model" / "evaluation_recap_rppo_1.txt"
 
 # =========================
 # Instantiate the environment wrapper
@@ -87,7 +84,7 @@ if simulate:
     # env.set_for_evaluation()
     
     # Reset the trained model
-    case_idx    = 96 #None
+    case_idx    = 89 #None
     seed        = None
     obs, _      = env.reset(seed=seed, specific_case_idx=case_idx)
 
@@ -124,11 +121,14 @@ if simulate:
     # - .gif
     # - .avi
     # - .mov
+    
+    # Get the save path for animation
+    saved_animation_path            = ROOT / "EBASTv2_train" / "simulated_trained_model" / "paper_results" / f"{case_idx}_rppo.gif"
 
     # Animate Simulation
     env.instance.AnimateFleetTrajectory(
             ship_ids=None,  
-            show=True,
+            show=False,
             block=True,
             mode="quick",
             fig_width=7.0,
@@ -146,7 +146,7 @@ if simulate:
             plot_inter_wp_proj=False,
             with_labels=True,
             precompute_ship_outlines=True,
-            # save_path=saved_animation_path,
+            save_path=saved_animation_path,
             writer_fps=20,
             palette=None,
             blit=True,
@@ -163,7 +163,7 @@ if simulate:
     # +--------------+--------------+---------------+
     
     # Plot Trajectory
-    saved_figure_path = ROOT / "EBASTv2_train" / "simulated_trained_model" / "plots_for_paper" / f"{case_idx}_rppo.pdf"
+    saved_figure_path = ROOT / "EBASTv2_train" / "simulated_trained_model" / "paper_results" / f"{case_idx}_rppo.pdf"
     # saved_figure_path = None
     # fig_widt = 5.0 for 'quick', 2.3 for 'paper'
     env.instance.PlotFleetTrajectory(

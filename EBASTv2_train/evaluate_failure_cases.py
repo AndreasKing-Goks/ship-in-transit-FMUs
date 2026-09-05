@@ -61,6 +61,14 @@ def evaluate_failure_cases(
         "nav_failure": 0,
         "other": 0,
     }
+    
+    status_eps_len = {
+        "no_collision": [],
+        "target_collision": [],
+        "collision": [],
+        "nav_failure": [],
+        "other": [],
+    }
 
     episode_results = []
     # ==========================================================
@@ -139,6 +147,7 @@ def evaluate_failure_cases(
             status = "other"
 
         status_count[status] += 1
+        status_eps_len[status].append(step_count)
 
         # Store complete episode recap
         episode_result = {
@@ -165,12 +174,16 @@ def evaluate_failure_cases(
     # ==========================================================
     total = sum(status_count.values())
     percentages = {}
+    mean_eps_lengths = {}
     for status, count in status_count.items():
         if total > 0:
             percentage = count / total * 100.0
+            mean_eps_length = sum(status_eps_len[status]) / len(status_eps_len[status]) if status_eps_len[status] else 0.0
         else:
             percentage = 0.0
+            mean_eps_length = 0.0
         percentages[status] = percentage
+        mean_eps_lengths[status] = mean_eps_length
 
     # ==========================================================
     # Write recap
@@ -209,10 +222,12 @@ def evaluate_failure_cases(
 
         for status, count in status_count.items():
             percentage = percentages[status]
+            mean_eps_length = mean_eps_lengths[status]
             file.write(
                 f"{status:<20}: "
                 f"{count:4d}/{total:4d} "
-                f"({percentage:7.2f} %)\n"
+                f"({percentage:7.2f} %) | "
+                f"mean episode length: {mean_eps_length:.1f}\n"
             )
 
     # ==========================================================
@@ -226,7 +241,8 @@ def evaluate_failure_cases(
         print(
             f"{status:<20}: "
             f"{count:4d}/{total:4d} "
-            f"({percentages[status]:7.2f} %)"
+            f"({percentages[status]:7.2f} %) | "
+            f"mean episode length: {mean_eps_lengths[status]:.1f}"
         )
 
     print(f"\nEvaluation recap saved to:\n{recap_path}")

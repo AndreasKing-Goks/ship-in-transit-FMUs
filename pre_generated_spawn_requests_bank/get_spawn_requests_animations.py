@@ -29,7 +29,7 @@ saved_animation_folder_path     = ROOT / "pre_generated_spawn_requests_bank" / "
 saved_animation_folder_path.mkdir(parents=True, exist_ok=True)
 
 # Case Index
-case_idxs                       = [40, 50] #range(20)
+case_idxs                       = [60, 70, 80, 90, 100] #range(20)
 
 # Print and save encounter description
 description_lines = []
@@ -137,7 +137,7 @@ for case_idx in case_idxs:
     # +--------------+--------------+---------------+
     
     # Plot Trajectory
-    saved_figure_path = ROOT / "EBASTv2_train" / "simulated_trained_model" / "plots_for_paper" / f"{case_idx}_scenario.pdf"
+    saved_figure_path = ROOT / "EBASTv2_train" / "simulated_trained_model" / "plots_for_paper" / f"{case_idx}_scenario.png"
     # saved_figure_path = None
     # fig_widt = 5.0 for 'quick', 2.3 for 'paper'
     instance.PlotFleetTrajectory(
