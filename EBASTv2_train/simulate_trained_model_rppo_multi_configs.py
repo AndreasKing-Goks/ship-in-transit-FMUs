@@ -50,10 +50,10 @@ model_path                      = ROOT / "EBASTv2_train" / "trained_model" / mod
 # model_path                      = ROOT / "EBASTv2_train" / "trained_model" / "checkpoints" / "EB-ASTv2_train_rppo_8000000_steps.zip"
 
 # Log path
-log_path                        = ROOT / "EBASTv2_train" / "simulated_trained_model" / "episode_recap_rppo_multi_configs.txt"
+log_path                        = ROOT / "EBASTv2_train" / "simulated_trained_model" / "episode_recap_rppo_multi_configs_after.txt"
 
 # Evaluation recap
-recap_path                      = ROOT / "EBASTv2_train" / "simulated_trained_model" / "evaluation_recap_rppo_multi_configs.txt"
+recap_path                      = ROOT / "EBASTv2_train" / "simulated_trained_model" / "evaluation_recap_rppo_multi_configs_after.txt"
 
 # =========================
 # Instantiate the environment wrapper
@@ -80,7 +80,7 @@ recurrent_ppo_model = RecurrentPPO.load(model_path)
 # Run the trained model and log the episode
 # =========================
 simulate    = False
-simulate    = True
+# simulate    = True
 
 if simulate:
     # Set the environment to evaluation mode
@@ -186,7 +186,7 @@ if simulate:
     )
 
 evaluate_failure    = False    
-# evaluate_failure    = True
+evaluate_failure    = True
 
 if evaluate_failure:
     indices=list(range(100))

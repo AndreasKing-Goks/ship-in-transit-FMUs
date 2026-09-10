@@ -1,6 +1,7 @@
 from pathlib import Path
 import sys
 import os
+import time
 
 # Ensure libcosim DLL is found
 dll_dir = Path(sys.prefix) / "Lib" / "site-packages" / "libcosimpy" / "libcosimc"
@@ -12,6 +13,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
 from orchestrator.sit_cosim import ShipInTransitCoSimulation
+from orchestrator.sit_cosim_fmpy import ShipInTransitCoSimulation
 from orchestrator.scenario_config import load_base_config
 
 # =========================
@@ -55,10 +57,13 @@ spawn_requests = {
 # =========================
 # Instantiate Co-simulation Wrapper
 # =========================
+# Flag for map evaluation
+skip_map_evaluation=True
+
 # Instantiate
 instance = ShipInTransitCoSimulation(config=config, ROOT=ROOT, 
                                      spawn_requests=spawn_requests,
-                                     skip_map_evaluation=True)
+                                     skip_map_evaluation=skip_map_evaluation)
 # WARNING!
 # Setting "skip_map_evaluation" to False enables grounding and outside_map_horizon checking, 
 # however this will increase the runtime by A LOT. As default, the value is set to True. 
@@ -67,7 +72,11 @@ instance = ShipInTransitCoSimulation(config=config, ROOT=ROOT,
 # =========================
 # Simulate
 # =========================
+start_time = time.time()
 instance.Simulate()
+time_count = time.time() -start_time
+print(f"Skip Map evaluation: {skip_map_evaluation}")
+print(f"A single simulation finished in {time_count:.2f} seconds")
 
 # =========================
 # Animation and Plot
@@ -81,30 +90,30 @@ instance.Simulate()
 ## Get the save path for animation
 save_path = ROOT / "saved_animation" / "singapore_strait.gif"
 
-# Animate Simulation
-instance.AnimateFleetTrajectory(
-        ship_ids=None,
-        show=True,
-        block=True,
-        mode="quick",
-        fig_width=10.0,
-        margin_frac=0.08,
-        equal_aspect=True,
-        interval_ms=20,
-        frame_step=5,
-        trail_len=300,
-        plot_routes=True,
-        plot_waypoints=True,
-        plot_roa=True,
-        plot_start_end=True,
-        with_labels=True,
-        precompute_ship_outlines=True,
-        # save_path=save_path,
-        writer_fps=20,
-        palette=None,
-        blit=True,
-        ship_scale=1.0
-    )
+# # Animate Simulation
+# instance.AnimateFleetTrajectory(
+#         ship_ids=None,
+#         show=True,
+#         block=True,
+#         mode="quick",
+#         fig_width=10.0,
+#         margin_frac=0.08,
+#         equal_aspect=True,
+#         interval_ms=20,
+#         frame_step=5,
+#         trail_len=300,
+#         plot_routes=True,
+#         plot_waypoints=True,
+#         plot_roa=True,
+#         plot_start_end=True,
+#         with_labels=True,
+#         precompute_ship_outlines=True,
+#         # save_path=save_path,
+#         writer_fps=20,
+#         palette=None,
+#         blit=True,
+#         ship_scale=1.0
+#     )
 
 # Plot Trajectory
 instance.PlotFleetTrajectory(mode="quick", ship_scale=1.0)

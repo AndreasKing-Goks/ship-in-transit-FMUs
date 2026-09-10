@@ -1,4 +1,5 @@
 from tensorboard.backend.event_processing import event_accumulator
+import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MultipleLocator, ScalarFormatter, FuncFormatter
@@ -126,7 +127,7 @@ def million_formatter(x, pos):
 
 # Single plot
 single_plot = False
-# single_plot = True
+single_plot = True
 
 if single_plot:
     
@@ -148,20 +149,57 @@ if single_plot:
     #     / "EB-ASTv2_train_rppo_0"
     # )
 
+    # tb_run_dir = (
+    #     ROOT
+    #     / "EBASTv2_train"
+    #     / "trained_model"
+    #     / "EB-ASTv2_train_sac_2026-08-04_19-10-27_c531"
+    #     / "tb"
+    #     / "EB-ASTv2_train_sac_0"
+    # )
+    
     tb_run_dir = (
         ROOT
         / "EBASTv2_train"
         / "trained_model"
-        / "EB-ASTv2_train_sac_2026-08-04_19-10-27_c531"
-        / "tb"
-        / "EB-ASTv2_train_sac_0"
+        / "join_results"
+        / "EB-ASTv2_train_rppo_2026-08-22_04-51-03_4942_multi_configs_continue"
     )
 
     tb_runs = get_tensorboard_event_files(tb_run_dir)
 
     # tags_to_plot = ['rollout/ep_len_mean', 'rollout/ep_rew_mean', 'train/loss', 'train/policy_gradient_loss', 'train/value_loss']   # PPO and RPPO
-    tags_to_plot = ['rollout/ep_len_mean', 'rollout/ep_rew_mean', 'train/actor_loss', 'train/critic_loss', 'train/learning_rate']   # SAC
+    # tags_to_plot = ['rollout/ep_len_mean', 'rollout/ep_rew_mean', 'train/actor_loss', 'train/critic_loss', 'train/learning_rate']   # SAC
+    
+    tags_to_plot = ['rollout/ep_len_mean', 'rollout/ep_rew_mean']   # PPO and RPPO
 
+    # ---------------------------------------------------------
+    # Output directory
+    # ---------------------------------------------------------
+    save_dir = (
+        ROOT
+        / "EBASTv2_train"
+        / "trained_model"
+        / "join_results"
+        / "EB-ASTv2_train_rppo_2026-08-22_04-51-03_4942_continue"
+    )
+
+    save_dir.mkdir(parents=True, exist_ok=True)
+
+    # ---------------------------------------------------------
+    # Plot-specific names
+    # ---------------------------------------------------------
+    plot_settings = {
+        "rollout/ep_rew_mean": {
+            "filename": "rppo_multi_configs_continue_reward.pdf",
+            "ylabel": "Mean episode reward",
+        },
+        "rollout/ep_len_mean": {
+            "filename": "rppo_multi_configs_continue_eps_len.pdf",
+            "ylabel": "Mean episode length",
+        },
+    }
+    
     all_rows = []
 
     for tag in tags_to_plot:
@@ -204,33 +242,167 @@ if single_plot:
             agg="mean",
         )
 
-        fig, ax = plt.subplots(figsize=(10, 4))
+        # Sized for two figures side-by-side in the thesis
+        fig, ax = plt.subplots(
+            figsize=(3.4, 1.9),
+            dpi=150,
+        )
         ax.plot(
             plot_df["step"],
             plot_df["value"],
             linewidth=1.2,
             label=tag,
         )
+        
+        # Mark previous training region
+        transition_step = 10_000_000
 
+        # Light gray shading before 10M
+        ax.axvspan(
+            plot_df["step"].min(),
+            transition_step,
+            color="lightgray",
+            alpha=0.35,
+            zorder=0,
+        )
+
+        # Dashed vertical line at 10M
+        ax.axvline(
+            transition_step,
+            color="gray",
+            linestyle="--",
+            linewidth=1.0,
+            zorder=2,
+        )
+        
+        # Do ordinary least-squares linear regression on the remaining data after 10M steps
+        post_df = plot_df[plot_df["step"] >= transition_step]
+
+        # Work in millions of steps so the slope is interpretable
+        x_post = post_df["step"].to_numpy() / 1e6
+        y_post = post_df["value"].to_numpy()
+
+        slope, intercept = np.polyfit(x_post, y_post, 1)
+
+        x_fit = np.array([x_post.min(), x_post.max()])
+        y_fit = slope * x_fit + intercept
+
+        ax.plot(
+            x_fit * 1e6,
+            y_fit,
+            linestyle="--",
+            linewidth=1.8,
+            label=f"Post-retraining trend ({slope:+.2f}/M steps)",
+        )
+        
+        # coeffs = np.polyfit(x_post, y_post, 2)
+        # a, b, c = coeffs
+
+        # x_fit = np.linspace(x_post.min(), x_post.max(), 200)
+        # y_fit = a * x_fit**2 + b * x_fit + c
+
+        # ax.plot(
+        #     x_fit * 1e6,
+        #     y_fit,
+        #     linestyle="--",
+        #     linewidth=1.8,
+        #     label="Post-retraining quadratic fit",
+        # )
+        
+        # -----------------------------------------------------
+        # Axes
+        # -----------------------------------------------------
         ax.set_xlim(left=0)
-        ax.xaxis.set_major_locator(MultipleLocator(1_000_000))
-        ax.xaxis.set_major_formatter(FuncFormatter(million_formatter))
 
-        ax.set_xlabel("Step (Millions)")
-        ax.set_ylabel("Value")
+        ax.xaxis.set_major_locator(
+            MultipleLocator(1_000_000)
+        )
 
-        ax.legend(loc="lower right", frameon=False)
+        ax.xaxis.set_major_formatter(
+            FuncFormatter(million_formatter)
+        )
 
-        ax.grid(True, alpha=0.3)
-        ax.tick_params(axis="x", labelsize=9)
-        ax.tick_params(axis="y", labelsize=9)
+        ax.set_xlabel(
+            "Training steps (millions)",
+            fontsize=7.5,
+            labelpad=1,
+        )
 
-        fig.tight_layout()
+        ax.set_ylabel(
+            plot_settings[tag]["ylabel"],
+            fontsize=7.5,
+            labelpad=1,
+        )
+
+        # -----------------------------------------------------
+        # Ticks
+        # -----------------------------------------------------
+        ax.tick_params(
+            axis="both",
+            which="major",
+            labelsize=5.5,
+            direction="in",
+            length=2.5,
+            pad=1,
+        )
+
+        # -----------------------------------------------------
+        # Legend
+        # -----------------------------------------------------
+        ax.legend(
+            loc="best",
+            frameon=False,
+            fontsize=6.0,
+            handlelength=1.5,
+            handletextpad=0.4,
+            labelspacing=0.25,
+        )
+
+        # -----------------------------------------------------
+        # Grid
+        # -----------------------------------------------------
+        ax.grid(
+            True,
+            linestyle=":",
+            linewidth=0.45,
+            alpha=0.4,
+        )
+
+        # Cleaner paper-style axes
+        ax.spines["top"].set_visible(False)
+        ax.spines["right"].set_visible(False)
+
+        ax.spines["left"].set_linewidth(0.7)
+        ax.spines["bottom"].set_linewidth(0.7)
+
+        # -----------------------------------------------------
+        # Compact layout
+        # -----------------------------------------------------
+        fig.tight_layout(
+            pad=0.15
+        )
+
+        # -----------------------------------------------------
+        # Save as vector PDF
+        # -----------------------------------------------------
+        save_path = (
+            save_dir
+            / plot_settings[tag]["filename"]
+        )
+
+        fig.savefig(
+            save_path,
+            format="pdf",
+            bbox_inches="tight",
+            pad_inches=0.01,
+        )
+
+        print(f"Saved: {save_path}")
 
     plt.show()
     
-multi_plots = True
-# multi_plots = False
+multi_plots = False
+# multi_plots = True
 
 if multi_plots:
 

@@ -1,4 +1,3 @@
-
 import numpy as np
 from map_route_plotter.polygon_obstacle import PolygonObstacle
 

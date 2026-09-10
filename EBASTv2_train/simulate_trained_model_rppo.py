@@ -31,10 +31,11 @@ import numpy as np
 # Handle paths
 # =========================
 # Trained Model Name
-model_name                      = "EB-ASTv2_train_rppo_2026-08-22_04-51-03_4942"
+model_name                      = "EB-ASTv2_train_rppo_2026-07-26_21-08-37_330c_continue_01"
 
 # Get the config path
 config_path                     = ROOT / "EBASTv2_train" / "EBASTv2_train_2.yaml"
+# config_path                     = ROOT / "EBASTv2_train" / "EBASTv2_train_2_reversed.yaml"
 
 # Get the encounter settings path
 encounter_settings_path         = ROOT / "EBASTv2_train" / "encounter_settings.json"
@@ -44,13 +45,13 @@ spawn_requests_bank_path        = ROOT / "EBASTv2_train" / "spawn_request_bank_e
 
 # Get the trained model
 model_path                      = ROOT / "EBASTv2_train" / "trained_model" / model_name / "model" / "model.zip"
-# model_path                      = ROOT / "EBASTv2_train" / "trained_model" / "checkpoints" / "EB-ASTv2_train_rppo_8000000_steps.zip"
+model_path                      = ROOT / "EBASTv2_train" / "trained_model" / "checkpoints" / "EB-ASTv2_train_rppo_14027008_steps.zip"
 
 # Log path
 log_path                        = ROOT / "EBASTv2_train" / "simulated_trained_model" / "episode_recap_rppo.txt"
 
 # Evaluation recap
-recap_path                      = ROOT / "EBASTv2_train" / "simulated_trained_model" / "evaluation_recap_rppo_1.txt"
+recap_path                      = ROOT / "EBASTv2_train" / "simulated_trained_model" / "evaluation_recap_rppo_continue.txt"
 
 # =========================
 # Instantiate the environment wrapper
