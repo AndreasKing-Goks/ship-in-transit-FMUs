@@ -1,4 +1,6 @@
-from shapely.geometry import Polygon, Point
+import numpy as np
+from shapely.geometry import Polygon, Point, LineString
+from shapely import STRtree
 import matplotlib.patches as patches
 
 class PolygonObstacle:
@@ -16,8 +18,15 @@ class PolygonObstacle:
             [(3,3), (5,3), (4,5)]          # Triangle
         ]
         '''
+        # Spatial index for fast  lookup
         self.polygons = [Polygon(verts) for verts in list_of_vertices_list]
         self.num_obstacles = len(self.polygons)
+        self.tree = STRtree(self.polygons)
+        
+        # Coastline-distance lookup
+        self.boundaries = [poly.exterior for poly in self.polygons]
+        self.boundary_tree = STRtree(self.boundaries)
+        
         self.map_boundaries(list_of_vertices_list)
         
     def map_boundaries(self, list_of_vertices_list):
@@ -35,10 +44,27 @@ class PolygonObstacle:
         self.min_north = min(north_values)
         self.max_north = max(north_values)
     
+    # def if_pos_inside_obstacles(self, n_pos, e_pos):
+    #     ''' Check if tagged pos is inside any polygon '''
+    #     pt = Point(e_pos, n_pos)  # x = east, y = north
+    #     return any(poly.covers(pt) for poly in self.polygons)
+    
     def if_pos_inside_obstacles(self, n_pos, e_pos):
-        ''' Check if tagged pos is inside any polygon '''
-        pt = Point(e_pos, n_pos)  # x = east, y = north
-        return any(poly.contains(pt) for poly in self.polygons)
+        """
+        UPGRADED VERSION
+        Using spatial index STRtree by looking into polygon with the nearest location 
+        from the evaluated position
+        """
+        
+        pt = Point(e_pos, n_pos)
+
+        # Point is tested only against geographically
+        # relevant polygons selected by STRtree.
+        # predicate "wihtin", only the insides
+        # predicate "covered_by", includes coastline
+        indices = self.tree.query(pt, predicate="covered_by")
+
+        return len(indices) > 0
     
     def if_route_inside_obstacles(self, n_route, e_route):
         ''' Check if any route point is inside any polygon '''
@@ -47,10 +73,18 @@ class PolygonObstacle:
                 return True
         return False
     
+    # def obstacles_distance(self, n_ship, e_ship):
+    #     ''' Minimum distance to any polygon '''
+    #     pt = Point(e_ship, n_ship)
+    #     return min(poly.exterior.distance(pt) for poly in self.polygons)
+    
     def obstacles_distance(self, n_ship, e_ship):
         ''' Minimum distance to any polygon '''
         pt = Point(e_ship, n_ship)
-        return min(poly.exterior.distance(pt) for poly in self.polygons)
+        idx = self.boundary_tree.nearest(pt)
+        nearest_boundary = self.boundaries[int(idx)]
+
+        return nearest_boundary.distance(pt)
     
     def plot_obstacle(self, ax):
         ''' Plot all polygonal obstacles '''
@@ -58,3 +92,72 @@ class PolygonObstacle:
             coords = list(poly.exterior.coords)
             patch = patches.Polygon(coords, closed=True, fill=True, color='grey')
             ax.add_patch(patch)
+            
+    def get_ship_reference_points(
+        n_ship,
+        e_ship,
+        heading_deg,
+        length,
+        beam,
+    ):
+
+        psi             = np.deg2rad(heading_deg)
+
+        # Forward vector [east, north]
+        forward         = np.array([np.sin(psi),np.cos(psi)])
+
+        # Starboard vector [east, north]
+        starboard       = np.array([np.cos(psi),-np.sin(psi)])
+        center          = np.array([e_ship,n_ship])
+        bow             = (center+ 0.5 * length * forward)
+        stern           = (center- 0.5 * length * forward)
+        starboard_point = (center+ 0.5 * beam * starboard)
+        port_point      = (center- 0.5 * beam * starboard)
+
+        return {
+            "bow": bow,
+            "stern": stern,
+            "port": port_point,
+            "starboard": starboard_point,
+        }
+    
+    def directional_distance(
+        self,
+        origin_e,
+        origin_n,
+        dir_e,
+        dir_n,
+        max_range=5000.0,
+    ):
+
+        direction_length = np.hypot(dir_e,dir_n)
+        dir_e /= direction_length
+        dir_n /= direction_length
+
+        end_e = origin_e + max_range * dir_e
+        end_n = origin_n + max_range * dir_n
+
+        # Shooting ray to one direction to see if it's intersects with the ground terrain
+        ray = LineString([
+            (origin_e, origin_n),
+            (end_e, end_n),
+        ])
+
+        # Only coastline pieces whose bounding boxes
+        # intersect the ray are considered.
+        indices = self.boundary_tree.query(ray, predicate="intersects")
+        if len(indices) == 0:
+            return np.inf
+
+        origin = Point(origin_e, origin_n)
+        min_distance = np.inf
+
+        for idx in indices:
+            boundary = self.boundaries[int(idx)]
+            intersection = ray.intersection(boundary)
+            if intersection.is_empty:
+                continue
+            distance = origin.distance(intersection)
+            min_distance = min(min_distance, distance)
+
+        return min_distance

@@ -9,6 +9,30 @@ The workflow consists of three main steps:
 
 Special thanks for **Aduragbemi Adetunji** (**aduragbemi.s.adetunji@ntnu.no**) for developing this method.
 
+## ⚠️ Geospatial package compatibility
+
+Use compatible versions of `OSMnx`, `Shapely`, and `GeoPandas`. A known incompatible setup is:
+
+- `OSMnx 1.0.1`
+- `Shapely 2.1.2`
+- `GeoPandas 1.1.4`
+
+In case for false or missing package installation, install individual component explicitly:
+
+```bash
+conda install -c conda-forge "osmnx=2.1.1"
+conda install -c conda-forge "shapely=2.1.2"
+conda install -c conda-forge "geopandas=1.1.4"
+```
+
+For a fully pinned setup:
+
+```bash
+conda install -c conda-forge "osmnx=2.1.1" "shapely=2.1.2" "geopandas=1.1.4"
+```
+
+Avoid unpinned installs when reproducibility matters.
+
 ------------------------------------------------------------------------
 
 ## 1. Download OpenStreetMap Data

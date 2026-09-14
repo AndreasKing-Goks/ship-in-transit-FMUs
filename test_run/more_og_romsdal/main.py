@@ -13,7 +13,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
 from orchestrator.sit_cosim import ShipInTransitCoSimulation
-from orchestrator.sit_cosim_fmpy_experimental import ShipInTransitCoSimulation
+from orchestrator.sit_cosim_fmpy import ShipInTransitCoSimulation
 from orchestrator.scenario_config import load_base_config
 
 # =========================
@@ -22,7 +22,7 @@ from orchestrator.scenario_config import load_base_config
 import yaml
 
 ## Get the config path
-config_path = ROOT / "test_run" / "singapore_strait" / "singapore_strait.yaml"
+config_path = ROOT / "test_run" / "more_og_romsdal" / "more_og_romsdal.yaml"
 
 ## Get the configs
 config      = load_base_config(config_path)
@@ -30,28 +30,14 @@ config      = load_base_config(config_path)
 # =========================
 # Spawn Requests
 # =========================
-# Spawn requests (Singapore Strait)  
+# Spawn requests (More og Romsdal)  
 own_ship = {
     "start_time"        : 0.0,
-    "speed_setpoints"   : [0, 6, 9, 9, 8, 8, 7, 7]
+    "speed_setpoints"   : [0, 4, 4, 3, 5, 6, 6, 6, 6]
 }
-target_ship_1 = {
-    "start_time"        : 250.0, # 0.0: Collides
-    "speed_setpoints"   : [0, 5, 5, 6, 9, 9, 4, 2]    
-}
-target_ship_2 = {
-    "start_time"        : 2500.0,
-    "speed_setpoints"   : [0, 2, 5, 5, 8, 5, 1]    
-}
-target_ship_3 = {
-    "start_time"        : 3000.0,
-    "speed_setpoints"   : [0, 2, 5, 7, 9, 9, 5, 2]    
-}
+
 spawn_requests = {
     "OS0": own_ship,
-    "TS1": target_ship_1,
-    "TS2": target_ship_2,
-    "TS3": target_ship_3,
 }
     
 # =========================
@@ -88,7 +74,7 @@ print(f"A single simulation finished in {time_count:.2f} seconds")
 # - .mov
 
 ## Get the save path for animation
-save_path = ROOT / "saved_animation" / "singapore_strait.gif"
+save_path = ROOT / "saved_animation" / "more_og_romsdal.gif"
 
 # Animate Simulation
 instance.AnimateFleetTrajectory(
@@ -99,7 +85,7 @@ instance.AnimateFleetTrajectory(
         fig_width=10.0,
         margin_frac=0.08,
         equal_aspect=True,
-        interval_ms=20,
+        interval_ms=60,
         frame_step=5,
         trail_len=300,
         plot_routes=True,
@@ -108,15 +94,15 @@ instance.AnimateFleetTrajectory(
         plot_start_end=True,
         with_labels=True,
         precompute_ship_outlines=True,
-        # save_path=save_path,
+        save_path=save_path,
         writer_fps=20,
         palette=None,
         blit=True,
         ship_scale=1.0
     )
 
-# Plot Trajectory
-instance.PlotFleetTrajectory(mode="quick", ship_scale=1.0)
+# # Plot Trajectory
+# instance.PlotFleetTrajectory(mode="quick", ship_scale=1.0)
 
 # Plot Simulation Results
 key_group_list = [
@@ -131,38 +117,18 @@ key_group_list = [
     ["OS0.shaft_speed_rpm", "OS0.shaft_speed_cmd_rpm"],
     ["OS0.throttle_cmd"],
     
-    # For non-single ship simulation only
-    ["OS0.new_throttle_cmd"],
-    ["OS0.new_rudder_angle_deg"],
-    ["OS0.colav_rud_ang_increment"],
-    ["OS0.beta_own_to_tar_1"],
-    ["OS0.tcpa_own_to_tar_1"],
-    ["OS0.dcpa_own_to_tar_1"],
-    ["OS0.dist_own_to_tar_1"],
-    ["OS0.rr_own_to_tar_1"],
-    
     # For environment load-enabled simulation only
     ["OS0.current_speed"],
     ["OS0.current_direction_deg"],
     ["OS0.wind_speed"],
     ["OS0.wind_direction_deg"],
-    
-    ## Target Ship(s)
-    # Base results
-    ["TS1.north"],
-    ["TS1.east"],
-    ["TS1.forward_speed", "TS1.next_wp_speed", "TS1.total_ship_speed"],
-    ["TS1.yaw_angle_rad", "TS1.yaw_angle_ref_rad"],
-    ["TS1.rudder_angle_deg"],
-    ["TS1.e_ct"],
-    ["TS1.thrust_force"]
 ]
 
-# Plot Time Series
-instance.JoinPlotTimeSeries(list(reversed(key_group_list)),  
-                            create_title= False, 
-                            legend= True, 
-                            show_instance_name=False,
-                            show_separately=False,
-                            show=True,
-                            mode="quick")
+# # Plot Time Series
+# instance.JoinPlotTimeSeries(list(reversed(key_group_list)),  
+#                             create_title= False, 
+#                             legend= True, 
+#                             show_instance_name=False,
+#                             show_separately=False,
+#                             show=True,
+#                             mode="quick")

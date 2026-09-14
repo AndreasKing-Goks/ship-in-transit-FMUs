@@ -277,7 +277,7 @@ def plot_route_map(
     return fig, ax
 
 def main():
-    map = 2
+    map = 3
     if map == 1:
         group           = "singapore_strait"
         map_filename    = "singapore_strait.gpkg"
@@ -286,6 +286,10 @@ def main():
         group           = "oslo_fjord"
         map_filename    = "oslo_fjord.gpkg"
         title           = "Oslo Fjord Fleet Route Map"
+    elif map == 3:
+        group           = "more_og_romsdal"
+        map_filename    = "more_og_romsdal.gpkg"
+        title           = "More og Romsdal Fleet Route Map"
     
     plot_route_map(
         ROOT=ROOT,

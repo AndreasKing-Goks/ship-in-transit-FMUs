@@ -25,7 +25,7 @@ from shapely.ops import unary_union
 # =============================================================================
 # CONFIG
 # =============================================================================
-map_name        = "oslo_fjord"
+map_name        = "more_og_romsdal"
 
 OSM_XML         = Path("map_route_plotter/osm_data") / f"{map_name}.osm"
 LAND_SHP        = Path("map_route_plotter/shp_data/land-polygons-complete-4326/land_polygons.shp")
@@ -33,12 +33,46 @@ WATER_SHP       = None
 OUT_GPKG        = Path("data/map") / f"{map_name}.gpkg"
 
 # Set to None to use OSM bounds automatically
-MANUAL_BOUNDS   = (10.56, 59.82, 10.76, 59.92)  # (minx, miny, maxx, maxy)
+MANUAL_BOUNDS   = (5.00, 62.25, 7.75, 63.25)  # (minx, miny, maxx, maxy)
 
+# =============================================================================
+# OSM FEATURE CONFIGURATION
+# =============================================================================
+
+OSM_FEATURES = {
+    "coast": False,
+    "water": False,
+    "waterways": False,
+    "roads": False,
+    "docks": False,
+    "harbours": False,
+    "ferry_terms": False,
+    "ferry_routes": True,
+    "tss": False,
+    "rocks_reefs": False,
+    "bridges": False,
+    "seas": False,
+}
 
 # =============================================================================
 # HELPERS
 # =============================================================================
+
+def optional_osm_feature(
+    name: str,
+    osm_xml: str,
+    tags: dict,
+    crs: str = "EPSG:4326",
+) -> gpd.GeoDataFrame:
+
+    if not OSM_FEATURES.get(name, False):
+        return empty_gdf(crs)
+
+    return osm_features_from_xml(
+        osm_xml,
+        tags=tags,
+        crs=crs,
+    )
 
 def empty_gdf(crs: str | None = "EPSG:4326") -> gpd.GeoDataFrame:
     """Create an empty GeoDataFrame with a geometry column."""
@@ -68,12 +102,27 @@ def make_frame(bounds: tuple[float, float, float, float], crs: str = "EPSG:4326"
     return gpd.GeoDataFrame(geometry=[box(minx, miny, maxx, maxy)], crs=crs)
 
 
-def safe_read_and_clip(path: str | None, frame: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
-    """Read a vector file and clip it to the frame. Return empty if unavailable."""
+def safe_read_and_clip(
+    path: str | None,
+    frame: gpd.GeoDataFrame,
+) -> gpd.GeoDataFrame:
     if not path:
         return empty_gdf(frame.crs)
     try:
-        return gpd.clip(gpd.read_file(path), frame)
+        minx, miny, maxx, maxy = frame.total_bounds
+        # Read only geometries intersecting our bounding box
+        gdf = gpd.read_file(
+            path,
+            bbox=(minx, miny, maxx, maxy),
+        )
+        if gdf.empty:
+            return empty_gdf(frame.crs)
+        # Exact clipping after the faster bbox filtering
+        return gpd.clip(
+            gdf,
+            frame,
+        )
+
     except Exception:
         return empty_gdf(frame.crs)
 
@@ -182,107 +231,233 @@ def plot_layer_if_not_empty(
 # MAIN
 # =============================================================================
 
-def main() -> None:
+def main():
+
     reset_output_file(OUT_GPKG)
-
-    bounds = MANUAL_BOUNDS if MANUAL_BOUNDS is not None else get_bounds_from_osm(OSM_XML)
-    frame_wgs84 = make_frame(bounds, crs="EPSG:4326")
-
-    # -------------------------------------------------------------------------
-    # Base land/ocean
-    # -------------------------------------------------------------------------
-    land = safe_read_and_clip(LAND_SHP, frame_wgs84)
-    ocean = safe_read_and_clip(WATER_SHP, frame_wgs84)
-    if ocean.empty:
-        ocean = build_ocean_from_land(frame_wgs84, land)
-
-    # -------------------------------------------------------------------------
-    # OSM feature extraction
-    # -------------------------------------------------------------------------
-    coast = osm_features_from_xml(OSM_XML, {"natural": "coastline"})
-    water_nat = osm_features_from_xml(OSM_XML, {"natural": "water"})
-    water_tag = osm_features_from_xml(OSM_XML, {"water": True})
-    water = concat_polygon_layers(water_nat, water_tag)
-
-    waterways = osm_features_from_xml(OSM_XML, {"waterway": True})
-    roads = osm_features_from_xml(OSM_XML, {"highway": True})
-
-    # More features
-    docks = osm_features_from_xml(OSM_XML, {"waterway": "dock"})
-    harbours = osm_features_from_xml(OSM_XML, {"harbour": True})
-    ferry_terms = osm_features_from_xml(OSM_XML, {"amenity": "ferry_terminal"})
-    ferry_routes = osm_features_from_xml(OSM_XML, {"route": "ferry"})
-    tss = osm_features_from_xml(
-        OSM_XML,
-        {"seamark:type": [
-            "traffic_separation_scheme",
-            "separation_zone",
-            "separation_line",
-            "roundabout",
-            "precautionary_area",
-        ]},
+    # -------------------------------------------------
+    # 1. Define map boundary
+    # -------------------------------------------------
+    bounds = MANUAL_BOUNDS
+    frame_wgs84 = make_frame(
+        bounds,
+        crs="EPSG:4326"
     )
-    rocks_reefs = osm_features_from_xml(OSM_XML, {"seamark:type": ["rock", "rock_awash", "reef"]})
-    bridges = osm_features_from_xml(OSM_XML, {"bridge": True})
-    seas = osm_features_from_xml(OSM_XML, {"place": "sea"})
 
-    layers_wgs84 = {
-        "frame": frame_wgs84,
-        "ocean": ocean,
-        "land": land,
-        "water": water,
-        "waterways": waterways,
-        "coast": coast,
-        "roads": roads,
-        "docks": docks,
-        "harbours": harbours,
-        "ferry_terms": ferry_terms,
-        "ferry_routes": ferry_routes,
-        "tss": tss,
-        "rocks_reefs": rocks_reefs,
-        "bridges": bridges,
-        "seas": seas,
-    }
+    # -------------------------------------------------
+    # 2. Read ONLY land inside the region
+    # -------------------------------------------------
+    land_wgs84 = safe_read_and_clip(
+        LAND_SHP,
+        frame_wgs84
+    )
 
-    # -------------------------------------------------------------------------
-    # Save WGS84
-    # -------------------------------------------------------------------------
-    save_projection_group(layers_wgs84, OUT_GPKG, suffix="wgs84", target_crs=None)
+    # -------------------------------------------------
+    # 3. Ocean = frame minus land
+    # -------------------------------------------------
+    ocean_wgs84 = build_ocean_from_land(
+        frame_wgs84,
+        land_wgs84
+    )
 
-    # -------------------------------------------------------------------------
-    # Save EPSG:3857
-    # -------------------------------------------------------------------------
-    layers_3857 = save_projection_group(layers_wgs84, OUT_GPKG, suffix="3857", target_crs="EPSG:3857")
+    # -------------------------------------------------
+    # 4. Convert everything ONCE to EPSG:3857
+    # -------------------------------------------------
+    frame_3857 = frame_wgs84.to_crs("EPSG:3857")
+    land_3857 = land_wgs84.to_crs("EPSG:3857")
+    ocean_3857 = ocean_wgs84.to_crs("EPSG:3857")
 
-    # -------------------------------------------------------------------------
-    # Save UTM
-    # -------------------------------------------------------------------------
-    base_for_crs = land if not land.empty else ocean
-    utm_crs = base_for_crs.estimate_utm_crs()
-    layers_utm = save_projection_group(layers_wgs84, OUT_GPKG, suffix="utm", target_crs=utm_crs)
-
-    # -------------------------------------------------------------------------
-    # Save union layers
-    # -------------------------------------------------------------------------
-    save_union_layers(
-        {
-            "ocean": layers_utm["ocean"],
-            "land": layers_utm["land"],
-            "water": layers_utm["water"],
-            "coast": layers_utm["coast"],
-            "docks": layers_utm["docks"],
-            "harbours": layers_utm["harbours"],
-            "ferry_terms": layers_utm["ferry_terms"],
-            "ferry_routes": layers_utm["ferry_routes"],
-            "tss": layers_utm["tss"],
-            "rocks_reefs": layers_utm["rocks_reefs"],
-            "bridges": layers_utm["bridges"],
-            "seas": layers_utm["seas"],
-        },
+    # -------------------------------------------------
+    # 5. Save ONLY what your simulator needs
+    # -------------------------------------------------
+    frame_3857.to_file(
         OUT_GPKG,
+        layer="frame_3857",
+        driver="GPKG"
     )
-
-    print(f"Saved fresh layers to {OUT_GPKG}")
-
+    ocean_3857.to_file(
+        OUT_GPKG,
+        layer="ocean_3857",
+        driver="GPKG"
+    )
+    land_3857.to_file(
+        OUT_GPKG,
+        layer="land_3857",
+        driver="GPKG"
+    )
+    print(f"Saved map to {OUT_GPKG}")
+    
 if __name__ == "__main__":
     main()
+
+# def main() -> None:
+#     reset_output_file(OUT_GPKG)
+
+#     bounds = MANUAL_BOUNDS if MANUAL_BOUNDS is not None else get_bounds_from_osm(OSM_XML)
+#     frame_wgs84 = make_frame(bounds, crs="EPSG:4326")
+
+#     # -------------------------------------------------------------------------
+#     # Base land/ocean
+#     # -------------------------------------------------------------------------
+#     land = safe_read_and_clip(LAND_SHP, frame_wgs84)
+#     ocean = safe_read_and_clip(WATER_SHP, frame_wgs84)
+#     if ocean.empty:
+#         ocean = build_ocean_from_land(frame_wgs84, land)
+
+#     # -------------------------------------------------------------------------
+#     # Optional OSM feature extraction
+#     # -------------------------------------------------------------------------
+
+#     coast = optional_osm_feature(
+#         "coast",
+#         OSM_XML,
+#         {"natural": "coastline"},
+#     )
+
+#     water_nat = optional_osm_feature(
+#         "water",
+#         OSM_XML,
+#         {"natural": "water"},
+#     )
+
+#     water_tag = optional_osm_feature(
+#         "water",
+#         OSM_XML,
+#         {"water": True},
+#     )
+
+#     water = concat_polygon_layers(
+#         water_nat,
+#         water_tag,
+#     )
+
+#     waterways = optional_osm_feature(
+#         "waterways",
+#         OSM_XML,
+#         {"waterway": True},
+#     )
+
+#     roads = optional_osm_feature(
+#         "roads",
+#         OSM_XML,
+#         {"highway": True},
+#     )
+
+#     docks = optional_osm_feature(
+#         "docks",
+#         OSM_XML,
+#         {"waterway": "dock"},
+#     )
+
+#     harbours = optional_osm_feature(
+#         "harbours",
+#         OSM_XML,
+#         {"harbour": True},
+#     )
+
+#     ferry_terms = optional_osm_feature(
+#         "ferry_terms",
+#         OSM_XML,
+#         {"amenity": "ferry_terminal"},
+#     )
+
+#     ferry_routes = optional_osm_feature(
+#         "ferry_routes",
+#         OSM_XML,
+#         {"route": "ferry"},
+#     )
+
+#     tss = optional_osm_feature(
+#         "tss",
+#         OSM_XML,
+#         {
+#             "seamark:type": [
+#                 "traffic_separation_scheme",
+#                 "separation_zone",
+#                 "separation_line",
+#                 "roundabout",
+#                 "precautionary_area",
+#             ]
+#         },
+#     )
+
+#     rocks_reefs = optional_osm_feature(
+#         "rocks_reefs",
+#         OSM_XML,
+#         {
+#             "seamark:type": [
+#                 "rock",
+#                 "rock_awash",
+#                 "reef",
+#             ]
+#         },
+#     )
+
+#     bridges = optional_osm_feature(
+#         "bridges",
+#         OSM_XML,
+#         {"bridge": True},
+#     )
+
+#     seas = optional_osm_feature(
+#         "seas",
+#         OSM_XML,
+#         {"place": "sea"},
+#     )
+
+#     layers_wgs84 = {
+#         "frame": frame_wgs84,
+#         "ocean": ocean,
+#         "land": land,
+#         "water": water,
+#         "waterways": waterways,
+#         "coast": coast,
+#         "roads": roads,
+#         "docks": docks,
+#         "harbours": harbours,
+#         "ferry_terms": ferry_terms,
+#         "ferry_routes": ferry_routes,
+#         "tss": tss,
+#         "rocks_reefs": rocks_reefs,
+#         "bridges": bridges,
+#         "seas": seas,
+#     }
+
+#     # -------------------------------------------------------------------------
+#     # Save WGS84
+#     # -------------------------------------------------------------------------
+#     save_projection_group(layers_wgs84, OUT_GPKG, suffix="wgs84", target_crs=None)
+
+#     # -------------------------------------------------------------------------
+#     # Save EPSG:3857
+#     # -------------------------------------------------------------------------
+#     layers_3857 = save_projection_group(layers_wgs84, OUT_GPKG, suffix="3857", target_crs="EPSG:3857")
+
+#     # -------------------------------------------------------------------------
+#     # Save UTM
+#     # -------------------------------------------------------------------------
+#     base_for_crs = land if not land.empty else ocean
+#     utm_crs = base_for_crs.estimate_utm_crs()
+#     layers_utm = save_projection_group(layers_wgs84, OUT_GPKG, suffix="utm", target_crs=utm_crs)
+
+#     # -------------------------------------------------------------------------
+#     # Save union layers
+#     # -------------------------------------------------------------------------
+#     save_union_layers(
+#         {
+#             "ocean": layers_utm["ocean"],
+#             "land": layers_utm["land"],
+#             "water": layers_utm["water"],
+#             "coast": layers_utm["coast"],
+#             "docks": layers_utm["docks"],
+#             "harbours": layers_utm["harbours"],
+#             "ferry_terms": layers_utm["ferry_terms"],
+#             "ferry_routes": layers_utm["ferry_routes"],
+#             "tss": layers_utm["tss"],
+#             "rocks_reefs": layers_utm["rocks_reefs"],
+#             "bridges": layers_utm["bridges"],
+#             "seas": layers_utm["seas"],
+#         },
+#         OUT_GPKG,
+#     )
+
+#     print(f"Saved fresh layers to {OUT_GPKG}")
