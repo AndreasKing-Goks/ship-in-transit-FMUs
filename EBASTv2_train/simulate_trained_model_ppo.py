@@ -31,7 +31,7 @@ import numpy as np
 # Handle paths
 # =========================
 # Trained Model Name
-model_name                      = "EB-ASTv2_train_ppo_2026-08-22_11-57-33_1a69"
+model_name                      = "EB-ASTv2_train_ppo_2026-09-10_18-01-46_704e"
 
 # Get the config path
 config_path                     = ROOT / "EBASTv2_train" / "EBASTv2_train_2.yaml"
@@ -50,7 +50,7 @@ model_path                      = ROOT / "EBASTv2_train" / "trained_model" / mod
 log_path                        = ROOT / "EBASTv2_train" / "simulated_trained_model" / "episode_recap_ppo.txt"
 
 # Evaluation recap
-recap_path                      = ROOT / "EBASTv2_train" / "simulated_trained_model" / "evaluation_recap_ppo_1.txt"
+recap_path                      = ROOT / "EBASTv2_train" / "simulated_trained_model" / "evaluation_recap_ppo_5.txt"
 
 # =========================
 # Instantiate the environment wrapper

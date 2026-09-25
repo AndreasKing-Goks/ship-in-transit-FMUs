@@ -274,9 +274,9 @@ class ShipModel(Fmi2Slave):
 
 
     def non_linear_damping_matrix(self, forward_speed, sideways_speed, yaw_rate):
-        return np.array([[self.ku * forward_speed, 0, 0],
-                       [0, self.kv * sideways_speed, 0],
-                       [0, 0, self.kr * yaw_rate]])
+        return np.array([[self.ku * np.abs(forward_speed), 0, 0],
+                       [0, self.kv * np.abs(sideways_speed), 0],
+                       [0, 0, self.kr * np.abs(yaw_rate)]])
         
 
     def get_wind_force(self, wind_speed, wind_dir_rad, yaw_angle_rad, forward_speed, sideways_speed):

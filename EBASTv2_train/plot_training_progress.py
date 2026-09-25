@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MultipleLocator, ScalarFormatter, FuncFormatter
+from matplotlib.lines import Line2D
 
 from pathlib import Path
 import sys
@@ -127,7 +128,7 @@ def million_formatter(x, pos):
 
 # Single plot
 single_plot = False
-single_plot = True
+# single_plot = True
 
 if single_plot:
     
@@ -684,3 +685,666 @@ if multi_plots:
         print(f"Saved: {save_path}")
 
     plt.show()
+    
+test_score_plot = False
+# test_score_plot = True
+
+if test_score_plot:
+    def plot_testing_scores(
+        scores,
+        save_path=None,
+        xlabel="Testing score (%)",
+    ):
+        """
+        Plot performance variability across independent runs.
+
+        Individual runs are shown as scatter points.
+        The diamond marker represents the mean.
+        Horizontal error bars represent ±1 sample standard deviation.
+
+        Parameters
+        ----------
+        scores : dict
+            Dictionary containing testing scores in percentage units.
+
+            Example:
+            {
+                "RPPO": [68, 64, 65, 68, 69],
+                "PPO":  [58, 68, 66, 63, 71],
+                "SAC":  [54, 57, 51, 43, 52],
+            }
+
+        save_path : str | Path | None
+            Optional output path for saving the figure as PDF.
+
+        xlabel : str
+            Label of the x-axis.
+
+        Returns
+        -------
+        pd.DataFrame
+            Summary statistics for each method.
+        """
+
+        methods = ["RPPO", "PPO", "SAC"]
+        
+        colors  = {"RPPO": "blue", "PPO": "green", "SAC": "red"}
+
+        # ---------------------------------------------------------
+        # Check input
+        # ---------------------------------------------------------
+        for method in methods:
+
+            if method not in scores:
+                raise ValueError(
+                    f"Missing testing scores for {method}"
+                )
+
+            if len(scores[method]) == 0:
+                raise ValueError(
+                    f"No testing scores provided for {method}"
+                )
+
+        # ---------------------------------------------------------
+        # Figure
+        # Wide and short for horizontal comparison
+        # ---------------------------------------------------------
+        fig, ax = plt.subplots(
+            figsize=(6.8, 2.2),
+            dpi=150,
+        )
+
+        summary_rows = []
+
+        # ---------------------------------------------------------
+        # Plot each method
+        # ---------------------------------------------------------
+        for y, method in enumerate(methods):
+
+            values = np.asarray(
+                scores[method],
+                dtype=float,
+            )
+
+            # -----------------------------------------------------
+            # Statistics
+            # -----------------------------------------------------
+            mean = np.mean(values)
+
+            # Sample standard deviation
+            if len(values) > 1:
+                std = np.std(
+                    values,
+                    ddof=1,
+                )
+            else:
+                std = 0.0
+
+            median = np.median(values)
+
+            q25 = np.percentile(
+                values,
+                25,
+            )
+
+            q75 = np.percentile(
+                values,
+                75,
+            )
+
+            summary_rows.append({
+                "method": method,
+                "n": len(values),
+                "mean": mean,
+                "std": std,
+                "median": median,
+                "q25": q25,
+                "q75": q75,
+                "min": np.min(values),
+                "max": np.max(values),
+            })
+
+            # -----------------------------------------------------
+            # Deterministic vertical jitter
+            #
+            # This only separates the individual observations
+            # visually. The vertical displacement has no
+            # statistical meaning.
+            # -----------------------------------------------------
+            jitter = np.linspace(
+                -0.08,
+                0.08,
+                len(values),
+            )
+
+            # -----------------------------------------------------
+            # Individual runs
+            # -----------------------------------------------------
+            scatter = ax.scatter(
+                values,
+                y + jitter,
+                s=32,
+                alpha=0.85,
+                linewidth=0.6,
+                zorder=3,
+                color=colors[method]
+            )
+
+            # Use the automatically assigned scatter color
+            color = scatter.get_facecolor()[0]
+
+            # -----------------------------------------------------
+            # Mean ± standard deviation
+            # -----------------------------------------------------
+            ax.errorbar(
+                mean,
+                y,
+                xerr=std,
+                fmt="D",
+                markersize=6.0,
+                capsize=4,
+                capthick=1.2,
+                elinewidth=1.3,
+                linewidth=1.2,
+                color=colors[method],
+                zorder=4,
+            )
+
+        # ---------------------------------------------------------
+        # X-axis
+        # ---------------------------------------------------------
+        ax.set_xlim(
+            40,
+            75,
+        )
+
+        ax.xaxis.set_major_locator(
+            MultipleLocator(5)
+        )
+
+        ax.xaxis.set_major_formatter(
+            FuncFormatter(
+                lambda x, pos: f"{x:.0f}%"
+            )
+        )
+
+        ax.set_xlabel(
+            xlabel,
+            fontsize=10,
+            labelpad=2,
+        )
+
+        # ---------------------------------------------------------
+        # Y-axis
+        # ---------------------------------------------------------
+        ax.set_ylim(
+            -0.4,
+            len(methods) - 0.6,
+        )
+
+        ax.set_yticks(
+            np.arange(len(methods))
+        )
+
+        ax.set_yticklabels(
+            methods
+        )
+
+        # RPPO at top, then PPO, then SAC
+        ax.invert_yaxis()
+
+        # No need for "Method" label because the method names
+        # themselves make the axis clear.
+        ax.set_ylabel("")
+
+        # ---------------------------------------------------------
+        # Ticks
+        # ---------------------------------------------------------
+        ax.tick_params(
+            axis="both",
+            which="major",
+            labelsize=9,
+            direction="in",
+            length=3,
+            width=0.8,
+            pad=2,
+        )
+
+        # ---------------------------------------------------------
+        # Grid
+        #
+        # Only vertical grid lines because score is now on x-axis
+        # ---------------------------------------------------------
+        ax.grid(
+            True,
+            axis="x",
+            linestyle=":",
+            linewidth=0.5,
+            alpha=0.3,
+        )
+
+        # ---------------------------------------------------------
+        # Cleaner paper-style axes
+        # ---------------------------------------------------------
+        ax.spines["top"].set_visible(False)
+        ax.spines["right"].set_visible(False)
+
+        ax.spines["left"].set_linewidth(0.9)
+        ax.spines["bottom"].set_linewidth(0.9)
+
+        # ---------------------------------------------------------
+        # Compact layout
+        # ---------------------------------------------------------
+        fig.tight_layout(
+            pad=0.3
+        )
+
+        # ---------------------------------------------------------
+        # Save
+        # ---------------------------------------------------------
+        if save_path is not None:
+
+            save_path = Path(
+                save_path
+            )
+
+            save_path.parent.mkdir(
+                parents=True,
+                exist_ok=True,
+            )
+
+            fig.savefig(
+                save_path,
+                format="pdf",
+                bbox_inches="tight",
+                pad_inches=0.01,
+            )
+
+            print(
+                f"Saved: {save_path}"
+            )
+
+        plt.show()
+
+        # ---------------------------------------------------------
+        # Summary statistics
+        # ---------------------------------------------------------
+        summary_df = pd.DataFrame(
+            summary_rows
+        )
+
+        return summary_df
+    
+    test_scores = {
+        "RPPO": [68, 64, 65, 68, 69],
+        "PPO":  [58, 68, 66, 63, 71], # [58, 68, 71, 66, 63]
+        "SAC":  [54, 57, 51, 43, 54],
+    }
+    
+    save_dir = (
+        ROOT
+        / "EBASTv2_train"
+        / "simulated_trained_model"
+        / "plots_for_paper"
+    )
+    
+    save_path = (
+            save_dir
+            / "score_variability_tests.pdf"
+        )
+
+    summary_df = plot_testing_scores(save_path=save_path, scores=test_scores)
+    
+    print(summary_df)
+
+
+test_eps_len_plot = False
+test_eps_len_plot = True
+
+if test_eps_len_plot:
+    def plot_test_eps_len(
+        eps_lens,
+        save_path=None,
+        xlabel="Episode Length",
+    ):
+        """
+        Plot episode_length variability across independent runs.
+
+        Individual runs are shown as scatter points.
+        The diamond marker represents the mean.
+        Horizontal error bars represent ±1 sample standard deviation.
+
+        Parameters
+        ----------
+        scores : dict
+            Dictionary containing testing episode length in percentage units.
+
+        save_path : str | Path | None
+            Optional output path for saving the figure as PDF.
+
+        xlabel : str
+            Label of the x-axis.
+
+        Returns
+        -------
+        pd.DataFrame
+            Summary statistics for each method.
+        """
+
+        methods = ["RPPO", "PPO", "SAC"]
+        data_tags = ["collision", "no_collision"]
+        
+        colors  = {"RPPO": "blue", "PPO": "green", "SAC": "red"}
+        markers  = {"collision": "o", "no_collision": "X"}
+        
+        tag_offset = {
+                    "collision": 0, #-0.1,
+                    "no_collision": 0, #0.1,
+                }
+
+        # ---------------------------------------------------------
+        # Check input
+        # ---------------------------------------------------------
+        for method in methods:
+
+            if method not in eps_lens:
+                raise ValueError(
+                    f"Missing testing episode length for {method}"
+                )
+
+        # ---------------------------------------------------------
+        # Figure
+        # Wide and short for horizontal comparison
+        # ---------------------------------------------------------
+        fig, ax = plt.subplots(
+            figsize=(6.8, 2.2),
+            dpi=150,
+        )
+
+        summary_rows = []
+
+        # ---------------------------------------------------------
+        # Plot each method
+        # ---------------------------------------------------------
+        for y, method in enumerate(methods):
+            for tag in data_tags:
+
+                values = np.asarray(
+                    eps_lens[method][tag],
+                    dtype=float,
+                )
+
+                # -----------------------------------------------------
+                # Statistics
+                # -----------------------------------------------------
+                mean = np.mean(values)
+
+                # Sample standard deviation
+                if len(values) > 1:
+                    std = np.std(
+                        values,
+                        ddof=1,
+                    )
+                else:
+                    std = 0.0
+
+                median = np.median(values)
+
+                q25 = np.percentile(
+                    values,
+                    25,
+                )
+
+                q75 = np.percentile(
+                    values,
+                    75,
+                )
+
+                summary_rows.append({
+                    "method": method,
+                    "tag": tag,
+                    "n": len(values),
+                    "mean": mean,
+                    "std": std,
+                    "median": median,
+                    "q25": q25,
+                    "q75": q75,
+                    "min": np.min(values),
+                    "max": np.max(values),
+                })
+
+                # -----------------------------------------------------
+                # Deterministic vertical jitter
+                #
+                # This only separates the individual observations
+                # visually. The vertical displacement has no
+                # statistical meaning.
+                # -----------------------------------------------------
+                jitter = np.linspace(
+                    -0.08,
+                    0.08,
+                    len(values),
+                )
+                
+                # -----------------------------------------------------
+                # Individual runs
+                # -----------------------------------------------------
+                scatter = ax.scatter(
+                    values,
+                    y + jitter + tag_offset[tag],
+                    s=32,
+                    alpha=0.85,
+                    linewidth=0.6,
+                    zorder=3,
+                    color=colors[method],
+                    marker=markers[tag]
+                )
+
+                # Use the automatically assigned scatter color
+                color = scatter.get_facecolor()[0]
+
+                # -----------------------------------------------------
+                # Mean ± standard deviation
+                # -----------------------------------------------------
+                ax.errorbar(
+                    mean,
+                    y + tag_offset[tag],
+                    xerr=std,
+                    fmt="D",
+                    markersize=6.0,
+                    capsize=4,
+                    capthick=1.2,
+                    elinewidth=1.3,
+                    linewidth=1.2,
+                    color=colors[method],
+                    zorder=4,
+                )
+
+        # ---------------------------------------------------------
+        # X-axis
+        # ---------------------------------------------------------
+        ax.set_xlim(
+            5.0,
+            8.0,
+        )
+
+        # ax.xaxis.set_major_locator(
+        #     MultipleLocator(1)
+        # )
+
+        # ax.xaxis.set_major_formatter(
+        #     FuncFormatter(
+        #         lambda x, pos: f"{x:.0f}%"
+        #     )
+        # )
+
+        ax.set_xlabel(
+            xlabel,
+            fontsize=10,
+            labelpad=2,
+        )
+
+        # ---------------------------------------------------------
+        # Y-axis
+        # ---------------------------------------------------------
+        ax.set_ylim(
+            -0.4,
+            len(methods) - 0.6,
+        )
+
+        ax.set_yticks(
+            np.arange(len(methods))
+        )
+
+        ax.set_yticklabels(
+            methods
+        )
+
+        # RPPO at top, then PPO, then SAC
+        ax.invert_yaxis()
+
+        # No need for "Method" label because the method names
+        # themselves make the axis clear.
+        ax.set_ylabel("")
+
+        # ---------------------------------------------------------
+        # Ticks
+        # ---------------------------------------------------------
+        ax.tick_params(
+            axis="both",
+            which="major",
+            labelsize=9,
+            direction="in",
+            length=3,
+            width=0.8,
+            pad=2,
+        )
+
+        # ---------------------------------------------------------
+        # Grid
+        #
+        # Only vertical grid lines because score is now on x-axis
+        # ---------------------------------------------------------
+        ax.grid(
+            True,
+            axis="x",
+            linestyle=":",
+            linewidth=0.5,
+            alpha=0.3,
+        )
+
+        # ---------------------------------------------------------
+        # Cleaner paper-style axes
+        # ---------------------------------------------------------
+        ax.spines["top"].set_visible(False)
+        ax.spines["right"].set_visible(False)
+
+        ax.spines["left"].set_linewidth(0.9)
+        ax.spines["bottom"].set_linewidth(0.9)
+
+        # ---------------------------------------------------------
+        # Compact layout
+        # ---------------------------------------------------------
+        fig.tight_layout(
+            pad=0.3
+        )
+        
+        # ---------------------------------------------------------
+        # Legend
+        # ---------------------------------------------------------
+        legend_handles = [
+            Line2D(
+                [0],
+                [0],
+                marker="o",
+                linestyle="None",
+                color="black",
+                markersize=6,
+                label="Collision",
+            ),
+            Line2D(
+                [0],
+                [0],
+                marker="X",
+                linestyle="None",
+                color="black",
+                markersize=6,
+                label="No collision",
+            ),
+        ]
+
+        ax.legend(
+            handles=legend_handles,
+            loc="upper center",
+            bbox_to_anchor=(0.5, 1.18),
+            ncol=2,
+            frameon=False,
+            fontsize=9,
+        )
+
+        # ---------------------------------------------------------
+        # Save
+        # ---------------------------------------------------------
+        if save_path is not None:
+
+            save_path = Path(
+                save_path
+            )
+
+            save_path.parent.mkdir(
+                parents=True,
+                exist_ok=True,
+            )
+
+            fig.savefig(
+                save_path,
+                format="pdf",
+                bbox_inches="tight",
+                pad_inches=0.01,
+            )
+
+            print(
+                f"Saved: {save_path}"
+            )
+
+        plt.show()
+
+        # ---------------------------------------------------------
+        # Summary statistics
+        # ---------------------------------------------------------
+        summary_df = pd.DataFrame(
+            summary_rows
+        )
+
+        return summary_df
+    
+    eps_lens = {
+        "RPPO": {
+            "collision": [5.6, 5.6, 5.6, 5.7, 5.5], #[68, 64, 65, 68, 69],
+            "no_collision": [6.6, 6.5, 6.8, 6.7, 6.6]
+            },
+        "PPO": {
+            "collision": [5.3, 5.4, 5.5, 5.4, 5.2], #[58, 68, 66, 63, 71], 
+            "no_collision":  [6.8, 6.6, 6.6, 6.7, 6.7]
+            },
+        "SAC": 
+            {"collision": [6.9, 7.0, 7.0, 6.9, 7.1], #[54, 57, 51, 43, 54],
+             "no_collision":  [7.9, 7.7, 7.7, 7.5, 7.6]
+             }
+    }
+    
+    save_dir = (
+        ROOT
+        / "EBASTv2_train"
+        / "simulated_trained_model"
+        / "plots_for_paper"
+    )
+    
+    save_path = (
+            save_dir
+            / "episode_length_variability_tests.pdf"
+        )
+
+    summary_df = plot_test_eps_len(save_path=save_path, eps_lens=eps_lens)
+    
+    print(summary_df)
