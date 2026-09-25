@@ -22,7 +22,7 @@ from orchestrator.scenario_config import load_base_config
 import yaml
 
 ## Get the config path
-config_path = ROOT / "test_run" / "more_og_romsdal" / "more_og_romsdal.yaml"
+config_path = ROOT / "test_run" / "more_og_romsdal" / "more_og_romsdal_complex_ship.yaml"
 
 ## Get the configs
 config      = load_base_config(config_path)
@@ -76,33 +76,33 @@ print(f"A single simulation finished in {time_count:.2f} seconds")
 ## Get the save path for animation
 save_path = ROOT / "saved_animation" / "more_og_romsdal.gif"
 
-# Animate Simulation
-instance.AnimateFleetTrajectory(
-        ship_ids=None,
-        show=True,
-        block=True,
-        mode="quick",
-        fig_width=10.0,
-        margin_frac=0.08,
-        equal_aspect=True,
-        interval_ms=60,
-        frame_step=5,
-        trail_len=300,
-        plot_routes=True,
-        plot_waypoints=True,
-        plot_roa=True,
-        plot_start_end=True,
-        with_labels=True,
-        precompute_ship_outlines=True,
-        save_path=save_path,
-        writer_fps=20,
-        palette=None,
-        blit=True,
-        ship_scale=1.0
-    )
+# # Animate Simulation
+# instance.AnimateFleetTrajectory(
+#         ship_ids=None,
+#         show=True,
+#         block=True,
+#         mode="quick",
+#         fig_width=10.0,
+#         margin_frac=0.08,
+#         equal_aspect=True,
+#         interval_ms=60,
+#         frame_step=60,
+#         trail_len=300,
+#         plot_routes=True,
+#         plot_waypoints=True,
+#         plot_roa=True,
+#         plot_start_end=True,
+#         with_labels=True,
+#         precompute_ship_outlines=True,
+#         save_path=save_path,
+#         writer_fps=20,
+#         palette=None,
+#         blit=True,
+#         ship_scale=1.0
+#     )
 
-# # Plot Trajectory
-# instance.PlotFleetTrajectory(mode="quick", ship_scale=1.0)
+# Plot Trajectory
+instance.PlotFleetTrajectory(mode="quick", ship_scale=1.0)
 
 # Plot Simulation Results
 key_group_list = [
@@ -124,11 +124,11 @@ key_group_list = [
     ["OS0.wind_direction_deg"],
 ]
 
-# # Plot Time Series
-# instance.JoinPlotTimeSeries(list(reversed(key_group_list)),  
-#                             create_title= False, 
-#                             legend= True, 
-#                             show_instance_name=False,
-#                             show_separately=False,
-#                             show=True,
-#                             mode="quick")
+# Plot Time Series
+instance.JoinPlotTimeSeries(list(reversed(key_group_list)),  
+                            create_title= False, 
+                            legend= True, 
+                            show_instance_name=False,
+                            show_separately=False,
+                            show=True,
+                            mode="quick")
