@@ -1,6 +1,7 @@
 """
 Machinery System Python FMU implementation.
 This FMU manages a machinery system and machinery system operating mode switching.
+Include local time integrator.
 
 Authors : Andreas R.G. Sitorus
 Date    : Januari 2026
@@ -10,16 +11,17 @@ from pythonfmu import Fmi2Causality, Fmi2Slave, Fmi2Variability, Real, Integer, 
 import numpy as np
 import traceback
 
-class MachinerySystem(Fmi2Slave):
+class MachinerySystemLTS(Fmi2Slave):
     
     author = "Andreas R.G. Sitorus"
-    description = "Ship Machinery System Python FMU Implementation"
+    description = "Ship Machinery System with Local Timestep Python FMU Implementation"
     
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         
         ## Parameters
         # Machinery System Configuration
+        self.max_dt                                                     = 5.0
         self.hotel_load                                                 = 0.0
         self.rated_speed_main_engine_rpm                                = 0.0
         self.linear_friction_main_engine                                = 0.0
@@ -69,6 +71,7 @@ class MachinerySystem(Fmi2Slave):
         self.hybrid_shaft_generator_torque                              = 0.0
         
         ## Internal Variables
+        self._precomputed                                               = False
         self.main_engine_capacity                                       = self.main_engine_capacity_spec
         self.electrical_capacity                                        = 2 * self.diesel_gen_capacity_spec
         self.shaft_generator_state                                      = 'OFF' # default
@@ -82,9 +85,14 @@ class MachinerySystem(Fmi2Slave):
         self.fuel_consumption_me_temp                                   = 0.0
         self.fuel_consumption_hsg_temp                                  = 0.0
         self.fuel_consumption_temp                                      = 0.0
+        # For local integration
+        self.n_sub                                                      = 1
+        self.dt_internal                                                = None
             
         ## Registration
-        # Rudder Parameters        
+        # Local Integration Parameters
+        self.register_variable(Real("max_dt", causality=Fmi2Causality.parameter, variability=Fmi2Variability.fixed))
+        
         # Machinery System Configuration
         self.register_variable(Real("hotel_load", causality=Fmi2Causality.parameter,variability=Fmi2Variability.fixed))
         self.register_variable(Real("rated_speed_main_engine_rpm", causality=Fmi2Causality.parameter,variability=Fmi2Variability.fixed))
@@ -250,9 +258,21 @@ class MachinerySystem(Fmi2Slave):
         
         return rate_me, rate_hsg, fuel_consumption_me, fuel_consumption_hsg, fuel_consumption
             
+    def implement_throttle(self, load_perc, shaft_speed_max, step_size):
+        # Get the shaft speed using input
+        self.d_omega = self.update_shaft_equation(load_perc)   
+        self.omega   = np.min([(self.omega + self.d_omega * step_size), shaft_speed_max])          # Integration
         
     def do_step(self, current_time: float, step_size: float) -> bool:
         try:
+            if not self._precomputed:
+                # Determine local integration resolution
+                self.n_sub = max(1, int(np.ceil(step_size / self.max_dt)))
+                self.dt_internal = step_size / self.n_sub
+                
+                # Turn off precomputed
+                self._precomputed = True
+                
             ## TREAT MACHINERY MODE AS AN INPUT
             # MEC Mode
             if self.mso_mode == 0:
@@ -287,9 +307,9 @@ class MachinerySystem(Fmi2Slave):
             # Max shaft speed
             shaft_speed_max = 1.1 * (self.rated_speed_main_engine_rpm * np.pi / 30) * self.gear_ratio_between_main_engine_and_propeller
             
-            # Get the shaft speed using input
-            self.d_omega = self.update_shaft_equation(self.load_perc)   
-            self.omega   = np.min([(self.omega + self.d_omega * step_size), shaft_speed_max])          # Integration
+            # implement throttle
+            for i in range(self.n_sub):
+                self.implement_throttle(self.load_perc, shaft_speed_max, self.dt_internal)
             
             # Get the thrust
             self.thrust_force = self.get_thrust_force(self.omega)

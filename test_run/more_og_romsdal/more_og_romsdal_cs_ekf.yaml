@@ -24,7 +24,7 @@ ships:
       - [AUTOPILOT, FMUs/complex_ship/Autopilot.fmu]
       - [SHAFT_SPEED_CONTROLLER, FMUs/complex_ship/ShaftSpeedController.fmu]
       - [THROTTLE_CONTROLLER, FMUs/complex_ship/ThrottleController.fmu]
-      - [MACHINERY_SYSTEM, FMUs/complex_ship/MachinerySystem.fmu]
+      - [MACHINERY_SYSTEM, FMUs/complex_ship/MachinerySystemLTS.fmu]
       - [RUDDER, FMUs/complex_ship/Rudder.fmu]
       - [SHIP_MODEL, FMUs/complex_ship/ShipModel.fmu]
       - [GPS, FMUs/complex_ship/GPSSensor.fmu]
@@ -50,7 +50,7 @@ ships:
 
       # Shaft speed controller
       - [SHAFT_SPEED_CONTROLLER, desired_ship_speed,  MISSION_MANAGER,  next_wp_speed]
-      - [SHAFT_SPEED_CONTROLLER, measured_ship_speed, SHIP_EKF,         estimated_v]
+      - [SHAFT_SPEED_CONTROLLER, measured_ship_speed, SHIP_EKF,         estimated_u]
 
       # Throttle controller
       - [THROTTLE_CONTROLLER, desired_shaft_speed_rpm,  SHAFT_SPEED_CONTROLLER, shaft_speed_cmd_rpm]
@@ -89,8 +89,11 @@ ships:
       - [SHIP_EKF, tau_r,               RUDDER,           rudder_force_r]
       - [SHIP_EKF, measured_north,      GPS,              measured_north]
       - [SHIP_EKF, measured_east,       GPS,              measured_east]
+      - [SHIP_EKF, gps_valid,           GPS,              measurement_valid]
       - [SHIP_EKF, measured_heading,    GYROCOMPASS,      measured_ship_heading_rad]
+      - [SHIP_EKF, gyro_valid,          GYROCOMPASS,      measurement_valid]
       - [SHIP_EKF, measured_ship_speed, SPEED_LOG,        measured_ship_speed]
+      - [SHIP_EKF, speed_log_valid,     SPEED_LOG,        measurement_valid]
 
     SHIP_OBSERVERS:
       - [MISSION_MANAGER, prev_wp_north, "Waypoint [m]"]
@@ -190,6 +193,7 @@ ships:
         ki: 0.000065
 
       MACHINERY_SYSTEM:
+        max_dt: 0.5
         hotel_load: 200000
         rated_speed_main_engine_rpm: 1000
         linear_friction_main_engine: 68
@@ -259,6 +263,7 @@ ships:
         ship_speed_sigma: 0.05
 
       SHIP_EKF:
+        max_dt: 0.5
         dead_weight_tonnage: 3850000
         coefficient_of_deadweight_to_displacement: 0.7
         bunkers: 200000

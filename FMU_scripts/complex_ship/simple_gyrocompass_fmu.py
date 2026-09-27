@@ -19,6 +19,7 @@ class GyrocompassSensor(Fmi2Slave):
         ## Noise Parameters (Sigma = Standard Deviation)
         self.seed                               = 42
         self.ship_heading_sigma_deg             = 0.05
+        self.initial_ship_heading_rad           = 0.0
         
         ## Input
         self.freeze                             = False
@@ -26,16 +27,17 @@ class GyrocompassSensor(Fmi2Slave):
         
         ## Output
         self.measured_ship_heading_rad          = 0.0
-        self.measurement_valid                  = True
+        self.measurement_valid                  = False
         
         # Internal Variables
-        self._noise_generator                   = None
+        self._precomputed                       = False
         self._prev_measured_ship_heading_rad    = 0.0
         
         ## Registration
         # PI Parameters
         self.register_variable(Integer("seed", causality=Fmi2Causality.parameter,variability=Fmi2Variability.fixed))
         self.register_variable(Real("ship_heading_sigma_deg", causality=Fmi2Causality.parameter,variability=Fmi2Variability.tunable))
+        self.register_variable(Real("initial_ship_heading_rad", causality=Fmi2Causality.parameter,variability=Fmi2Variability.tunable))
         
         # Input
         self.register_variable(Boolean("freeze", causality=Fmi2Causality.input, variability=Fmi2Variability.discrete))
@@ -51,8 +53,12 @@ class GyrocompassSensor(Fmi2Slave):
     def do_step(self, current_time: float, step_size: float) -> bool:
         try:
             # Precompute once
-            if self._noise_generator is None:
-                self._noise_generator               = np.random.default_rng(seed=self.seed)
+            if not self._precomputed:
+                self._noise_generator           = np.random.default_rng(seed=self.seed)
+                
+                self.ship_heading_rad           = self.initial_ship_heading_rad
+                
+                self._precomputed               = True
             
             if not self.freeze:
                 # Noise only generated when the sensor is not frozen

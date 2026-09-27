@@ -364,16 +364,42 @@ class ShipInTransitCoSimulation(CoSimInstance):
         fmu_params["SHIP_MODEL"]["initial_yaw_angle_rad"]         = np.deg2rad(spawn.get("yaw_angle_deg", 0.0))
         fmu_params["SHIP_MODEL"]["initial_forward_speed_m_per_s"] = spawn.get("forward_speed", 0.0)
         
+        # Set the sensors
+        ekf_exists          = isinstance(fmu_params.get("SHIP_EKF", None), dict)
+        gps_exists          = isinstance(fmu_params.get("GPS", None), dict)
+        gyrocompass_exists  = isinstance(fmu_params.get("GYROCOMPASS", None), dict)
+        speed_log_exists    = isinstance(fmu_params.get("SPEED_LOG", None), dict)
+        
+        if ekf_exists:
+            # Set the initial based on the spawn point
+            fmu_params["SHIP_EKF"]["initial_measured_north"]        = spawn["north"]
+            fmu_params["SHIP_EKF"]["initial_measured_east"]         = spawn["east"]
+            fmu_params["SHIP_EKF"]["initial_measured_heading"]      = np.deg2rad(spawn.get("yaw_angle_deg", 0.0))
+            fmu_params["SHIP_EKF"]["initial_measured_ship_speed"]   = spawn.get("forward_speed", 0.0)
+            
+        if gps_exists:
+            # Set the initial based on the spawn point
+            fmu_params["GPS"]["initial_north"]                      = spawn["north"]
+            fmu_params["GPS"]["initial_east"]                       = spawn["east"]
+            
+        if gyrocompass_exists:
+            # Set the initial based on the spawn point
+            fmu_params["GYROCOMPASS"]["initial_ship_heading_rad"]   = np.deg2rad(spawn.get("yaw_angle_deg", 0.0))
+            
+        if speed_log_exists:
+            # Set the initial based on the spawn point
+            fmu_params["SPEED_LOG"]["initial_ship_speed"]           = spawn.get("forward_speed", 0.0)
+            
         # Set the ship reach end waypoint status at False first
         self.ship_reach_end_waypoint[ship_id].append(False)
         
         # Start the ship when the time is equal to the start time, else ship is delayed
         start_time = spawn["start_time"]
-        if self.time < start_time*1e9:
+        if self.time < start_time:
             self.ship_delayed[ship_id].append(True)
         else:
             self.ship_delayed[ship_id].append(False)
-        
+
         return fmu_params
     
     

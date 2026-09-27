@@ -19,6 +19,7 @@ class ShipEKF(Fmi2Slave):
         
         ## Parameters
         # Ship configuration
+        self.max_dt                                         = 5.0
         self.dead_weight_tonnage                            = 0.0
         self.coefficient_of_deadweight_to_displacement      = 0.0 
         self.bunkers                                        = 0.0
@@ -35,6 +36,12 @@ class ShipEKF(Fmi2Slave):
         self.nonlinear_friction_coefficient_in_sway         = 0.0
         self.nonlinear_friction_coefficient_in_yaw          = 0.0
         self.rho_seawater                                   = 1025.0
+        
+        # Initial states
+        self.initial_measured_north         = 0.0
+        self.initial_measured_east          = 0.0
+        self.initial_measured_heading       = 0.0
+        self.initial_measured_ship_speed    = 0.0
         
         # Initial uncertainty
         self.sigma_p0_n                 = 2.0
@@ -95,11 +102,15 @@ class ShipEKF(Fmi2Slave):
         self.Q                          = None
         # Measurement Jacobian
         self.H                          = None
+        # For local integration
+        self.n_sub                      = 1
+        self.dt_internal                = None
         
         ## Registration
         # =========================
         # Ship configuration (parameters, fixed)
         # =========================
+        self.register_variable(Real("max_dt", causality=Fmi2Causality.parameter, variability=Fmi2Variability.fixed))
         self.register_variable(Real("dead_weight_tonnage", causality=Fmi2Causality.parameter, variability=Fmi2Variability.fixed))
         self.register_variable(Real("coefficient_of_deadweight_to_displacement", causality=Fmi2Causality.parameter, variability=Fmi2Variability.fixed))
         self.register_variable(Real("bunkers", causality=Fmi2Causality.parameter, variability=Fmi2Variability.fixed))
@@ -134,6 +145,11 @@ class ShipEKF(Fmi2Slave):
         self.register_variable(Real("sigma_p0_v", causality=Fmi2Causality.parameter, variability=Fmi2Variability.fixed))
         self.register_variable(Real("sigma_p0_r", causality=Fmi2Causality.parameter, variability=Fmi2Variability.fixed))
         
+        self.register_variable(Real("initial_measured_north", causality=Fmi2Causality.parameter, variability=Fmi2Variability.fixed))
+        self.register_variable(Real("initial_measured_east", causality=Fmi2Causality.parameter, variability=Fmi2Variability.fixed))
+        self.register_variable(Real("initial_measured_heading", causality=Fmi2Causality.parameter, variability=Fmi2Variability.fixed))
+        self.register_variable(Real("initial_measured_ship_speed", causality=Fmi2Causality.parameter, variability=Fmi2Variability.fixed))
+        
         # =========================
         # Input
         # =========================
@@ -157,7 +173,6 @@ class ShipEKF(Fmi2Slave):
         self.register_variable(Real("estimated_u", causality=Fmi2Causality.output))
         self.register_variable(Real("estimated_v", causality=Fmi2Causality.output))
         self.register_variable(Real("estimated_r", causality=Fmi2Causality.output))
-        
         
     def _wrap_to_pi(self, a):
         return (a + np.pi) % (2*np.pi) - np.pi
@@ -268,7 +283,9 @@ class ShipEKF(Fmi2Slave):
         ])
         
         # Integration
-        nu_dot  = MARB.inv() @ (tau - (CRB + CARB) @ nu - (DL + DNL) @ nu)
+        rhs     = (-(CRB @ nu) - (CARB @ nu) - ((DL + DNL) @nu) + tau)  # Right hand side of the equation
+        
+        nu_dot  = MARB.LUsolve(rhs)
         nu_next = nu + nu_dot * step_size
 
         ## Complete dynamics
@@ -337,7 +354,7 @@ class ShipEKF(Fmi2Slave):
         ])
         
         ## Q Matrix
-        self.Q  = np.diag([
+        Q_rate  = np.diag([
             self.sigma_q_n ** 2,
             self.sigma_q_e ** 2,
             np.deg2rad(self.sigma_q_psi) ** 2,
@@ -345,6 +362,8 @@ class ShipEKF(Fmi2Slave):
             self.sigma_q_v ** 2,
             self.sigma_q_r ** 2,
         ])
+        
+        self.Q = Q_rate * self.dt_internal
         
         ## R Matrix
         # Sensor Covariance
@@ -461,21 +480,25 @@ class ShipEKF(Fmi2Slave):
     def do_step(self, current_time: float, step_size: float) -> bool:
         try:
             if not self._precomputed:
+                # Determine local integration resolution
+                self.n_sub = max(1, int(np.ceil(step_size / self.max_dt)))
+                self.dt_internal = step_size / self.n_sub
+                
                 # Get P, Q, and R Matrix
                 self.get_PQR()
                 
                 # Set the initial x
                 self.x = np.array([
-                    self.measured_north,
-                    self.measured_east,
-                    self._wrap_to_pi(self.measured_heading),
-                    self.measured_ship_speed,
+                    self.initial_measured_north,
+                    self.initial_measured_east,
+                    self._wrap_to_pi(self.initial_measured_heading),
+                    self.initial_measured_ship_speed,
                     0.0,                                        # Sway speed assume to be 0.0
                     0.0                                         # Yaw rate assume to be 0.0
                 ])
                 
                 # Set the control plant model
-                self.control_plant_model(step_size)
+                self.control_plant_model(self.dt_internal)
                 
                 # Turn off precomputed
                 self._precomputed = True
@@ -490,8 +513,9 @@ class ShipEKF(Fmi2Slave):
             
             # ========================================
             # EKF prediction
-            # ========================================
-            self.predict(tau=tau)
+            # ========================================            
+            for i in range(self.n_sub):
+                self.predict(tau=tau)
             
             # ========================================
             # Sensor corrections
@@ -501,6 +525,8 @@ class ShipEKF(Fmi2Slave):
                     self.measured_north,
                     self.measured_east
                 )
+                
+                self.debug_gps_n = float(self.x[0])
             
             if self.gyro_valid:
                 self.update_gyro(

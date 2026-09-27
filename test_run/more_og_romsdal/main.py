@@ -12,8 +12,8 @@ os.add_dll_directory(str(dll_dir))
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
-from orchestrator.sit_cosim import ShipInTransitCoSimulation
-from orchestrator.sit_cosim_fmpy import ShipInTransitCoSimulation
+# from orchestrator.sit_cosim import ShipInTransitCoSimulation
+from orchestrator.sit_cosim_fmpy_experimental import ShipInTransitCoSimulation
 from orchestrator.scenario_config import load_base_config
 
 # =========================
@@ -22,7 +22,7 @@ from orchestrator.scenario_config import load_base_config
 import yaml
 
 ## Get the config path
-config_path = ROOT / "test_run" / "more_og_romsdal" / "more_og_romsdal_complex_ship.yaml"
+config_path = ROOT / "test_run" / "more_og_romsdal" / "more_og_romsdal_cs_ekf.yaml"
 
 ## Get the configs
 config      = load_base_config(config_path)
@@ -112,16 +112,30 @@ key_group_list = [
     ["OS0.east"],
     ["OS0.forward_speed", "OS0.next_wp_speed", "OS0.total_ship_speed"],
     ["OS0.yaw_angle_rad", "OS0.yaw_angle_ref_rad"],
-    ["OS0.rudder_angle_deg"],
-    ["OS0.e_ct"],
-    ["OS0.shaft_speed_rpm", "OS0.shaft_speed_cmd_rpm"],
-    ["OS0.throttle_cmd"],
+    # ["OS0.rudder_angle_deg"],
+    # ["OS0.e_ct"],
+    # ["OS0.shaft_speed_rpm", "OS0.shaft_speed_cmd_rpm"],
+    # ["OS0.throttle_cmd"],
     
-    # For environment load-enabled simulation only
-    ["OS0.current_speed"],
-    ["OS0.current_direction_deg"],
-    ["OS0.wind_speed"],
-    ["OS0.wind_direction_deg"],
+    # # For environment load-enabled simulation only
+    # ["OS0.current_speed"],
+    # ["OS0.current_direction_deg"],
+    # ["OS0.wind_speed"],
+    # ["OS0.wind_direction_deg"],
+    
+    # For Ship EKF
+    ["OS0.estimated_n"],
+    ["OS0.estimated_e"],
+    ["OS0.estimated_psi"],
+    ["OS0.estimated_u"],
+    ["OS0.estimated_v"],
+    ["OS0.estimated_r"],
+    
+    # Sensors
+    ["OS0.measured_north"],
+    ["OS0.measured_east"],
+    ["OS0.measured_ship_heading_rad"],
+    ["OS0.measured_ship_speed"],
 ]
 
 # Plot Time Series

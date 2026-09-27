@@ -413,10 +413,10 @@ class ShipModel(Fmi2Slave):
                 ])
             
             # Compute the kinematics and kinetics
-            d_north, d_east, d_yaw_angle_rad          = self.three_dof_kinematics(yaw_angle_rad,
-                                                                                  forward_speed, 
-                                                                                  sideways_speed, 
-                                                                                  yaw_rate)
+            d_north, d_east, d_yaw_angle_rad                = self.three_dof_kinematics(yaw_angle_rad,
+                                                                                        forward_speed, 
+                                                                                        sideways_speed, 
+                                                                                        yaw_rate)
             d_forward_speed, d_sideways_speed, d_yaw_rate   = self.three_dof_kinetics(yaw_angle_rad,
                                                                                       forward_speed, 
                                                                                       sideways_speed, 

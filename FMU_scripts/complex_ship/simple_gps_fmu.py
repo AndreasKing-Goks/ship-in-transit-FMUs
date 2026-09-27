@@ -20,6 +20,8 @@ class GPSSensor(Fmi2Slave):
         self.seed                           = 42
         self.north_sigma                    = 2.0
         self.east_sigma                     = 2.0
+        self.initial_north                  = 0.0
+        self.initial_east                   = 0.0
         
         ## Input
         self.freeze                         = False
@@ -29,10 +31,10 @@ class GPSSensor(Fmi2Slave):
         ## Output
         self.measured_north                 = 0.0
         self.measured_east                  = 0.0
-        self.measurement_valid              = True
+        self.measurement_valid              = False
         
         # Internal Variables
-        self._noise_generator               = None
+        self._precomputed                   = False
         self._prev_measured_north           = 0.0
         self._prev_measured_east            = 0.0
         
@@ -41,6 +43,8 @@ class GPSSensor(Fmi2Slave):
         self.register_variable(Integer("seed", causality=Fmi2Causality.parameter,variability=Fmi2Variability.fixed))
         self.register_variable(Real("north_sigma", causality=Fmi2Causality.parameter,variability=Fmi2Variability.tunable))
         self.register_variable(Real("east_sigma", causality=Fmi2Causality.parameter,variability=Fmi2Variability.tunable))
+        self.register_variable(Real("initial_north", causality=Fmi2Causality.parameter,variability=Fmi2Variability.tunable))
+        self.register_variable(Real("initial_east", causality=Fmi2Causality.parameter,variability=Fmi2Variability.tunable))
         
         # Input
         self.register_variable(Boolean("freeze", causality=Fmi2Causality.input, variability=Fmi2Variability.discrete))
@@ -55,8 +59,13 @@ class GPSSensor(Fmi2Slave):
     def do_step(self, current_time: float, step_size: float) -> bool:
         try:
             # Precompute once
-            if self._noise_generator is None:
+            if not self._precomputed:
                 self._noise_generator           = np.random.default_rng(seed=self.seed)
+                
+                self.north                      = self.initial_north
+                self.east                       = self.initial_east
+                
+                self._precomputed               = True
             
             if not self.freeze:
                 # Noise only generated when the sensor is not frozen
