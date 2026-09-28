@@ -76,30 +76,30 @@ print(f"A single simulation finished in {time_count:.2f} seconds")
 ## Get the save path for animation
 save_path = ROOT / "saved_animation" / "more_og_romsdal.gif"
 
-# # Animate Simulation
-# instance.AnimateFleetTrajectory(
-#         ship_ids=None,
-#         show=True,
-#         block=True,
-#         mode="quick",
-#         fig_width=10.0,
-#         margin_frac=0.08,
-#         equal_aspect=True,
-#         interval_ms=60,
-#         frame_step=60,
-#         trail_len=300,
-#         plot_routes=True,
-#         plot_waypoints=True,
-#         plot_roa=True,
-#         plot_start_end=True,
-#         with_labels=True,
-#         precompute_ship_outlines=True,
-#         save_path=save_path,
-#         writer_fps=20,
-#         palette=None,
-#         blit=True,
-#         ship_scale=1.0
-#     )
+# Animate Simulation
+instance.AnimateFleetTrajectory(
+        ship_ids=None,
+        show=True,
+        block=True,
+        mode="quick",
+        fig_width=10.0,
+        margin_frac=0.08,
+        equal_aspect=True,
+        interval_ms=60,
+        frame_step=60,
+        trail_len=300,
+        plot_routes=True,
+        plot_waypoints=True,
+        plot_roa=True,
+        plot_start_end=True,
+        with_labels=True,
+        precompute_ship_outlines=True,
+        save_path=save_path,
+        writer_fps=20,
+        palette=None,
+        blit=True,
+        ship_scale=1.0
+    )
 
 # Plot Trajectory
 instance.PlotFleetTrajectory(mode="quick", ship_scale=1.0)
@@ -112,10 +112,10 @@ key_group_list = [
     ["OS0.east"],
     ["OS0.forward_speed", "OS0.next_wp_speed", "OS0.total_ship_speed"],
     ["OS0.yaw_angle_rad", "OS0.yaw_angle_ref_rad"],
-    # ["OS0.rudder_angle_deg"],
-    # ["OS0.e_ct"],
-    # ["OS0.shaft_speed_rpm", "OS0.shaft_speed_cmd_rpm"],
-    # ["OS0.throttle_cmd"],
+    ["OS0.rudder_angle_deg"],
+    ["OS0.e_ct"],
+    ["OS0.shaft_speed_rpm", "OS0.shaft_speed_cmd_rpm"],
+    ["OS0.throttle_cmd"],
     
     # # For environment load-enabled simulation only
     # ["OS0.current_speed"],

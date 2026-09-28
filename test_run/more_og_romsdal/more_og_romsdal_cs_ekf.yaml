@@ -175,22 +175,22 @@ ships:
         r: 1000
         ki_ct: 0.002
         integrator_limit: 5000
-        kp: 1.5
+        kp: 0.5
         ki: 0.00015
-        kd: 80.0
+        kd: 50.0
         max_rudder_rate_deg_per_sec: 2.3
         max_rudder_angle_deg: 30
 
       SHAFT_SPEED_CONTROLLER:
-        kp: 175.0
-        ki: 2.25
+        kp: 25.0
+        ki: 0.5
         rated_speed_main_engine_rpm: 1000
         gear_ratio_between_main_engine_and_propeller: 0.6
         idle_rpm_fraction: 0.1
 
       THROTTLE_CONTROLLER:
-        kp: 0.000003
-        ki: 0.000065
+        kp: 0.00005
+        ki: 0.000075
 
       MACHINERY_SYSTEM:
         max_dt: 0.5
