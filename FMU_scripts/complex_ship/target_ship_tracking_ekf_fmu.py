@@ -378,25 +378,25 @@ class TargetShipTrackingEKF(Fmi2Slave):
         """
         radar model: z = h_radar(x, m_radar)
         """
-        return np.asarray(self.h_radar_lambda(*(x.tolist() + m_radar.tolist())), dtype=float).reshape(-1)
+        return np.asarray(self.h_radar_lambda(*(x.tolist() + m_radar.tolist())), dtype=float).reshape(-1) # Ensure flattened
     
     def dhdx_radar(self, x:np.ndarray, m_radar:np.ndarray, *args, **kwargs) -> np.ndarray:
         """
         Jacobian of the radar model: dh_radar/dx
         """
-        return np.asarray(self.H_radar_x_lambda(*(x.tolist() + m_radar.tolist())), dtype=float).reshape(-1)
+        return np.asarray(self.H_radar_x_lambda(*(x.tolist() + m_radar.tolist())), dtype=float)
     
     def h_cam(self, x:np.ndarray, m_cam:np.ndarray, *args, **kwargs) -> np.ndarray:
         """
         camera model: z = h_cam(x, m_cam)
         """
-        return np.asarray(self.h_cam_lambda(*(x.tolist() + m_cam.tolist())), dtype=float).reshape(-1)
+        return np.asarray(self.h_cam_lambda(*(x.tolist() + m_cam.tolist())), dtype=float).reshape(-1) # Ensure flattened
     
     def dhdx_cam(self, x:np.ndarray, m_cam:np.ndarray, *args, **kwargs) -> np.ndarray:
         """
         Jacobian of the camera model: dh_radar/dx
         """
-        return np.asarray(self.H_cam_x_lambda(*(x.tolist() + m_cam.tolist())), dtype=float).reshape(-1)
+        return np.asarray(self.H_cam_x_lambda(*(x.tolist() + m_cam.tolist())), dtype=float)
     
     def get_PQR(self):
         ## P Matrix
@@ -414,7 +414,7 @@ class TargetShipTrackingEKF(Fmi2Slave):
         # Speed variance due to unknown acceleration            : \Delta Spd = (a * dt)**2
         # Position-speed covariance due to unknown acceleration : (1/2 * a * dt**2) * (a * dt)
         
-        # Unknown variance due to unknown acceleration
+        # Unknown variance due to unknown acceleration M(4x2)
         G = np.array([
             [(0.5 * self.dt_internal**2), 0.0],     # North position variance due to unknown acceleration
             [0.0, (0.5 * self.dt_internal**2)],     # East speed variance due to unknown acceleration
@@ -422,7 +422,7 @@ class TargetShipTrackingEKF(Fmi2Slave):
             [0.0, self.dt_internal]                 # East speed variance due to unknown acceleration
         ])
         
-        # Unknown acceleration variance
+        # Unknown acceleration variance M(2x1)
         Q_acc   = np.diag([
             self.sigma_acc_north**2,
             self.sigma_acc_east**2
@@ -430,6 +430,7 @@ class TargetShipTrackingEKF(Fmi2Slave):
         
         # Propagate the unknown acceleration uncertainty 
         # to the Q acceleration matrix
+        # M(4x2) @ M(2x2) @ M(2x4) = M(4x4)
         self.Q = G @ Q_acc @ G.T
         
         ## R Matrix

@@ -299,47 +299,24 @@ class ShipEKF(Fmi2Slave):
             nu_next[2, 0],      # r
         ])
         
-        # Measurement model
-        h = sp.Matrix([
-            n, 
-            e, 
-            psi, 
-            u
-        ])
-        
         ## Compute the Jacobian
         J_x     = f.jacobian(x)     # State Jacobian
-        H_x     = h.jacobian(x)      # Measurement Jacobian
         
         ## Convert to lambdified function
-        self.J_x_lambda     = sp.lambdify([n, e, psi, u, v, r], J_x, "numpy")
-        self.H_x_lambda     = sp.lambdify([n, e, psi, u, v, r], H_x, "numpy")
+        self.J_x_lambda     = sp.lambdify([n, e, psi, u, v, r] + [tau_u, tau_v, tau_r], J_x, "numpy")
         self.f_lambda       = sp.lambdify([n, e, psi, u, v, r] + [tau_u, tau_v, tau_r], f, "numpy")
-        self.h_lambda       = sp.lambdify([n, e, psi, u, v, r], h, "numpy")
        
     def f(self, x:np.ndarray, u:np.ndarray, *args, **kwargs) -> np.ndarray:
         """
         System model: x' = f(x, u)
         """
-        return np.asarray(self.f_lambda(*(x.tolist() + u.tolist()))).reshape(-1)
+        return np.asarray(self.f_lambda(*(x.tolist() + u.tolist()))).reshape(-1)    # Flattened
     
-    def dfdx(self, x:np.ndarray, *args, **kwargs) -> np.ndarray:
+    def dfdx(self, x:np.ndarray, u:np.ndarray, *args, **kwargs) -> np.ndarray:
         """
         Jacobian of system model: df/dx for x = x_prev, u = u_prev
         """
-        return np.asarray(self.J_x_lambda(*x.tolist()), dtype=float)
-    
-    def h(self, x:np.ndarray, *args, **kwargs) -> np.ndarray:
-        """
-        Measurement model: z = h(x)
-        """
-        return np.asarray(self.h_lambda(*x.tolist()), dtype=float).squeeze()
-    
-    def dhdx(self, x:np.ndarray, *args, **kwargs) -> np.ndarray:
-        """
-        Jacobian of the measurement model: dh/dx for z = h(x)
-        """
-        return np.asarray(self.H_x_lambda(*x.tolist()), dtype=float)
+        return np.asarray(self.J_x_lambda(*(x.tolist() + u.tolist())), dtype=float)
     
     def get_PQR(self):
         ## P Matrix
@@ -366,14 +343,6 @@ class ShipEKF(Fmi2Slave):
         self.Q = Q_rate * self.dt_internal
         
         ## R Matrix
-        # Sensor Covariance
-        self.R  = np.diag([
-            self.sigma_gps_north **2,
-            self.sigma_gps_east **2,
-            np.deg2rad(self.sigma_gyro) ** 2,
-            self.sigma_speed_log ** 2
-        ])
-        
         # GPS Covariance
         self.R_gps  = np.diag([
             self.sigma_gps_north **2,
@@ -429,16 +398,20 @@ class ShipEKF(Fmi2Slave):
         return self.x
     
     def update_gps(self, north, east):
+        # Actual GPS measurement
         z = np.array([
             north,
             east
         ])
         
+        # GPS measurement model
         h = np.array([
             self.x[0],
             self.x[1]
         ])
         
+        # GPS measurement model Jacobian
+        # [n, e, psi, u, v, r]
         dhdx = np.array([
             [1, 0, 0, 0, 0, 0],
             [0, 1, 0, 0, 0, 0]
@@ -447,14 +420,18 @@ class ShipEKF(Fmi2Slave):
         self._update(z=z, h=h, dhdx=dhdx, R=self.R_gps)
         
     def update_gyro(self, heading):
+        # Actual Gyrocompass measurement
         z = np.array([
             heading
         ])
         
+        # Gyrocompass measurement model
         h = np.array([
             self.x[2]
         ])
         
+        # Gyrocompass measurement model Jacobian
+        # [n, e, psi, u, v, r]
         dhdx = np.array([
             [0, 0, 1, 0, 0, 0]
         ])
@@ -462,14 +439,18 @@ class ShipEKF(Fmi2Slave):
         self._update(z=z, h=h, dhdx=dhdx, R=self.R_gyro, angle_indices=[0])
         
     def update_speed_log(self, speed):
+        # Actual Speed Log measurement
         z = np.array([
             speed
         ])
         
+        # Speed log measurement model
         h = np.array([
             self.x[3]
         ])
         
+        # Gyrocompass measurement model Jacobian
+        # [n, e, psi, u, v, r]
         dhdx = np.array([
             [0, 0, 0, 1, 0, 0]
         ])
@@ -489,8 +470,8 @@ class ShipEKF(Fmi2Slave):
                     self.initial_measured_east,
                     self._wrap_to_pi(self.initial_measured_heading),
                     self.initial_measured_ship_speed,
-                    0.0,                                        # Sway speed assume to be 0.0
-                    0.0                                         # Yaw rate assume to be 0.0
+                    0.0,                                                # Sway speed assume to be 0.0
+                    0.0                                                 # Yaw rate assume to be 0.0
                 ])
                 
                 # Get P, Q, and R Matrix
