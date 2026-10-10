@@ -21,7 +21,7 @@ from EBASTv2_core.reward_designs import (
 
 # === Customizable boundaries for X axis ===
 x_min = 0
-x_max = 10000
+x_max = 200
 
 # x_min = -60
 # x_max = 60
@@ -37,7 +37,7 @@ designs = [
     RewardDesign1(target=0, offset_param=500),
     RewardDesign2(target=1000, offset_param1=10000, offset_param2=10000000),
     RewardDesign3(target=1000, offset_param=150000),
-    RewardDesign4(target=100, offset_param=15000000),
+    RewardDesign4(target=1000, offset_param=15000000),
     RewardDesign5(target_bound_low=40, target_bound_high=60, offset_param=100),
     RewardDesign6(target1=30, target2=70, second_peak=0.8, flat_zone=0.5,
                   offset_param1=100, offset_param2=50, offset_param3=50, offset_param4=100),
@@ -74,8 +74,29 @@ if test_1:
     plt.tight_layout(rect=[0, 0, 1, 0.95])
     plt.show()
 
+# test_2 = False
+# # test_2 = True
+
+# if test_2:
+#     design = designs[0]
+
+#     y = [design(float(xi)) for xi in x]
+#     plt.figure(figsize=(7, 6.8))
+#     plt.plot(x, y)
+#     plt.xlim(x_min, x_max)
+#     plt.ylim(-.1, 1.1)
+
+#     plt.xticks(np.linspace(x_min, x_max, 6))
+#     plt.yticks([.0, 0.5, 1.0])
+
+#     plt.xlabel('Input value')
+#     plt.ylabel('Reward')
+#     plt.grid()
+#     # plt.tight_layout()
+#     plt.show()
+
 test_2 = False
-# test_2 = True
+test_2 = True
 
 if test_2:
     design = designs[0]
@@ -205,8 +226,13 @@ if test_2:
 # ============================================================
 
 PLOT_LPDF = True
+PLOT_LPDF = False
+
 PLOT_ND   = True
+PLOT_ND   = False
+
 PLOT_IC   = True
+PLOT_IC   = False
 
 SAVE_DIR = (
     ROOT

@@ -235,7 +235,7 @@ class ShipEKF(Fmi2Slave):
         # Ship parameters
         self._compute_ship_parameters()
         
-        # Rotaion matrix
+        # Rotation matrix
         R_psi   = sp.Matrix([
             [sp.cos(psi), -sp.sin(psi), 0],
             [sp.sin(psi), sp.cos(psi), 0],
@@ -413,7 +413,6 @@ class ShipEKF(Fmi2Slave):
         S           = dhdx @ self.P @ dhdx.T + R
         
         # Kalman Gain -> Balance factor for blending prediction and measurement
-        # K           = self.P @ dhdx.T @ np.linalg.inv(S)
         K           = np.linalg.solve(S.T, (self.P @ dhdx.T).T).T
         
         # Correct the state estimate
@@ -525,8 +524,6 @@ class ShipEKF(Fmi2Slave):
                     self.measured_north,
                     self.measured_east
                 )
-                
-                self.debug_gps_n = float(self.x[0])
             
             if self.gyro_valid:
                 self.update_gyro(
