@@ -31,7 +31,8 @@ class TargetShipTrackingEKF(Fmi2Slave):
         self.initial_measured_own_north         = 0.0
         self.initial_measured_own_east          = 0.0
         self.initial_measured_own_yaw_angle     = 0.0
-        self.initial_measured_own_speed         = 0.0
+        self.initial_measured_own_speed_north   = 0.0
+        self.initial_measured_own_speed_east    = 0.0
         
         # Target ship initial states
         self.initial_measured_tar_north         = 0.0
@@ -67,18 +68,13 @@ class TargetShipTrackingEKF(Fmi2Slave):
         self.sigma_starboard_camera_range       = 50.0
         self.sigma_starboard_camera_bearing_deg = 0.1
         
-        ## Prediction uncertainty
-        self.sigma_q_n                          = 10.0
-        self.sigma_q_e                          = 10.0
-        self.sigma_q_vn                         = 0.2
-        self.sigma_q_ve                         = 0.2
-        
         ## Input
         # Own ship states
         self.measured_own_north                 = 0.0
         self.measured_own_east                  = 0.0
         self.measured_own_yaw_angle             = 0.0
-        self.measured_own_speed                 = 0.0
+        self.measured_own_speed_north           = 0.0
+        self.measured_own_speed_east            = 0.0
         
         # Target ship states
         self.measured_tar_north                 = 0.0
@@ -177,17 +173,12 @@ class TargetShipTrackingEKF(Fmi2Slave):
         self.register_variable(Real("sigma_starboard_camera_range", causality=Fmi2Causality.parameter, variability=Fmi2Variability.fixed))
         self.register_variable(Real("sigma_starboard_camera_bearing_deg", causality=Fmi2Causality.parameter, variability=Fmi2Variability.fixed))
         
-        # Prediction uncertainty
-        self.register_variable(Real("sigma_q_n", causality=Fmi2Causality.parameter, variability=Fmi2Variability.fixed))
-        self.register_variable(Real("sigma_q_e", causality=Fmi2Causality.parameter, variability=Fmi2Variability.fixed))
-        self.register_variable(Real("sigma_q_vn", causality=Fmi2Causality.parameter, variability=Fmi2Variability.fixed))
-        self.register_variable(Real("sigma_q_ve", causality=Fmi2Causality.parameter, variability=Fmi2Variability.fixed))
-        
         # Own ship initial measurement
         self.register_variable(Real("initial_measured_own_north", causality=Fmi2Causality.parameter, variability=Fmi2Variability.fixed))
         self.register_variable(Real("initial_measured_own_east", causality=Fmi2Causality.parameter, variability=Fmi2Variability.fixed))
         self.register_variable(Real("initial_measured_own_yaw_angle", causality=Fmi2Causality.parameter, variability=Fmi2Variability.fixed))
-        self.register_variable(Real("initial_measured_own_speed", causality=Fmi2Causality.parameter, variability=Fmi2Variability.fixed))
+        self.register_variable(Real("initial_measured_own_speed_north", causality=Fmi2Causality.parameter, variability=Fmi2Variability.fixed))
+        self.register_variable(Real("initial_measured_own_speed_east", causality=Fmi2Causality.parameter, variability=Fmi2Variability.fixed))
         
         # Target ship initial measurement
         self.register_variable(Real("initial_measured_tar_north", causality=Fmi2Causality.parameter, variability=Fmi2Variability.fixed))
@@ -202,7 +193,8 @@ class TargetShipTrackingEKF(Fmi2Slave):
         self.register_variable(Real("measured_own_north", causality=Fmi2Causality.input))
         self.register_variable(Real("measured_own_east", causality=Fmi2Causality.input))
         self.register_variable(Real("measured_own_yaw_angle", causality=Fmi2Causality.input))
-        self.register_variable(Real("measured_own_speed", causality=Fmi2Causality.input))
+        self.register_variable(Real("measured_own_speed_north", causality=Fmi2Causality.input))
+        self.register_variable(Real("measured_own_speed_east", causality=Fmi2Causality.input))
         
         # Target ship states
         self.register_variable(Real("measured_tar_north", causality=Fmi2Causality.input))
@@ -258,12 +250,23 @@ class TargetShipTrackingEKF(Fmi2Slave):
         """
             Low-frequency control plant model
         """
-        
         ## Symbols
         # State symbol
-        # Target ships
+        # Target ship
         n, e, vn, ve  = sp.symbols('n, e, vn, ve', real=True)
         
+        # Own ship
+        no, eo, psi_o, vno, veo = sp.symbols(
+            'no eo psi_o vno veo',
+            real=True
+        )
+        
+        # Camera lever arm and boresight angle
+        lx, ly, theta_cam = sp.symbols('lx ly theta_cam', real=True)
+        
+        # ---------------------------------------------------
+        # Target ship model
+        # ---------------------------------------------------
         ## Vectors
         eta         = sp.Matrix([n, e])
         nu          = sp.Matrix([vn, ve])
@@ -287,22 +290,113 @@ class TargetShipTrackingEKF(Fmi2Slave):
         
         ## Compute the Jacobian
         J_x     = f.jacobian(x)      # State Jacobian
+        # ---------------------------------------------------
+        
+        # ---------------------------------------------------
+        # Radar model
+        # ---------------------------------------------------
+        # Position difference
+        dn  = n - no
+        de  = e - eo
+        
+        # Velocity difference
+        dvn = vn - vno
+        dve = ve - veo
+        
+        # Range
+        rho = sp.sqrt(dn**2 + de**2)
+        
+        # Range rate
+        rho_dot = (dn * dvn + de *dve) / rho
+        
+        # Bearing
+        bearing = sp.atan2(de, dn) - psi_o
+        
+        # Radar measurement model
+        h_radar = sp.Matrix([rho, rho_dot, bearing])
+        
+        # Radar measurement model Jacobian
+        H_radar_x = h_radar.jacobian(x)
+        # ---------------------------------------------------
+        
+        # ---------------------------------------------------
+        # Camera model
+        # ---------------------------------------------------
+        # Lever arm
+        lever = sp.Matrix([lx, ly])
+        
+        # NED to Body Rotational matrix
+        R_n2b = sp.Matrix([
+            [sp.cos(psi_o),  sp.sin(psi_o)],
+            [-sp.sin(psi_o), sp.cos(psi_o)]
+        ])
+        
+        # Relative target NED position
+        r_ned   = sp.Matrix([
+            n - no,
+            e - eo
+        ])
+        
+        # Relative target to camera position
+        r_cam   = R_n2b @ r_ned - lever
+        
+        ## Measurement model
+        # Range
+        rho_cam     = sp.sqrt(r_cam[0]**2 + r_cam[1]**2)
+        # Bearing
+        beta_cam    = sp.atan2(r_cam[1], r_cam[0]) - theta_cam
+        
+        h_cam   = sp.Matrix([rho_cam, beta_cam])
+        
+        H_cam_x     = h_cam.jacobian(x)
+        # ---------------------------------------------------
         
         ## Convert to lambdified function
-        self.J_x_lambda     = sp.lambdify([n, e, vn, ve], J_x, "numpy")
-        self.f_lambda       = sp.lambdify([n, e, vn, ve], f, "numpy")
+        self.f_lambda           = sp.lambdify([n, e, vn, ve], f, "numpy")
+        self.J_x_lambda         = sp.lambdify([n, e, vn, ve], J_x, "numpy")
+        
+        self.h_radar_lambda     = sp.lambdify([n, e, vn, ve] + [no, eo, psi_o, vno, veo], h_radar, "numpy")
+        self.H_radar_x_lambda   = sp.lambdify([n, e, vn, ve], H_radar_x, "numpy")
+        
+        self.h_cam_lambda       = sp.lambdify([n, e, vn, ve] + [no, eo, psi_o, lx, ly, theta_cam], h_cam, "numpy")
+        self.H_cam_x_lambda     = sp.lambdify([n, e, vn, ve], H_cam_x, "numpy")
+        
         
     def f(self, x:np.ndarray, *args, **kwargs) -> np.ndarray:
         """
         System model: x' = f(x)
         """
-        return np.asarray(self.f_lambda(*(x.tolist()))).reshape(-1)
+        return np.asarray(self.f_lambda(*x.tolist())).squeeze()
     
     def dfdx(self, x:np.ndarray, *args, **kwargs) -> np.ndarray:
         """
         Jacobian of system model: df/dx for x = x_prev, u = u_prev
         """
         return np.asarray(self.J_x_lambda(*x.tolist()), dtype=float)
+    
+    def h_radar(self, x:np.ndarray, m_radar:np.ndarray, *args, **kwargs) -> np.ndarray:
+        """
+        radar model: z = h_radar(x, m_radar)
+        """
+        return np.asarray(self.h_radar_lambda(*(x.tolist() + m_radar.tolist())), dtype=float).reshape(-1)
+    
+    def dhdx_radar(self, x:np.ndarray, m_radar:np.ndarray, *args, **kwargs) -> np.ndarray:
+        """
+        Jacobian of the radar model: dh_radar/dx
+        """
+        return np.asarray(self.H_radar_x_lambda(*(x.tolist() + m_radar.tolist())), dtype=float).reshape(-1)
+    
+    def h_cam(self, x:np.ndarray, m_cam:np.ndarray, *args, **kwargs) -> np.ndarray:
+        """
+        camera model: z = h_cam(x, m_cam)
+        """
+        return np.asarray(self.h_cam_lambda(*(x.tolist() + m_cam.tolist())), dtype=float).reshape(-1)
+    
+    def dhdx_cam(self, x:np.ndarray, m_cam:np.ndarray, *args, **kwargs) -> np.ndarray:
+        """
+        Jacobian of the camera model: dh_radar/dx
+        """
+        return np.asarray(self.H_cam_x_lambda(*(x.tolist() + m_cam.tolist())), dtype=float).reshape(-1)
     
     def get_PQR(self):
         ## P Matrix
@@ -324,15 +418,15 @@ class TargetShipTrackingEKF(Fmi2Slave):
         G = np.array([
             [(0.5 * self.dt_internal**2), 0.0],     # North position variance due to unknown acceleration
             [0.0, (0.5 * self.dt_internal**2)],     # East speed variance due to unknown acceleration
-            [self.dt_internal, 0,0],                # North position variance due to unknown acceleration
+            [self.dt_internal, 0.0],                # North position variance due to unknown acceleration
             [0.0, self.dt_internal]                 # East speed variance due to unknown acceleration
         ])
         
         # Unknown acceleration variance
-        Q_acc   = np.diag[(
-            self.sigma_acc_n**2,
-            self.sigma_acc_e**2
-        )]
+        Q_acc   = np.diag([
+            self.sigma_acc_north**2,
+            self.sigma_acc_east**2
+        ])
         
         # Propagate the unknown acceleration uncertainty 
         # to the Q acceleration matrix
@@ -343,15 +437,15 @@ class TargetShipTrackingEKF(Fmi2Slave):
         self.R  = np.diag([
             self.sigma_radar_range **2,
             self.sigma_radar_range_rate **2,
-            self._wrap_to_pi(self.sigma_radar_bearing_deg) ** 2,
+            self._wrap_to_pi(np.deg2rad(self.sigma_radar_bearing_deg)) ** 2,
             self.sigma_fore_camera_range ** 2,
-            self._wrap_to_pi(self.sigma_fore_camera_bearing_deg) ** 2,
+            self._wrap_to_pi(np.deg2rad(self.sigma_fore_camera_bearing_deg)) ** 2,
             self.sigma_aft_camera_range ** 2,
-            self._wrap_to_pi(self.sigma_aft_camera_bearing_deg) ** 2,
+            self._wrap_to_pi(np.deg2rad(self.sigma_aft_camera_bearing_deg)) ** 2,
             self.sigma_port_camera_range ** 2,
-            self._wrap_to_pi(self.sigma_port_camera_bearing_deg) ** 2,
+            self._wrap_to_pi(np.deg2rad(self.sigma_port_camera_bearing_deg)) ** 2,
             self.sigma_starboard_camera_range ** 2,
-            self._wrap_to_pi(self.sigma_starboard_camera_bearing_deg) ** 2,
+            self._wrap_to_pi(np.deg2rad(self.sigma_starboard_camera_bearing_deg)) ** 2,
         ])
         
         # Radar Covariance
@@ -420,122 +514,56 @@ class TargetShipTrackingEKF(Fmi2Slave):
         
         return self.x
     
-    def update_radar(self, 
-                     own_north, own_east, own_yaw_angle, own_speed,
-                     measured_range, measured_range_rate, measured_bearing):
-        ## Target relative distance
-        p_own           =  np.array([own_north, own_east])
-        p_tar           =  np.array([self.x[0], self.x[1]])
-        
-        r               = p_tar - p_own
-        
-        ## Target relative speed
-        own_north_speed = own_speed * np.cos(own_yaw_angle)
-        own_east_speed  = own_speed * np.sin(own_yaw_angle)
-        
-        vel_own         =  np.array([own_north_speed, own_east_speed])
-        vel_tar         =  np.array([self.x[2], self.x[3]])
-        
-        vel             = vel_tar - vel_own
-        
+    def update_radar(self):
         ## Actual measurement
         z = np.array([
-            measured_range,
-            measured_range_rate,
-            measured_bearing
+            self.radar_measured_range,
+            self.radar_measured_range_rate,
+            self.radar_measured_bearing
         ])
         
         ## Measurement model
-        # Range
-        predicted_range         = np.hypot(r[0], r[1])
-        
-        # Range Rate
-        if predicted_range < 1e-6:  # If predicted range is too small, reject the radar updates
-            return 
-        else:
-            r_hat   = r / predicted_range
-            predicted_range_rate    = float(np.dot(r_hat, vel))
-        
-        # Bearing
-        predicted_bearing       = self._wrap_to_pi(np.arctan2(r[1], r[0]) - own_yaw_angle)
-        
-        ## Measurement model
-        h = np.array([
-            predicted_range,
-            predicted_range_rate,
-            predicted_bearing
+        # no, eo, psi_o, vno, veo
+        m_radar = np.array([
+            self.measured_own_north,
+            self.measured_own_east,
+            self.measured_own_yaw_angle,
+            self.measured_own_speed_north,
+            self.measured_own_speed_east
         ])
+        h       = self.h_radar(self.x, m_radar)
         
-        # Derivatives
-        drho_dN     = r[0] / predicted_range
-        drho_dE     = r[1] / predicted_range
-        drho_dVN    = 0.0
-        drho_dVE    = 0.0
-        
-        s           = r[0]*vel[0] + r[1]*vel[1]
-        drhodot_dN  = vel[0] / predicted_range - s*r[0]/predicted_range**3
-        drhodot_dE  = vel[1] / predicted_range - s*r[1]/predicted_range**3
-        drhodot_dVN = r[0] / predicted_range
-        drhodot_dVE = r[1] / predicted_range
-        
-        dbeta_dN    = -r[1] / predicted_range**2
-        dbeta_dE    = r[0] / predicted_range**2
-        dbeta_dVN   = 0.0
-        dbeta_dVE   = 0.0
-        
-        dhdx = np.array([
-            [drho_dN, drho_dE, drho_dVN, drho_dVE],
-            [drhodot_dN, drhodot_dE, drhodot_dVN, drhodot_dVE],
-            [dbeta_dN, dbeta_dE, dbeta_dVN, dbeta_dVE],
-        ])
+        ## Measurement model Jacobian
+        dhdx = self.dhdx_radar(self.x, m_radar)
         
         self._update(z=z, h=h, dhdx=dhdx, R=self.R_radar, angle_indices=[2])
         
-    def update_camera(self,
-                      own_north, own_east, own_yaw_angle,
-                      measured_range, measured_bearing,
-                      orientation="fore"):
-        ## Target relative distance
-        p_own           =  np.array([own_north, own_east])
-        p_tar           =  np.array([self.x[0], self.x[1]])
-        
-        r               = p_tar - p_own
-        
-        # Relative target positions in own ship BODY FRAME
-        # Transform from BODY to NED (R = [[c -s] [s c]])
-        # Transform from NED to BODY (Rinv = [[c s] [-s c]])
-        R_inv = np.array([
-            [np.cos(own_yaw_angle), np.sin(own_yaw_angle)],
-            [-np.sin(own_yaw_angle), np.cos(own_yaw_angle)]
-        ])
-        r_body          = R_inv @ r
-        
-        # Get lever hand
+    def update_camera(self, orientation="fore"):
+        # Get lever arm
         if orientation == "fore":
-            lever_arm   = np.array([self.length_of_ship/2, 0.0])
-            theta_cam   = 0.0
-            R_cam       = self.R_fore_camera
+            measured_range      = self.fore_camera_measured_range
+            measured_bearing    = self.fore_camera_measured_bearing
+            lever_arm           = np.array([self.length_of_ship/2, 0.0])
+            theta_cam           = 0.0
+            R_cam               = self.R_fore_camera
         elif orientation == "aft":
-            lever_arm   = np.array([-self.length_of_ship/2, 0.0])
-            theta_cam   = np.pi
-            R_cam       = self.R_aft_camera
+            measured_range      = self.aft_camera_measured_range
+            measured_bearing    = self.aft_camera_measured_bearing
+            lever_arm           = np.array([-self.length_of_ship/2, 0.0])
+            theta_cam           = np.pi
+            R_cam               = self.R_aft_camera
         elif orientation == "port":
-            lever_arm   = np.array([0.0, -self.width_of_ship/2])
-            theta_cam   = -np.pi / 2
-            R_cam       = self.R_port_camera
+            measured_range      = self.port_camera_measured_range
+            measured_bearing    = self.port_camera_measured_bearing
+            lever_arm           = np.array([0.0, -self.width_of_ship/2])
+            theta_cam           = -np.pi / 2
+            R_cam               = self.R_port_camera
         elif orientation == "starboard":
-            lever_arm   = np.array([0.0, self.width_of_ship/2])
-            theta_cam   = np.pi / 2
-            R_cam       = self.R_starboard_camera
-
-        # Distance to camera
-        r_cam           = r_body - lever_arm
-        
-        # Range
-        predicted_range         = np.hypot(r_cam[0], r_cam[1])
-        
-        # Bearing
-        predicted_bearing       = self._wrap_to_pi(np.arctan2(r_cam[1], r_cam[0]) - theta_cam)
+            measured_range      = self.starboard_camera_measured_range
+            measured_bearing    = self.starboard_camera_measured_bearing
+            lever_arm           = np.array([0.0, self.width_of_ship/2])
+            theta_cam           = np.pi / 2
+            R_cam               = self.R_starboard_camera
         
         ## Actual measurement
         z = np.array([
@@ -544,26 +572,20 @@ class TargetShipTrackingEKF(Fmi2Slave):
         ])
         
         ## Measurement model
-        # Derivatives
-        drho_dN     = r_cam[0] / predicted_range
-        drho_dE     = r_cam[1] / predicted_range
-        drho_dVN    = 0.0
-        drho_dVE    = 0.0
-        
-        dbeta_dN    = -r_cam[1] / predicted_range**2
-        dbeta_dE    = r_cam[0] / predicted_range**2
-        dbeta_dVN   = 0.0
-        dbeta_dVE   = 0.0
-        
-        h = np.array([
-            predicted_range,
-            predicted_bearing
+        # no, eo, psi_o, lx, ly, theta_cam
+        m_cam = np.array([
+            self.measured_own_north,
+            self.measured_own_east,
+            self.measured_own_yaw_angle,
+            lever_arm[0],
+            lever_arm[1],
+            theta_cam
         ])
         
-        dhdx = np.array([
-            [drho_dN, drho_dE, drho_dVN, drho_dVE],
-            [dbeta_dN, dbeta_dE, dbeta_dVN, dbeta_dVE],
-        ])
+        h = self.h_cam_lambda(self.x, m_cam)
+        
+        ## Measurement model Jacobian
+        dhdx = self.dhdx_cam(self.x, m_cam)
         
         self._update(z=z, h=h, dhdx=dhdx, R=R_cam, angle_indices=[1])
     
@@ -574,9 +596,6 @@ class TargetShipTrackingEKF(Fmi2Slave):
                 self.n_sub = max(1, int(np.ceil(step_size / self.max_dt)))
                 self.dt_internal = step_size / self.n_sub
                 
-                # Get P, Q, and R Matrix
-                self.get_PQR()
-                
                 # Set the initial x
                 self.x = np.array([
                     self.initial_measured_tar_north,
@@ -584,6 +603,9 @@ class TargetShipTrackingEKF(Fmi2Slave):
                     self.initial_measured_tar_speed_north,
                     self.initial_measured_tar_speed_east,
                 ])
+                
+                # Get P, Q, and R Matrix
+                self.get_PQR()
                 
                 # Set the control plant model
                 self.control_plant_model(self.dt_internal)
@@ -602,59 +624,23 @@ class TargetShipTrackingEKF(Fmi2Slave):
             # ========================================
             # Radar
             if self.radar_valid and self.radar_detection:
-                self.update_radar(
-                    own_north= self.measured_own_north,
-                    own_east=self.measured_own_east,
-                    own_yaw_angle=self.measured_own_yaw_angle,
-                    own_speed=self.measured_own_speed,
-                    measured_range=self.radar_measured_range,
-                    measured_range_rate=self.radar_measured_range_rate,
-                    measured_bearing=self.radar_measured_bearing
-                )
+                self.update_radar()
             
             # Fore Camera
             if self.camera_fore_valid and self.fore_camera_detection:
-                self.update_camera(
-                    own_north= self.measured_own_north,
-                    own_east=self.measured_own_east,
-                    own_yaw_angle=self.measured_own_yaw_angle,
-                    measured_range=self.fore_camera_measured_range,
-                    measured_bearing=self.fore_camera_measured_bearing,
-                    orientation="fore"
-                )
+                self.update_camera(orientation="fore")
             
             # Aft Camera
             if self.camera_aft_valid and self.aft_camera_detection:
-                self.update_camera(
-                    own_north= self.measured_own_north,
-                    own_east=self.measured_own_east,
-                    own_yaw_angle=self.measured_own_yaw_angle,
-                    measured_range=self.aft_camera_measured_range,
-                    measured_bearing=self.aft_camera_measured_bearing,
-                    orientation="aft"
-                )
+                self.update_camera(orientation="aft")
             
             # Port Camera
             if self.camera_port_valid and self.port_camera_detection:
-                self.update_camera(
-                    own_north= self.measured_own_north,
-                    own_east=self.measured_own_east,
-                    own_yaw_angle=self.measured_own_yaw_angle,
-                    measured_range=self.port_camera_measured_range,
-                    measured_bearing=self.port_camera_measured_bearing,
-                    orientation="port"
-                )
+                self.update_camera(orientation="port")
             
             # Starboard Camera
             if self.camera_starboard_valid and self.starboard_camera_detection:
-                self.update_camera(
-                    own_north= self.measured_own_north,
-                    own_east=self.measured_own_east,
-                    own_yaw_angle=self.measured_own_yaw_angle,
-                    measured_range=self.starboard_camera_measured_range,
-                    measured_bearing=self.starboard_camera_measured_bearing,
-                    orientation="starboard"
-                )
+                self.update_camera(orientation="starboard")
                 
             # ========================================
             # Observer outputs

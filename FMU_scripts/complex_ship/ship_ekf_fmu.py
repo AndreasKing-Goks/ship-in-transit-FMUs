@@ -483,9 +483,6 @@ class ShipEKF(Fmi2Slave):
                 self.n_sub = max(1, int(np.ceil(step_size / self.max_dt)))
                 self.dt_internal = step_size / self.n_sub
                 
-                # Get P, Q, and R Matrix
-                self.get_PQR()
-                
                 # Set the initial x
                 self.x = np.array([
                     self.initial_measured_north,
@@ -495,6 +492,9 @@ class ShipEKF(Fmi2Slave):
                     0.0,                                        # Sway speed assume to be 0.0
                     0.0                                         # Yaw rate assume to be 0.0
                 ])
+                
+                # Get P, Q, and R Matrix
+                self.get_PQR()
                 
                 # Set the control plant model
                 self.control_plant_model(self.dt_internal)
