@@ -32,7 +32,7 @@ class ShipInTransitCoSimulation(CoSimInstance):
                  ROOT                   : Path,
                  spawn_requests         : dict=None,
                  IW_sampling_animated   : bool=False,
-                 skip_map_evaluation    : bool=True,
+                 skip_map_evaluation    : bool=False,
                  debug                  : bool=False,
                  simu_output_print      : bool=False,
                  ):
@@ -1990,7 +1990,7 @@ class ShipInTransitCoSimulation(CoSimInstance):
         all_e = []
         all_n = []
 
-        for sid in ship_ids:
+        for sid in ship_ids: 
             all_e.append(np.asarray(data[sid]["east"]))
             all_n.append(np.asarray(data[sid]["north"]))
 

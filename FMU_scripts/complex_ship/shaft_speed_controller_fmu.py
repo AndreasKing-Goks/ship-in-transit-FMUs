@@ -34,15 +34,10 @@ class ShaftSpeedController(Fmi2Slave):
         self.desired_ship_speed                             = 0.0
         self.measured_ship_speed                            = 0.0
         
+        self.colav_speed_reduction_factor                   = 1.0 
+        
         ## Output
         self.shaft_speed_cmd_rpm                            = 0.0
-        
-        self.rpm_cmd_pi                                     = 0.0
-        self.rpm_cmd_ff                                     = 0.0
-        self.error                                          = 0.0
-        
-        self.des_speed                                      = 0.0
-        self.mea_speed                                      = 0.0
         
         ## Registration
         # PI Parameters
@@ -56,16 +51,10 @@ class ShaftSpeedController(Fmi2Slave):
         # Input
         self.register_variable(Real("desired_ship_speed", causality=Fmi2Causality.input))
         self.register_variable(Real("measured_ship_speed", causality=Fmi2Causality.input))
+        self.register_variable(Real("colav_speed_reduction_factor", causality=Fmi2Causality.input))
 
         # Output
         self.register_variable(Real("shaft_speed_cmd_rpm", causality=Fmi2Causality.output))
-        # - debug 
-        self.register_variable(Real("rpm_cmd_pi", causality=Fmi2Causality.output))
-        self.register_variable(Real("rpm_cmd_ff", causality=Fmi2Causality.output))
-        self.register_variable(Real("error_i", causality=Fmi2Causality.output))
-        self.register_variable(Real("error", causality=Fmi2Causality.output))
-        self.register_variable(Real("des_speed", causality=Fmi2Causality.output))
-        self.register_variable(Real("mea_speed", causality=Fmi2Causality.output))
         
 
     @staticmethod
@@ -108,11 +97,12 @@ class ShaftSpeedController(Fmi2Slave):
             shaft_speed_max_rpm     = 1.1 * self.rated_speed_main_engine_rpm * self.gear_ratio_between_main_engine_and_propeller
             shaft_speed_floor_rpm   = self.idle_rpm_fraction * shaft_speed_max_rpm     # Floor shaft speed ~ 10 % max rpm
             
-            # Get PI rpm command            
-            error       = self.desired_ship_speed - self.measured_ship_speed
-            rpm_cmd_p   = self.kp * error
-            rpm_cmd_i   = self.ki * self.error_i
-            rpm_cmd_pi  = rpm_cmd_p + rpm_cmd_i
+            # Get PI rpm command (Also implement COLAV speed reduction)
+            desired_ship_speed  = self.desired_ship_speed * self.colav_speed_reduction_factor
+            error               = desired_ship_speed - self.measured_ship_speed
+            rpm_cmd_p           = self.kp * error
+            rpm_cmd_i           = self.ki * self.error_i
+            rpm_cmd_pi          = rpm_cmd_p + rpm_cmd_i
             
             # Get feedforward rpm command
             rpm_cmd_ff = self.map_speed_to_rpm(self.desired_ship_speed, shaft_speed_floor_rpm)
@@ -135,13 +125,6 @@ class ShaftSpeedController(Fmi2Slave):
             # If command IS saturated, do not integrate the error
             if not (pushing_further_high or pushing_further_low):
                 self.error_i += error * step_size
-                
-            # - debug
-            self.rpm_cmd_pi = rpm_cmd_pi
-            self.rpm_cmd_ff = rpm_cmd_ff
-            self.error      = error
-            self.des_speed  = self.desired_ship_speed
-            self.mea_speed  = self.measured_ship_speed
                 
             # Output
             self.shaft_speed_cmd_rpm = rpm_cmd_sat

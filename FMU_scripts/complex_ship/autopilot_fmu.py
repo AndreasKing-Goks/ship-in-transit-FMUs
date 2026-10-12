@@ -48,6 +48,8 @@ class Autopilot(Fmi2Slave):
         self.prev_wp_north                  = 0.0
         self.prev_wp_east                   = 0.0
         
+        self.colav_heading_offset_deg       = 0.0
+        
         ## Output
         self.yaw_angle_ref_rad              = 0.0       # Heading Reference
         self.rudder_angle_deg               = 0.0       # Rudder Angle
@@ -76,6 +78,8 @@ class Autopilot(Fmi2Slave):
         
         self.register_variable(Real("prev_wp_north", causality=Fmi2Causality.input))
         self.register_variable(Real("prev_wp_east", causality=Fmi2Causality.input))
+        
+        self.register_variable(Real("colav_heading_offset_deg", causality=Fmi2Causality.input))
         
         # Output
         self.register_variable(Real("yaw_angle_ref_rad", causality=Fmi2Causality.output))
@@ -166,6 +170,9 @@ class Autopilot(Fmi2Slave):
             yaw_angle_ref_rad, e_ct = self.los_guidance(self.north, self.east, 
                                                         self.next_wp_north, self.next_wp_east, 
                                                         self.prev_wp_north, self.prev_wp_east)
+            
+            # Add COLAV offset correction
+            yaw_angle_ref_rad   += yaw_angle_ref_rad + self.colav_heading_offset_deg
             
             # Compute the control signal
             rudder_angle_des_rad = self.pid_ctrl(setpoint=yaw_angle_ref_rad, measurement=self.yaw_angle_rad, step_size=step_size) # self.heading_mea is input

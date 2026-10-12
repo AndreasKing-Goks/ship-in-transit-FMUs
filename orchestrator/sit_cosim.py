@@ -43,7 +43,7 @@ class ShipInTransitCoSimulation(CoSimInstance):
                  ROOT                   : Path,
                  spawn_requests         : dict=None,
                  IW_sampling_animated   : bool=False,
-                 skip_map_evaluation    : bool=True,
+                 skip_map_evaluation    : bool=False,
                  debug                  : bool=False,
                  simu_output_print      : bool=False,
                  ):

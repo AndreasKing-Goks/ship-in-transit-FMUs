@@ -29,6 +29,8 @@ class ThrottleController(Fmi2Slave):
         self.desired_shaft_speed_rpm    = 0.0
         self.measured_shaft_speed_rpm   = 0.0 
         
+        self.colav_throttle_cmd_factor  = 1.0
+        
         ## Output
         self.throttle_cmd               = 0.0
         

@@ -48,7 +48,7 @@ class DopplerRADAR(Fmi2Slave):
             setattr(self, f"tar_{i}_east", 1e9)
             setattr(self, f"tar_{i}_yaw_angle", 0.0)
             setattr(self, f"tar_{i}_measured_speed", 0.0)
-        self.radar_degradation                                 = False
+        self.radar_degradation                              = False
         
         ## Output
         self.measurement_valid                              = False

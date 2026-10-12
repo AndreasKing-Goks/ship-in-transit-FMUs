@@ -13,7 +13,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
 from orchestrator.sit_cosim import ShipInTransitCoSimulation
-from orchestrator.sit_cosim_fmpy_experimental import ShipInTransitCoSimulation
+from orchestrator.sit_cosim_fmpy import ShipInTransitCoSimulation
 from orchestrator.scenario_config import load_base_config
 
 # =========================
@@ -64,10 +64,6 @@ skip_map_evaluation=False
 instance = ShipInTransitCoSimulation(config=config, ROOT=ROOT, 
                                      spawn_requests=spawn_requests,
                                      skip_map_evaluation=skip_map_evaluation)
-# WARNING!
-# Setting "skip_map_evaluation" to False enables grounding and outside_map_horizon checking, 
-# however this will increase the runtime by A LOT. As default, the value is set to True. 
-# Set the value to False when you need it: you WILL know it when you really need it!
 
 # =========================
 # Simulate
