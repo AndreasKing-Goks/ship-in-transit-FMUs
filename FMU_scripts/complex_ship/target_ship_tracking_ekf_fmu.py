@@ -28,11 +28,11 @@ class TargetShipTrackingEKF(Fmi2Slave):
         self.sigma_acc_east                     = 0.2   # m/s2
         
         # Own ship initial states
-        self.initial_measured_own_north         = 0.0
-        self.initial_measured_own_east          = 0.0
-        self.initial_measured_own_yaw_angle     = 0.0
-        self.initial_measured_own_speed_north   = 0.0
-        self.initial_measured_own_speed_east    = 0.0
+        self.initial_estimated_own_north        = 0.0
+        self.initial_estimated_own_east         = 0.0
+        self.initial_estimated_own_yaw_angle    = 0.0
+        self.initial_estimated_own_speed_north  = 0.0
+        self.initial_estimated_own_speed_east   = 0.0
         
         # Target ship initial states
         self.initial_measured_tar_north         = 0.0
@@ -70,50 +70,44 @@ class TargetShipTrackingEKF(Fmi2Slave):
         
         ## Input
         # Own ship states
-        self.measured_own_north                 = 0.0
-        self.measured_own_east                  = 0.0
-        self.measured_own_yaw_angle             = 0.0
-        self.measured_own_speed_north           = 0.0
-        self.measured_own_speed_east            = 0.0
-        
-        # Target ship states
-        self.measured_tar_north                 = 0.0
-        self.measured_tar_east                  = 0.0
-        self.measured_tar_speed_north           = 0.0
-        self.measured_tar_speed_east            = 0.0
+        self.estimated_own_north                = 0.0
+        self.estimated_own_east                 = 0.0
+        self.estimated_own_yaw_angle            = 0.0
+        self.estimated_own_speed_north          = 0.0
+        self.estimated_own_speed_east           = 0.0
         
         # Measurement validity flags
-        self.radar_valid                        = True
-        self.camera_fore_valid                  = True
-        self.camera_aft_valid                   = True
-        self.camera_port_valid                  = True
-        self.camera_starboard_valid             = True
+        self.RADAR_valid                        = True
+        self.CAMERA_FORE_valid                  = True
+        self.CAMERA_AFT_valid                   = True
+        self.CAMERA_PORT_valid                  = True
+        self.CAMERA_STARBOARD_valid             = True
         
         # Radar
-        self.radar_detection                    = True
-        self.radar_measured_range               = 0.0
-        self.radar_measured_range_rate          = 0.0
-        self.radar_measured_bearing             = 0.0
+        self.RADAR_detection                    = True
+        self.RADAR_measured_range               = 0.0
+        self.RADAR_measured_range_rate          = 0.0
+        self.RADAR_measured_bearing             = 0.0
         
         # Fore Camera
-        self.fore_camera_detection              = True
-        self.fore_camera_measured_range         = 0.0
-        self.fore_camera_measured_bearing       = 0.0
+        self.CAMERA_FORE_detection              = True
+        self.CAMERA_FORE_measured_range         = 0.0
+        self.CAMERA_FORE_measured_bearing       = 0.0
         
         # Aft Camera
-        self.aft_camera_detection               = True
-        self.aft_camera_measured_range          = 0.0
-        self.aft_camera_measured_bearing        = 0.0
+        self.CAMERA_AFT_detection               = True
+        self.CAMERA_AFT_measured_range          = 0.0
+        self.CAMERA_AFT_measured_bearing        = 0.0
         
         # Port Camera
-        self.port_camera_detection              = True
-        self.port_camera_measured_range         = 0.0
-        self.port_camera_measured_bearing       = 0.0
+        self.CAMERA_PORT_detection              = True
+        self.CAMERA_PORT_measured_range         = 0.0
+        self.CAMERA_PORT_measured_bearing       = 0.0
         
         # Starboard Camera
-        self.starboard_camera_detection         = True
-        self.starboard_camera_measured_range    = 0.0
-        self.starboard_camera_measured_bearing  = 0.0
+        self.CAMERA_STARBOARD_detection         = True
+        self.CAMERA_STARBOARD_measured_range    = 0.0
+        self.CAMERA_STARBOARD_measured_bearing  = 0.0
         
         ## Output
         self.estimated_n                        = 0.0
@@ -174,11 +168,11 @@ class TargetShipTrackingEKF(Fmi2Slave):
         self.register_variable(Real("sigma_starboard_camera_bearing_deg", causality=Fmi2Causality.parameter, variability=Fmi2Variability.fixed))
         
         # Own ship initial measurement
-        self.register_variable(Real("initial_measured_own_north", causality=Fmi2Causality.parameter, variability=Fmi2Variability.fixed))
-        self.register_variable(Real("initial_measured_own_east", causality=Fmi2Causality.parameter, variability=Fmi2Variability.fixed))
-        self.register_variable(Real("initial_measured_own_yaw_angle", causality=Fmi2Causality.parameter, variability=Fmi2Variability.fixed))
-        self.register_variable(Real("initial_measured_own_speed_north", causality=Fmi2Causality.parameter, variability=Fmi2Variability.fixed))
-        self.register_variable(Real("initial_measured_own_speed_east", causality=Fmi2Causality.parameter, variability=Fmi2Variability.fixed))
+        self.register_variable(Real("initial_estimated_own_north", causality=Fmi2Causality.parameter, variability=Fmi2Variability.fixed))
+        self.register_variable(Real("initial_estimated_own_east", causality=Fmi2Causality.parameter, variability=Fmi2Variability.fixed))
+        self.register_variable(Real("initial_estimated_own_yaw_angle", causality=Fmi2Causality.parameter, variability=Fmi2Variability.fixed))
+        self.register_variable(Real("initial_estimated_own_speed_north", causality=Fmi2Causality.parameter, variability=Fmi2Variability.fixed))
+        self.register_variable(Real("initial_estimated_own_speed_east", causality=Fmi2Causality.parameter, variability=Fmi2Variability.fixed))
         
         # Target ship initial measurement
         self.register_variable(Real("initial_measured_tar_north", causality=Fmi2Causality.parameter, variability=Fmi2Variability.fixed))
@@ -190,50 +184,44 @@ class TargetShipTrackingEKF(Fmi2Slave):
         # Input
         # =========================
         # Own ship states
-        self.register_variable(Real("measured_own_north", causality=Fmi2Causality.input))
-        self.register_variable(Real("measured_own_east", causality=Fmi2Causality.input))
-        self.register_variable(Real("measured_own_yaw_angle", causality=Fmi2Causality.input))
-        self.register_variable(Real("measured_own_speed_north", causality=Fmi2Causality.input))
-        self.register_variable(Real("measured_own_speed_east", causality=Fmi2Causality.input))
-        
-        # Target ship states
-        self.register_variable(Real("measured_tar_north", causality=Fmi2Causality.input))
-        self.register_variable(Real("measured_tar_east", causality=Fmi2Causality.input))
-        self.register_variable(Real("measured_tar_speed_north", causality=Fmi2Causality.input))
-        self.register_variable(Real("measured_tar_speed_east", causality=Fmi2Causality.input))
+        self.register_variable(Real("estimated_own_north", causality=Fmi2Causality.input))
+        self.register_variable(Real("estimated_own_east", causality=Fmi2Causality.input))
+        self.register_variable(Real("estimated_own_yaw_angle", causality=Fmi2Causality.input))
+        self.register_variable(Real("estimated_own_speed_north", causality=Fmi2Causality.input))
+        self.register_variable(Real("estimated_own_speed_east", causality=Fmi2Causality.input))
         
         # Measurement validity flags
-        self.register_variable(Boolean("radar_valid", causality=Fmi2Causality.input, variability=Fmi2Variability.discrete))
-        self.register_variable(Boolean("camera_fore_valid", causality=Fmi2Causality.input, variability=Fmi2Variability.discrete))
-        self.register_variable(Boolean("camera_aft_valid", causality=Fmi2Causality.input, variability=Fmi2Variability.discrete))
-        self.register_variable(Boolean("camera_port_valid", causality=Fmi2Causality.input, variability=Fmi2Variability.discrete))
-        self.register_variable(Boolean("camera_starboard_valid", causality=Fmi2Causality.input, variability=Fmi2Variability.discrete))
+        self.register_variable(Boolean("RADAR_valid", causality=Fmi2Causality.input, variability=Fmi2Variability.discrete))
+        self.register_variable(Boolean("CAMERA_FORE_valid", causality=Fmi2Causality.input, variability=Fmi2Variability.discrete))
+        self.register_variable(Boolean("CAMERA_AFT_valid", causality=Fmi2Causality.input, variability=Fmi2Variability.discrete))
+        self.register_variable(Boolean("CAMERA_PORT_valid", causality=Fmi2Causality.input, variability=Fmi2Variability.discrete))
+        self.register_variable(Boolean("CAMERA_STARBOARD_valid", causality=Fmi2Causality.input, variability=Fmi2Variability.discrete))
         
         # Radar
-        self.register_variable(Boolean("radar_detection", causality=Fmi2Causality.input, variability=Fmi2Variability.discrete))
-        self.register_variable(Real("radar_measured_range", causality=Fmi2Causality.input))
-        self.register_variable(Real("radar_measured_range_rate", causality=Fmi2Causality.input))
-        self.register_variable(Real("radar_measured_bearing", causality=Fmi2Causality.input))
+        self.register_variable(Boolean("RADAR_detection", causality=Fmi2Causality.input, variability=Fmi2Variability.discrete))
+        self.register_variable(Real("RADAR_measured_range", causality=Fmi2Causality.input))
+        self.register_variable(Real("RADAR_measured_range_rate", causality=Fmi2Causality.input))
+        self.register_variable(Real("RADAR_measured_bearing", causality=Fmi2Causality.input))
         
         # Fore Camera
-        self.register_variable(Boolean("fore_camera_detection", causality=Fmi2Causality.input, variability=Fmi2Variability.discrete))
-        self.register_variable(Real("fore_camera_measured_range", causality=Fmi2Causality.input))
-        self.register_variable(Real("fore_camera_measured_bearing", causality=Fmi2Causality.input))
+        self.register_variable(Boolean("CAMERA_FORE_detection", causality=Fmi2Causality.input, variability=Fmi2Variability.discrete))
+        self.register_variable(Real("CAMERA_FORE_measured_range", causality=Fmi2Causality.input))
+        self.register_variable(Real("CAMERA_FORE_measured_bearing", causality=Fmi2Causality.input))
         
         # Aft Camera
-        self.register_variable(Boolean("aft_camera_detection", causality=Fmi2Causality.input, variability=Fmi2Variability.discrete))
-        self.register_variable(Real("aft_camera_measured_range", causality=Fmi2Causality.input))
-        self.register_variable(Real("aft_camera_measured_bearing", causality=Fmi2Causality.input))
+        self.register_variable(Boolean("CAMERA_AFT_detection", causality=Fmi2Causality.input, variability=Fmi2Variability.discrete))
+        self.register_variable(Real("CAMERA_AFT_measured_range", causality=Fmi2Causality.input))
+        self.register_variable(Real("CAMERA_AFT_measured_bearing", causality=Fmi2Causality.input))
         
         # Port Camera
-        self.register_variable(Boolean("port_camera_detection", causality=Fmi2Causality.input, variability=Fmi2Variability.discrete))
-        self.register_variable(Real("port_camera_measured_range", causality=Fmi2Causality.input))
-        self.register_variable(Real("port_camera_measured_bearing", causality=Fmi2Causality.input))
+        self.register_variable(Boolean("CAMERA_PORT_detection", causality=Fmi2Causality.input, variability=Fmi2Variability.discrete))
+        self.register_variable(Real("CAMERA_PORT_measured_range", causality=Fmi2Causality.input))
+        self.register_variable(Real("CAMERA_PORT_measured_bearing", causality=Fmi2Causality.input))
         
         # Starboard Camera
-        self.register_variable(Boolean("starboard_camera_detection", causality=Fmi2Causality.input, variability=Fmi2Variability.discrete))
-        self.register_variable(Real("starboard_camera_measured_range", causality=Fmi2Causality.input))
-        self.register_variable(Real("starboard_camera_measured_bearing", causality=Fmi2Causality.input))
+        self.register_variable(Boolean("CAMERA_STARBOARD_detection", causality=Fmi2Causality.input, variability=Fmi2Variability.discrete))
+        self.register_variable(Real("CAMERA_STARBOARD_measured_range", causality=Fmi2Causality.input))
+        self.register_variable(Real("CAMERA_STARBOARD_measured_bearing", causality=Fmi2Causality.input))
 
         # =========================
         # Output
@@ -518,19 +506,19 @@ class TargetShipTrackingEKF(Fmi2Slave):
     def update_radar(self):
         ## Actual measurement
         z = np.array([
-            self.radar_measured_range,
-            self.radar_measured_range_rate,
-            self.radar_measured_bearing
+            self.RADAR_measured_range,
+            self.RADAR_measured_range_rate,
+            self.RADAR_measured_bearing
         ])
         
         ## Measurement model
         # no, eo, psi_o, vno, veo
         m_radar = np.array([
-            self.measured_own_north,
-            self.measured_own_east,
-            self.measured_own_yaw_angle,
-            self.measured_own_speed_north,
-            self.measured_own_speed_east
+            self.estimated_own_north,
+            self.estimated_own_east,
+            self.estimated_own_yaw_angle,
+            self.estimated_own_speed_north,
+            self.estimated_own_speed_east
         ])
         h       = self.h_radar(self.x, m_radar)
         
@@ -542,26 +530,26 @@ class TargetShipTrackingEKF(Fmi2Slave):
     def update_camera(self, orientation="fore"):
         # Get lever arm
         if orientation == "fore":
-            measured_range      = self.fore_camera_measured_range
-            measured_bearing    = self.fore_camera_measured_bearing
+            measured_range      = self.CAMERA_FORE_measured_range
+            measured_bearing    = self.CAMERA_FORE_measured_bearing
             lever_arm           = np.array([self.length_of_ship/2, 0.0])
             theta_cam           = 0.0
             R_cam               = self.R_fore_camera
         elif orientation == "aft":
-            measured_range      = self.aft_camera_measured_range
-            measured_bearing    = self.aft_camera_measured_bearing
+            measured_range      = self.CAMERA_AFT_measured_range
+            measured_bearing    = self.CAMERA_AFT_measured_bearing
             lever_arm           = np.array([-self.length_of_ship/2, 0.0])
             theta_cam           = np.pi
             R_cam               = self.R_aft_camera
         elif orientation == "port":
-            measured_range      = self.port_camera_measured_range
-            measured_bearing    = self.port_camera_measured_bearing
+            measured_range      = self.CAMERA_PORT_measured_range
+            measured_bearing    = self.CAMERA_PORT_measured_bearing
             lever_arm           = np.array([0.0, -self.width_of_ship/2])
             theta_cam           = -np.pi / 2
             R_cam               = self.R_port_camera
         elif orientation == "starboard":
-            measured_range      = self.starboard_camera_measured_range
-            measured_bearing    = self.starboard_camera_measured_bearing
+            measured_range      = self.CAMERA_STARBOARD_measured_range
+            measured_bearing    = self.CAMERA_STARBOARD_measured_bearing
             lever_arm           = np.array([0.0, self.width_of_ship/2])
             theta_cam           = np.pi / 2
             R_cam               = self.R_starboard_camera
@@ -575,9 +563,9 @@ class TargetShipTrackingEKF(Fmi2Slave):
         ## Measurement model
         # no, eo, psi_o, lx, ly, theta_cam
         m_cam = np.array([
-            self.measured_own_north,
-            self.measured_own_east,
-            self.measured_own_yaw_angle,
+            self.estimated_own_north,
+            self.estimated_own_east,
+            self.estimated_own_yaw_angle,
             lever_arm[0],
             lever_arm[1],
             theta_cam
@@ -624,23 +612,23 @@ class TargetShipTrackingEKF(Fmi2Slave):
             # Sensor corrections
             # ========================================
             # Radar
-            if self.radar_valid and self.radar_detection:
+            if self.RADAR_valid and self.RADAR_detection:
                 self.update_radar()
             
             # Fore Camera
-            if self.camera_fore_valid and self.fore_camera_detection:
+            if self.CAMERA_FORE_valid and self.CAMERA_FORE_detection:
                 self.update_camera(orientation="fore")
             
             # Aft Camera
-            if self.camera_aft_valid and self.aft_camera_detection:
+            if self.CAMERA_AFT_valid and self.CAMERA_AFT_detection:
                 self.update_camera(orientation="aft")
             
             # Port Camera
-            if self.camera_port_valid and self.port_camera_detection:
+            if self.CAMERA_PORT_valid and self.CAMERA_PORT_detection:
                 self.update_camera(orientation="port")
             
             # Starboard Camera
-            if self.camera_starboard_valid and self.starboard_camera_detection:
+            if self.CAMERA_STARBOARD_valid and self.CAMERA_STARBOARD_detection:
                 self.update_camera(orientation="starboard")
                 
             # ========================================

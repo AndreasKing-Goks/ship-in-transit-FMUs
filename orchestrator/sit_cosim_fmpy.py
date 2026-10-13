@@ -965,14 +965,6 @@ class ShipInTransitCoSimulation(CoSimInstance):
                      or self.own_ship_reaches_end_waypoint 
                      or self.all_ship_reaches_end_waypoint 
                      or self.any_ship_collides)
-
-        print(self.any_ship_grounding)
-        print(self.any_ship_outside)
-        print(self.any_ship_nav_fail)
-        print(self.own_ship_reaches_end_waypoint)
-        print(self.all_ship_reaches_end_waypoint)
-        print(self.any_ship_collides)
-        print("----------------")
         
         # ==================================
         # Gather IW sampling animation data

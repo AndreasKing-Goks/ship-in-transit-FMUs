@@ -172,7 +172,7 @@ class Autopilot(Fmi2Slave):
                                                         self.prev_wp_north, self.prev_wp_east)
             
             # Add COLAV offset correction
-            yaw_angle_ref_rad    = yaw_angle_ref_rad + self.colav_heading_offset_deg
+            yaw_angle_ref_rad    = yaw_angle_ref_rad + math.radians(self.colav_heading_offset_deg)
             
             # Compute the control signal
             rudder_angle_des_rad = self.pid_ctrl(setpoint=yaw_angle_ref_rad, measurement=self.yaw_angle_rad, step_size=step_size) # self.heading_mea is input

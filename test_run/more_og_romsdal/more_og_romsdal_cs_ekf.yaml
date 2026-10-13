@@ -81,7 +81,7 @@ ships:
       - [GYROCOMPASS, ship_heading_rad, SHIP_MODEL, yaw_angle_rad]
 
       # Speed log
-      - [SPEED_LOG, ship_speed, SHIP_MODEL, forward_speed]
+      - [SPEED_LOG, ship_speed, SHIP_MODEL, total_ship_speed]
 
       # Ship EKF
       - [SHIP_EKF, tau_u,               MACHINERY_SYSTEM, thrust_force]

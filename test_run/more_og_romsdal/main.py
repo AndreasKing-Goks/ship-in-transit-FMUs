@@ -13,7 +13,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
 # from orchestrator.sit_cosim import ShipInTransitCoSimulation
-from orchestrator.sit_cosim_fmpy import ShipInTransitCoSimulation
+from orchestrator.complex_sit_cosim_fmpy import ShipInTransitCoSimulation
 from orchestrator.scenario_config import load_base_config
 
 # =========================

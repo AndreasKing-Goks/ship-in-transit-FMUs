@@ -10,10 +10,10 @@ from pythonfmu import Fmi2Causality, Fmi2Slave, Fmi2Variability, Real, Integer, 
 import numpy as np
 import traceback
 
-class SimpleCollisionAvoidanceCOLREGS(Fmi2Slave):
+class CollisionAvoidanceCOLREGS(Fmi2Slave):
     
     author = "Andreas R.G. Sitorus"
-    description = "COLREGS compliantSimple Collision Avoidance Algorithm Python FMU Implementation"
+    description = "COLREGS-compliant Collision Avoidance Algorithm Python FMU Implementation"
     
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -28,6 +28,7 @@ class SimpleCollisionAvoidanceCOLREGS(Fmi2Slave):
         self.T_lookahead                    = 900.0         # Soon to collide  (second)
         self.own_ship_sog_max               = 6.0           # in m/s
         self.turning_direction              = "STARBOARD"
+        self.colav_tag                      = "colregs-compliant_colav"
         
         ## Input
         self.own_north                      = 0.0
@@ -78,6 +79,7 @@ class SimpleCollisionAvoidanceCOLREGS(Fmi2Slave):
         self.register_variable(Real("T_lookahead", causality=Fmi2Causality.parameter, variability=Fmi2Variability.tunable))
         self.register_variable(Real("own_ship_sog_max", causality=Fmi2Causality.parameter, variability=Fmi2Variability.tunable))
         self.register_variable(String("turning_direction", causality=Fmi2Causality.parameter, variability=Fmi2Variability.tunable))
+        self.register_variable(String("colav_tag", causality=Fmi2Causality.parameter, variability=Fmi2Variability.tunable))
         
         # Input        
         self.register_variable(Real("own_north", causality=Fmi2Causality.input))

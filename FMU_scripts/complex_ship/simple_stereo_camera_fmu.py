@@ -23,8 +23,6 @@ class StereoCameraSensor(Fmi2Slave):
         self.width_of_ship                                  = 16
         self.range_sigma                                    = 50.0
         self.bearing_sigma_deg                              = 0.1       # deg
-        self.initial_range                                  = 0.0
-        self.initial_bearing                                = 0.0
         self.initial_own_north                              = 0.0
         self.initial_own_east                               = 0.0
         self.initial_own_yaw_angle                          = 0.0
@@ -36,7 +34,7 @@ class StereoCameraSensor(Fmi2Slave):
             # For each ship, set the initial position to be far away, facing north, and static
             setattr(self, f"init_tar_{i}_north", 1e9)
             setattr(self, f"init_tar_{i}_east", 1e9)
-        
+         
         ## Input
         self.own_north                                      = 0.0
         self.own_east                                       = 0.0
@@ -67,8 +65,6 @@ class StereoCameraSensor(Fmi2Slave):
         self.register_variable(Real("width_of_ship", causality=Fmi2Causality.parameter,variability=Fmi2Variability.tunable))
         self.register_variable(Real("range_sigma", causality=Fmi2Causality.parameter,variability=Fmi2Variability.tunable))
         self.register_variable(Real("bearing_sigma_deg", causality=Fmi2Causality.parameter,variability=Fmi2Variability.tunable))
-        self.register_variable(Real("initial_range", causality=Fmi2Causality.parameter,variability=Fmi2Variability.tunable))
-        self.register_variable(Real("initial_bearing", causality=Fmi2Causality.parameter,variability=Fmi2Variability.tunable))
         self.register_variable(Real("initial_own_north", causality=Fmi2Causality.parameter,variability=Fmi2Variability.tunable))
         self.register_variable(Real("initial_own_east", causality=Fmi2Causality.parameter,variability=Fmi2Variability.tunable))
         self.register_variable(Real("initial_own_yaw_angle", causality=Fmi2Causality.parameter,variability=Fmi2Variability.tunable))

@@ -22,8 +22,6 @@ class DopplerRADAR(Fmi2Slave):
         self.range_sigma                                    = 10.0
         self.range_rate_sigma                               = 0.2
         self.bearing_sigma_deg                              = 1.0       # deg
-        self.initial_range                                  = 0.0
-        self.initial_bearing                                = 0.0
         self.initial_own_north                              = 0.0
         self.initial_own_east                               = 0.0
         self.initial_own_yaw_angle                          = 0.0
@@ -69,8 +67,6 @@ class DopplerRADAR(Fmi2Slave):
         self.register_variable(Real("range_sigma", causality=Fmi2Causality.parameter,variability=Fmi2Variability.tunable))
         self.register_variable(Real("range_rate_sigma", causality=Fmi2Causality.parameter,variability=Fmi2Variability.tunable))
         self.register_variable(Real("bearing_sigma_deg", causality=Fmi2Causality.parameter,variability=Fmi2Variability.tunable))
-        self.register_variable(Real("initial_range", causality=Fmi2Causality.parameter,variability=Fmi2Variability.tunable))
-        self.register_variable(Real("initial_bearing", causality=Fmi2Causality.parameter,variability=Fmi2Variability.tunable))
         self.register_variable(Real("initial_own_north", causality=Fmi2Causality.parameter,variability=Fmi2Variability.tunable))
         self.register_variable(Real("initial_own_east", causality=Fmi2Causality.parameter,variability=Fmi2Variability.tunable))
         self.register_variable(Real("initial_own_yaw_angle", causality=Fmi2Causality.parameter,variability=Fmi2Variability.tunable))
