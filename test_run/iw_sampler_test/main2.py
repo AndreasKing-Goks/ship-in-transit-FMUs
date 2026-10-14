@@ -257,40 +257,14 @@ instance.PlotFleetTrajectory(mode="quick", ship_scale=1.0)
 key_group_list = [
     ## Own Ship
     # Base results
-    ["OS0.north"],
-    ["OS0.east"],
-    ["OS0.forward_speed", "OS0.next_wp_speed", "OS0.total_ship_speed"],
-    ["OS0.yaw_angle_rad", "OS0.yaw_angle_ref_rad"],
-    ["OS0.rudder_angle_deg"],
-    ["OS0.e_ct"],
-    ["OS0.shaft_speed_rpm", "OS0.shaft_speed_cmd_rpm"],
-    ["OS0.throttle_cmd"],
-    
-    # # For non-single ship simulation only
-    # ["OS0.new_throttle_cmd"],
-    # ["OS0.new_rudder_angle_deg"],
-    # ["OS0.colav_rud_ang_increment"],
-    # ["OS0.beta_own_to_tar_1"],
-    # ["OS0.tcpa_own_to_tar_1"],
-    # ["OS0.dcpa_own_to_tar_1"],
-    # ["OS0.dist_own_to_tar_1"],
-    # ["OS0.rr_own_to_tar_1"],
-    
-    # # For environment load-enabled simulation only
-    # ["OS0.current_speed"],
-    # ["OS0.current_direction_deg"],
-    # ["OS0.wind_speed"],
-    # ["OS0.wind_direction_deg"],
-    
-    ## Target Ship(s)
-    # Base results
-    # ["TS1.north"],
-    # ["TS1.east"],
-    # ["TS1.forward_speed", "TS1.next_wp_speed", "TS1.total_ship_speed"],
-    # ["TS1.yaw_angle_rad", "TS1.yaw_angle_ref_rad"],
-    # ["TS1.rudder_angle_deg"],
-    # ["TS1.e_ct"],
-    # ["TS1.thrust_force"]
+    ["OS0.SHIP_MODEL.north"],
+    ["OS0.SHIP_MODEL.east"],
+    ["OS0.SHIP_MODEL.forward_speed", "OS0.MISSION_MANAGER.next_wp_speed", "OS0.SHIP_MODEL.total_ship_speed"],
+    ["OS0.SHIP_MODEL.yaw_angle_rad", "OS0.AUTOPILOT.yaw_angle_ref_rad"],
+    ["OS0.AUTOPILOT.rudder_angle_deg"],
+    ["OS0.AUTOPILOT.e_ct"],
+    ["OS0.MACHINERY_SYSTEM.shaft_speed_rpm", "OS0.SHAFT_SPEED_CONTROLLER.shaft_speed_cmd_rpm"],
+    ["OS0.THROTTLE_CONTROLLER.throttle_cmd"],
 ]
 
 # Plot Time Series

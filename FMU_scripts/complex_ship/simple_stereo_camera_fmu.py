@@ -87,7 +87,7 @@ class StereoCameraSensor(Fmi2Slave):
 
         # Output
         self.register_variable(Boolean("measurement_valid", causality=Fmi2Causality.output, variability=Fmi2Variability.discrete))
-        self.register_variable(String("camera_position_out", causality=Fmi2Causality.output))
+        self.register_variable(String("camera_position_out", causality=Fmi2Causality.output, variability=Fmi2Variability.discrete))
         for i in range(1,4):
             self.register_variable(Boolean(f"detect_tar_{i}", causality=Fmi2Causality.output, variability=Fmi2Variability.discrete))
             self.register_variable(Real(f"tar_{i}_range", causality=Fmi2Causality.output))
@@ -96,7 +96,7 @@ class StereoCameraSensor(Fmi2Slave):
     def _wrap_to_pi(self, a):
         return (a + np.pi) % (2*np.pi) - np.pi
     
-    def _camera_detection_probability(self, range):
+    def _camera_detection_probability(self, range_):
         """
             Detection probabililty will decay as range increased (Sigmoid)
             Half detection probability at 1500 m
@@ -107,7 +107,7 @@ class StereoCameraSensor(Fmi2Slave):
         k = 0.006
 
         # Sigmoid/Logistic function
-        p = 1.0 / (1.0 + np.exp(k * (range - r50)))
+        p = 1.0 / (1.0 + np.exp(k * (range_ - r50)))
 
         return p
         
@@ -201,15 +201,22 @@ class StereoCameraSensor(Fmi2Slave):
                 # Inside camera field of view
                 half_fov_bound          = np.deg2rad(self.camera_horizontal_fov_angle_limit_deg) / 2.0
                 within_field_of_view    = np.abs(true_bearing) <= half_fov_bound
+                
                 ship_visible            = within_range and within_field_of_view
-                detect_rng              = self._detection_rng.uniform(low=0.0, high=1.0)
                 
-                detection_prob          = self._camera_detection_probability(range=true_range)
-                
-                if self.low_visibility:
-                    detection_prob      = detection_prob * self.low_visibility_detection_probability_coeff
-                
-                detection = True if detect_rng < detection_prob else False
+                if ship_visible:
+                    
+                    detection_prob      = self._camera_detection_probability(range_=true_range)
+                    
+                    if self.low_visibility:
+                        detection_prob  = detection_prob * self.low_visibility_detection_probability_coeff
+                    
+                    detection_rng       = self._detection_rng.uniform(low=0.0, high=1.0)
+                    detected            = detection_rng < detection_prob
+                    
+                else:
+                    detected        = False
+                        
                 
                 ## OUTPUT
                 # Bearing angle noise
@@ -221,7 +228,6 @@ class StereoCameraSensor(Fmi2Slave):
                 ## Measured output            
                 measured_range      = true_range + range_noise
                 measured_bearing    = self._wrap_to_pi(true_bearing + bearing_noise)
-                detected            = ship_visible and detection
                 
                 if detected:
                     setattr(self, f"detect_tar_{idx}", True)
@@ -243,4 +249,4 @@ class StereoCameraSensor(Fmi2Slave):
             # Freeze dynamics safely (keep last state/outputs)
             self.measurement_valid                  = False
         
-            return True
+        return True

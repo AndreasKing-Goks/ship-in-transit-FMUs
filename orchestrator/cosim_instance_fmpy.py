@@ -346,12 +346,37 @@ class CoSimInstance:
         """
         self._initialize()
         # Source of problem
-        for slave_data in self.slaves.values():
+        for slaveName, slave_data in self.slaves.items():
+            ## ONLY FOR DEBUGGING
+            # print(
+            #     f"[FMU STEP] "
+            #     f"name={slaveName} "
+            #     f"object={id(slave_data['fmu'])} "
+            #     f"t={self.time} "
+            #     f"dt={self.stepSize}"
+            # )
+
+            # try:
+            #     slave_data["fmu"].doStep(
+            #         currentCommunicationPoint=self.time,
+            #         communicationStepSize=self.stepSize,
+            #     )
+
+            # except Exception as e:
+            #     print(
+            #         f"\n[FMU FAILED]\n"
+            #         f"name   = {slaveName}\n"
+            #         f"object = {id(slave_data['fmu'])}\n"
+            #         f"time   = {self.time}\n"
+            #         f"dt     = {self.stepSize}\n"
+            #         f"error  = {type(e).__name__}: {e}\n"
+            #     )
+            #     raise
             
             slave_data["fmu"].doStep(
-                currentCommunicationPoint=self.time,
-                communicationStepSize=self.stepSize,
-            )
+                    currentCommunicationPoint=self.time,
+                    communicationStepSize=self.stepSize,
+                )
         
         next_time = self.time + self.stepSize
         for obs in self.observer_time_series_struct.values():

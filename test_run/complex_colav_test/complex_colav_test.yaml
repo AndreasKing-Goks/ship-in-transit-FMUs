@@ -63,7 +63,7 @@ ships:
       # Shaft speed controller
       - [SHAFT_SPEED_CONTROLLER, desired_ship_speed,           MISSION_MANAGER,  next_wp_speed]
       - [SHAFT_SPEED_CONTROLLER, measured_ship_speed,          SHIP_EKF,         estimated_u]
-      - [SHAFT_SPEED_CONTROLLER, colav_speed_reduction_factor, COLAV,         estimated_u]
+      - [SHAFT_SPEED_CONTROLLER, colav_speed_reduction_factor, COLAV,            colav_speed_reduction_factor]
 
       # Throttle controller
       - [THROTTLE_CONTROLLER, desired_shaft_speed_rpm,  SHAFT_SPEED_CONTROLLER, shaft_speed_cmd_rpm]
@@ -89,10 +89,8 @@ ships:
       # Collision Avoidance (Only Internal Ports)
       - [COLAV, own_north,          SHIP_MODEL,           north]
       - [COLAV, own_east,           SHIP_MODEL,           east]
-      - [COLAV, own_yaw_angle,      SHIP_MODEL,           yaw_angle_rad]
-      - [COLAV, own_measured_speed, SHIP_MODEL,           total_ship_speed]
-      - [COLAV, throttle_cmd,       THROTTLE_CONTROLLER,  throttle_cmd]
-      - [COLAV, rudder_angle_deg,   AUTOPILOT,            rudder_angle_deg]
+      - [COLAV, own_speed_north,    SHIP_MODEL,           d_north]
+      - [COLAV, own_speed_east,     SHIP_MODEL,           d_east]
 
       # GPS
       - [GPS, north, SHIP_MODEL, north]
@@ -143,16 +141,16 @@ ships:
       - [SHIP_EKF, speed_log_valid,     SPEED_LOG,        measurement_valid]
 
       # Target Ship Tracking EKF
-      - [TS_TRACKING_EKF_TS1, estimated_own_north,    SHIP_EKF, estimated_n]
-      - [TS_TRACKING_EKF_TS1, estimated_own_east,     SHIP_EKF, estimated_e]
-      - [TS_TRACKING_EKF_TS1, estimated_yaw_angle,    SHIP_EKF, estimated_psi]
-      - [TS_TRACKING_EKF_TS1, estimated_speed_north,  SHIP_EKF, estimated_u]
-      - [TS_TRACKING_EKF_TS1, estimated_speed_east,   SHIP_EKF, estimated_v]
-      - [TS_TRACKING_EKF_TS1, radar_valid,            SHIP_EKF, measurement_valid]
-      - [TS_TRACKING_EKF_TS1, camera_fore_valid,      SHIP_EKF, measurement_valid]
-      - [TS_TRACKING_EKF_TS1, camera_aft_valid,       SHIP_EKF, measurement_valid]
-      - [TS_TRACKING_EKF_TS1, camera_port_valid,      SHIP_EKF, measurement_valid]
-      - [TS_TRACKING_EKF_TS1, camera_starboard_valid, SHIP_EKF, measurement_valid]
+      - [TS_TRACKING_EKF_TS1, estimated_own_north,        SHIP_EKF,         estimated_n]
+      - [TS_TRACKING_EKF_TS1, estimated_own_east,         SHIP_EKF,         estimated_e]
+      - [TS_TRACKING_EKF_TS1, estimated_own_yaw_angle,    SHIP_EKF,         estimated_psi]
+      - [TS_TRACKING_EKF_TS1, estimated_own_speed_north,  SHIP_EKF,         estimated_u]
+      - [TS_TRACKING_EKF_TS1, estimated_own_speed_east,   SHIP_EKF,         estimated_v]
+      - [TS_TRACKING_EKF_TS1, RADAR_valid,                RADAR,            measurement_valid]
+      - [TS_TRACKING_EKF_TS1, CAMERA_FORE_valid,          CAMERA_FORE,      measurement_valid]
+      - [TS_TRACKING_EKF_TS1, CAMERA_AFT_valid,           CAMERA_AFT,       measurement_valid]
+      - [TS_TRACKING_EKF_TS1, CAMERA_PORT_valid,          CAMERA_PORT,      measurement_valid]
+      - [TS_TRACKING_EKF_TS1, CAMERA_STARBOARD_valid,     CAMERA_STARBOARD, measurement_valid]
 
 
     SHIP_OBSERVERS:
@@ -214,15 +212,15 @@ ships:
 
       - [SPEED_LOG, measured_ship_speed, "Speed [m/s]"]
 
-      - [SURFACE_CURRENT, current_speed, "Speed [m/s]"]
-      - [SURFACE_CURRENT, current_direction_deg, "Angle [deg]"]
-
       - [SHIP_EKF, estimated_n,   "Position [m]"]
       - [SHIP_EKF, estimated_e,   "Position [m]"]
       - [SHIP_EKF, estimated_psi, "Angle [rad]"]
       - [SHIP_EKF, estimated_u,   "Speed [m/s]"]
       - [SHIP_EKF, estimated_v,   "Speed [m/s]"]
       - [SHIP_EKF, estimated_r,   "Angular Speed [rad/s]"]
+
+      - [SURFACE_CURRENT, current_speed, "Speed [m/s]"]
+      - [SURFACE_CURRENT, current_direction_deg, "Angle [deg]"]
 
       - [WIND, wind_speed, "Speed [m/s]"]
       - [WIND, wind_direction_deg, "Angle [deg]"]
@@ -478,7 +476,7 @@ ships:
   - id: TS1
 
     spawn:
-      start_time: 250.0
+      start_time: 0.0
       north: 10000.0
       east: 0.0
       yaw_angle_deg: 135.0
@@ -487,7 +485,7 @@ ships:
     route:
       north: [10000.0 , 0.0     ]
       east:  [0.0     , 10000.0 ]
-      speed: 5.0          # Upon reaching the next waypoint
+      speed: [5.0]          # Upon reaching the next waypoint
 
     SHIP_BLOCKS:
       - [MISSION_MANAGER, FMUs/simplified_ship/MissionManager.fmu]
@@ -575,9 +573,9 @@ ships:
         r: 1000
         ki_ct: 0.002
         integrator_limit: 5000
-        kp: 1.5
+        kp: 0.5
         ki: 0.00015
-        kd: 80.0
+        kd: 5.0
         max_rudder_rate_deg_per_sec: 2.3
         max_rudder_angle_deg: 30
 

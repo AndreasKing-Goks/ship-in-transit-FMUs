@@ -19,7 +19,7 @@ from libcosimpy.CosimSlave import CosimLocalSlave
 from libcosimpy.CosimManipulator import CosimManipulator
 from libcosimpy.CosimObserver import CosimObserver
 from libcosimpy.CosimEnums import CosimVariableType
-from old_function.utils import GetVariableInfo, GetVariableIndex
+from orchestrator.cosim_instance import GetVariableInfo, GetVariableIndex
 
 
 def plot_real_ts(observer, slave_index, vr, label, sample_count=200000):

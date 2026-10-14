@@ -17,7 +17,8 @@ from libcosimpy.CosimSlave import CosimLocalSlave
 from libcosimpy.CosimManipulator import CosimManipulator
 from libcosimpy.CosimObserver import CosimObserver
 from libcosimpy.CosimEnums import CosimVariableType
-from old_function.utils import *
+from orchestrator.utils import *
+from orchestrator.cosim_instance import *
 
 # =========================
 # Instantiate CoSimInstance

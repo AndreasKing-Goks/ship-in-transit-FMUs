@@ -17,7 +17,7 @@ from libcosimpy.CosimSlave import CosimLocalSlave
 from libcosimpy.CosimManipulator import CosimManipulator
 from libcosimpy.CosimObserver import CosimObserver
 from libcosimpy.CosimEnums import CosimVariableType
-from old_function.utils import *
+from orchestrator.cosim_instance import GetVariableInfo, GetVariableIndex
 
 # PARAMETERS
 stopTime = 1e11 # Number of steps in nano seconds (int)

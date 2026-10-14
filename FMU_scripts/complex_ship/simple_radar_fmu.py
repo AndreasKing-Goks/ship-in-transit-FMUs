@@ -160,19 +160,21 @@ class RADAR(Fmi2Slave):
                 bearing_body        = np.arctan2(y_body, x_body) # (angle from measured from heading=0)
                 true_bearing        = self._wrap_to_pi(bearing_body)
                 
-                ## Check if the ship is detected 
+                ## Check if the ship is detected
                 # Inside radar range
                 within_range        = true_range < self.max_range
                 
-                ship_visible        = within_range
-                detect_rng          = self._detection_rng.uniform(low=0.0, high=1.0)
+                if within_range:
+                    detection_prob          = self._radar_detection_probability(range_=true_range)
                 
-                detection_prob      = self._radar_detection_probability(range=true_range)
-                
-                if self.radar_degradation:
-                    detection_prob      = detection_prob * self.radar_degradation_detection_probability_coeff
+                    if self.radar_degradation:
+                        detection_prob      = detection_prob * self.radar_degradation_detection_probability_coeff
                     
-                detection = True if detect_rng < detection_prob else False
+                    detection_rng           = self._detection_rng.uniform(low=0.0, high=1.0)
+                    detected                = detection_rng < detection_prob
+                
+                else:
+                    detected = False
                 
                 ## OUTPUT
                 # Bearing angle noise
@@ -184,7 +186,6 @@ class RADAR(Fmi2Slave):
                 ## Measured output            
                 measured_range      = true_range + range_noise
                 measured_bearing    = self._wrap_to_pi(true_bearing + bearing_noise)
-                detected            = ship_visible and detection
                 
                 if detected:
                     setattr(self, f"detect_tar_{idx}", True)
@@ -205,4 +206,4 @@ class RADAR(Fmi2Slave):
             # Freeze dynamics safely (keep last state/outputs)
             self.measurement_valid                  = False
         
-            return True
+        return True

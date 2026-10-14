@@ -229,35 +229,11 @@ instance.PlotFleetTrajectory(mode="quick", ship_scale=1.0)
 # Plot Simulation Results
 key_group_list = [
     ## Own Ship
-    # Base results
-    # ["OS0.north"],
-    # ["OS0.east"],
-    # ["OS0.forward_speed", "OS0.next_wp_speed", "OS0.total_ship_speed"],
-    # ["OS0.yaw_angle_rad", "OS0.yaw_angle_ref_rad"],
-    # ["OS0.rudder_angle_deg"],
-    # ["OS0.e_ct"],
-    
     # Waypoints
-    ["OS0.prev_wp_north"],
-    ["OS0.prev_wp_east"],
-    ["OS0.next_wp_north"],
-    ["OS0.next_wp_east"],
-    
-    # # For non-single ship simulation only
-    # ["OS0.new_throttle_cmd"],
-    # ["OS0.new_rudder_angle_deg"],
-    # ["OS0.colav_rud_ang_increment"],
-    # ["OS0.beta_own_to_tar_1"],
-    # ["OS0.tcpa_own_to_tar_1"],
-    # ["OS0.dcpa_own_to_tar_1"],
-    # ["OS0.dist_own_to_tar_1"],
-    # ["OS0.rr_own_to_tar_1"],
-    
-    # # For environment load-enabled simulation only
-    # ["OS0.current_speed"],
-    # ["OS0.current_direction_deg"],
-    # ["OS0.wind_speed"],
-    # ["OS0.wind_direction_deg"],
+    ["OS0.MISSION_MANAGER.prev_wp_north"],
+    ["OS0.MISSION_MANAGER.prev_wp_east"],
+    ["OS0.MISSION_MANAGER.next_wp_north"],
+    ["OS0.MISSION_MANAGER.next_wp_east"],
     
 ]
 

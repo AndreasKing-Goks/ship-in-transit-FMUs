@@ -12,13 +12,14 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 import matplotlib.pyplot as plt
+import numpy as np
 
 from libcosimpy.CosimExecution import CosimExecution
 from libcosimpy.CosimSlave import CosimLocalSlave
 from libcosimpy.CosimManipulator import CosimManipulator
 from libcosimpy.CosimObserver import CosimObserver
 from libcosimpy.CosimEnums import CosimVariableType
-from old_function.utils import *  # assumes GetVariableIndex / GetVariableInfo exist
+from orchestrator.cosim_instance import GetVariableInfo, GetVariableIndex
 
 
 # ============================================================

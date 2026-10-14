@@ -100,8 +100,8 @@ class CollisionAvoidanceCOLREGS(Fmi2Slave):
         self.register_variable(Integer("ship_priority_idx", causality=Fmi2Causality.output, variability=Fmi2Variability.discrete))
         self.register_variable(Boolean("colav_active", causality=Fmi2Causality.output, variability=Fmi2Variability.discrete))
         self.register_variable(Boolean("ship_collision", causality=Fmi2Causality.output, variability=Fmi2Variability.discrete))
-        self.register_variable(String("encounter_status", causality=Fmi2Causality.output))
-        self.register_variable(String("role_status", causality=Fmi2Causality.output))
+        self.register_variable(String("encounter_status", causality=Fmi2Causality.output, variability=Fmi2Variability.discrete))
+        self.register_variable(String("role_status", causality=Fmi2Causality.output, variability=Fmi2Variability.discrete))
         
         for i in range(1,4):
             self.register_variable(Real(f"beta_own_to_tar_{i}", causality=Fmi2Causality.output))
@@ -437,7 +437,7 @@ class CollisionAvoidanceCOLREGS(Fmi2Slave):
             
         except Exception as e:
             # IMPORTANT: do not crash host
-            print(f"[SimpleCollisionAvoidanceCOLREGS] ERROR t={current_time} dt={step_size}: {type(e).__name__}: {e}")
+            print(f"[CollisionAvoidanceCOLREGS] ERROR t={current_time} dt={step_size}: {type(e).__name__}: {e}")
             print(traceback.format_exc())
             
             # Freeze dynamics (keep last state/outputs)

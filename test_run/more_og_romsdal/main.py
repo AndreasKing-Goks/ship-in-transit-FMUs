@@ -104,34 +104,34 @@ instance.PlotFleetTrajectory(mode="quick", ship_scale=1.0)
 key_group_list = [
     ## Own Ship
     # Base results
-    ["OS0.north"],
-    ["OS0.east"],
-    ["OS0.forward_speed", "OS0.next_wp_speed", "OS0.total_ship_speed"],
-    ["OS0.yaw_angle_rad", "OS0.yaw_angle_ref_rad"],
-    ["OS0.rudder_angle_deg"],
-    ["OS0.e_ct"],
-    ["OS0.shaft_speed_rpm", "OS0.shaft_speed_cmd_rpm"],
-    ["OS0.throttle_cmd"],
+    ["OS0.SHIP_MODEL.north"],
+    ["OS0.SHIP_MODEL.east"],
+    ["OS0.SHIP_MODEL.forward_speed", "OS0.MISSION_MANAGER.next_wp_speed", "OS0.SHIP_MODEL.total_ship_speed"],
+    ["OS0.SHIP_MODEL.yaw_angle_rad", "OS0.AUTOPILOT.yaw_angle_ref_rad"],
+    ["OS0.AUTOPILOT.rudder_angle_deg"],
+    ["OS0.AUTOPILOT.e_ct"],
+    ["OS0.MACHINERY_SYSTEM.shaft_speed_rpm", "OS0.SHAFT_SPEED_CONTROLLER.shaft_speed_cmd_rpm"],
+    ["OS0.THROTTLE_CONTROLLER.throttle_cmd"],
     
-    # # For environment load-enabled simulation only
-    # ["OS0.current_speed"],
-    # ["OS0.current_direction_deg"],
-    # ["OS0.wind_speed"],
-    # ["OS0.wind_direction_deg"],
+    # For environment load-enabled simulation only
+    ["OS0.SURFACE_CURRENT.current_speed"],
+    ["OS0.SURFACE_CURRENT.current_direction_deg"],
+    ["OS0.WIND.wind_speed"],
+    ["OS0.WIND.wind_direction_deg"],
     
     # For Ship EKF
-    ["OS0.estimated_n"],
-    ["OS0.estimated_e"],
-    ["OS0.estimated_psi"],
-    ["OS0.estimated_u"],
-    ["OS0.estimated_v"],
-    ["OS0.estimated_r"],
+    ["OS0.SHIP_EKF.estimated_n"],
+    ["OS0.SHIP_EKF.estimated_e"],
+    ["OS0.SHIP_EKF.estimated_psi"],
+    ["OS0.SHIP_EKF.estimated_u"],
+    ["OS0.SHIP_EKF.estimated_v"],
+    ["OS0.SHIP_EKF.estimated_r"],
     
     # Sensors
-    ["OS0.measured_north"],
-    ["OS0.measured_east"],
-    ["OS0.measured_ship_heading_rad"],
-    ["OS0.measured_ship_speed"],
+    ["OS0.GPS.measured_north"],
+    ["OS0.GPS.measured_east"],
+    ["OS0.GYROCOMPASS.measured_ship_heading_rad"],
+    ["OS0.SPEED_LOG.measured_ship_speed"],
 ]
 
 # Plot Time Series

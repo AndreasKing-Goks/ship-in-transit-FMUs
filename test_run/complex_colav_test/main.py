@@ -22,7 +22,7 @@ from orchestrator.scenario_config import load_base_config
 import yaml
 
 ## Get the config path
-config_path = ROOT / "test_run" / "complax_colav_test" / "complax_colav_test.yaml"
+config_path = ROOT / "test_run" / "complex_colav_test" / "complex_colav_test.yaml"
 
 ## Get the configs
 config      = load_base_config(config_path)
@@ -56,7 +56,7 @@ print(f"A single simulation finished in {time_count:.2f} seconds")
 # - .mov
 
 ## Get the save path for animation
-save_path = ROOT / "saved_animation" / "more_og_romsdal.gif"
+save_path = ROOT / "saved_animation" / "complex_colav_test.gif"
 
 # Animate Simulation
 instance.AnimateFleetTrajectory(
@@ -68,7 +68,7 @@ instance.AnimateFleetTrajectory(
         margin_frac=0.08,
         equal_aspect=True,
         interval_ms=60,
-        frame_step=60,
+        frame_step=1,
         trail_len=300,
         plot_routes=True,
         plot_waypoints=True,
@@ -90,34 +90,44 @@ instance.PlotFleetTrajectory(mode="quick", ship_scale=1.0)
 key_group_list = [
     ## Own Ship
     # Base results
-    ["OS0.north"],
-    ["OS0.east"],
-    ["OS0.forward_speed", "OS0.next_wp_speed", "OS0.total_ship_speed"],
-    ["OS0.yaw_angle_rad", "OS0.yaw_angle_ref_rad"],
-    ["OS0.rudder_angle_deg"],
-    ["OS0.e_ct"],
-    ["OS0.shaft_speed_rpm", "OS0.shaft_speed_cmd_rpm"],
-    ["OS0.throttle_cmd"],
+    ["OS0.SHIP_MODEL.north"],
+    ["OS0.SHIP_MODEL.east"],
+    ["OS0.SHIP_MODEL.forward_speed", "OS0.MISSION_MANAGER.next_wp_speed", "OS0.SHIP_MODEL.total_ship_speed"],
+    ["OS0.SHIP_MODEL.yaw_angle_rad", "OS0.AUTOPILOT.yaw_angle_ref_rad"],
+    ["OS0.AUTOPILOT.rudder_angle_deg"],
+    ["OS0.AUTOPILOT.e_ct"],
+    ["OS0.MACHINERY_SYSTEM.shaft_speed_rpm", "OS0.SHAFT_SPEED_CONTROLLER.shaft_speed_cmd_rpm"],
+    ["OS0.THROTTLE_CONTROLLER.throttle_cmd"],
     
     # # For environment load-enabled simulation only
-    # ["OS0.current_speed"],
-    # ["OS0.current_direction_deg"],
-    # ["OS0.wind_speed"],
-    # ["OS0.wind_direction_deg"],
+    # ["OS0.SURFACE_CURRENT.current_speed"],
+    # ["OS0.SURFACE_CURRENT.current_direction_deg"],
+    # ["OS0.WIND.wind_speed"],
+    # ["OS0.WIND.wind_direction_deg"],
     
-    # For Ship EKF
-    ["OS0.estimated_n"],
-    ["OS0.estimated_e"],
-    ["OS0.estimated_psi"],
-    ["OS0.estimated_u"],
-    ["OS0.estimated_v"],
-    ["OS0.estimated_r"],
+    # # For Ship EKF
+    # ["OS0.SHIP_EKF.estimated_n"],
+    # ["OS0.SHIP_EKF.estimated_e"],
+    # ["OS0.SHIP_EKF.estimated_psi"],
+    # ["OS0.SHIP_EKF.estimated_u"],
+    # ["OS0.SHIP_EKF.estimated_v"],
+    # ["OS0.SHIP_EKF.estimated_r"],
     
-    # Sensors
-    ["OS0.measured_north"],
-    ["OS0.measured_east"],
-    ["OS0.measured_ship_heading_rad"],
-    ["OS0.measured_ship_speed"],
+    # # Sensors
+    # ["OS0.GPS.measured_north"],
+    # ["OS0.GPS.measured_east"],
+    # ["OS0.GYROCOMPASS.measured_ship_heading_rad"],
+    # ["OS0.SPEED_LOG.measured_ship_speed"],
+    
+    ## Target Ship(s)
+    # Base results
+    ["TS1.SHIP_MODEL.north"],
+    ["TS1.SHIP_MODEL.east"],
+    ["TS1.SHIP_MODEL.forward_speed", "TS1.MISSION_MANAGER.next_wp_speed", "TS1.SHIP_MODEL.total_ship_speed"],
+    ["TS1.SHIP_MODEL.yaw_angle_rad", "TS1.AUTOPILOT.yaw_angle_ref_rad"],
+    ["TS1.AUTOPILOT.rudder_angle_deg"],
+    ["TS1.AUTOPILOT.e_ct"],
+    ["TS1.SPEED_CONTROLLER.thrust_force"]
 ]
 
 # Plot Time Series

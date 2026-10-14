@@ -762,7 +762,7 @@ class ShipInTransitCoSimulation(CoSimInstance):
             # Add observers (namespaced keys)
             for block, var, label in SHIP_OBSERVERS:
                 self.AddObserverTimeSeriesWithLabel(
-                    name=f"{prefix}.{var}",
+                    name=f"{prefix}.{block}.{var}",
                     slaveName=self.ship_slave(prefix, block),
                     variable=var,
                     var_label=label
@@ -1651,7 +1651,6 @@ class ShipInTransitCoSimulation(CoSimInstance):
 
             # Gather data
             for key in key_group:
-
                 time_points, step_number, samples = self.GetObserverTimeSeries(key)
 
                 struct_time_points.append(time_points)
@@ -1708,8 +1707,8 @@ class ShipInTransitCoSimulation(CoSimInstance):
 # =============================================================================================================
 # Static Plot
 # =============================================================================================================
-    def get_ship_timeseries(self, ship_id: str, var: str):
-        key = f"{ship_id}.{var}"
+    def get_ship_timeseries(self, ship_id: str, block:str, var: str):
+        key = f"{ship_id}.{block}.{var}"
         t, step, samples = self.GetObserverTimeSeries(key)
         return np.asarray(t), np.asarray(step), np.asarray(samples)
     
@@ -1908,9 +1907,9 @@ class ShipInTransitCoSimulation(CoSimInstance):
             color = palette[k % len(palette)]
 
             # time series 
-            _, _, north = self.get_ship_timeseries(sid, "north")
-            _, _, east  = self.get_ship_timeseries(sid, "east")
-            _, _, yaw   = self.get_ship_timeseries(sid, "yaw_angle_rad")
+            _, _, north = self.get_ship_timeseries(sid, "SHIP_MODEL", "north")
+            _, _, east  = self.get_ship_timeseries(sid, "SHIP_MODEL", "east")
+            _, _, yaw   = self.get_ship_timeseries(sid, "SHIP_MODEL", "yaw_angle_rad")
             
             n = min(len(north), len(east), len(yaw))
             north, east, yaw = north[:n], east[:n], yaw[:n]
@@ -2161,9 +2160,9 @@ class ShipInTransitCoSimulation(CoSimInstance):
         data = {}
 
         for sid in ship_ids:
-            _, _, north = self.get_ship_timeseries(sid, "north")
-            _, _, east  = self.get_ship_timeseries(sid, "east")
-            _, _, yaw   = self.get_ship_timeseries(sid, "yaw_angle_rad")
+            _, _, north = self.get_ship_timeseries(sid, "SHIP_MODEL", "north")
+            _, _, east  = self.get_ship_timeseries(sid, "SHIP_MODEL", "east")
+            _, _, yaw   = self.get_ship_timeseries(sid, "SHIP_MODEL", "yaw_angle_rad")
 
             n = min(len(north), len(east), len(yaw))
             north, east, yaw = north[:n], east[:n], yaw[:n]

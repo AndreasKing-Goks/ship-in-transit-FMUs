@@ -344,10 +344,10 @@ class TargetShipTrackingEKF(Fmi2Slave):
         self.J_x_lambda         = sp.lambdify([n, e, vn, ve], J_x, "numpy")
         
         self.h_radar_lambda     = sp.lambdify([n, e, vn, ve] + [no, eo, psi_o, vno, veo], h_radar, "numpy")
-        self.H_radar_x_lambda   = sp.lambdify([n, e, vn, ve], H_radar_x, "numpy")
+        self.H_radar_x_lambda   = sp.lambdify([n, e, vn, ve] + [no, eo, psi_o, vno, veo], H_radar_x, "numpy")
         
         self.h_cam_lambda       = sp.lambdify([n, e, vn, ve] + [no, eo, psi_o, lx, ly, theta_cam], h_cam, "numpy")
-        self.H_cam_x_lambda     = sp.lambdify([n, e, vn, ve], H_cam_x, "numpy")
+        self.H_cam_x_lambda     = sp.lambdify([n, e, vn, ve] + [no, eo, psi_o, lx, ly, theta_cam], H_cam_x, "numpy")
         
         
     def f(self, x:np.ndarray, *args, **kwargs) -> np.ndarray:
@@ -571,7 +571,7 @@ class TargetShipTrackingEKF(Fmi2Slave):
             theta_cam
         ])
         
-        h = self.h_cam_lambda(self.x, m_cam)
+        h = self.h_cam(self.x, m_cam)
         
         ## Measurement model Jacobian
         dhdx = self.dhdx_cam(self.x, m_cam)
