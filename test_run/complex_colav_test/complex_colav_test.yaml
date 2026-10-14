@@ -14,14 +14,14 @@ ships:
       forward_speed: 0.0
 
     route:
-      north: [0.0, 10000.0 ]
-      east:  [0.0, 10000.0 ]
-      speed: [5.0]
+      north: [0, 8000 , 10000 ]
+      east:  [0, 8000 , 10000 ]
+      speed: [5, 3.5   ]          # Upon reaching the next waypoint
 
     SHIP_BLOCKS:
       - [MISSION_MANAGER, FMUs/complex_ship/MissionManager.fmu]
 
-      - [AUTOPILOT, FMUs/complex_ship/Autopilot.fmu]
+      - [AUTOPILOT, FMUs/complex_ship/HeadingOffsetAutopilot.fmu]
       - [SHAFT_SPEED_CONTROLLER, FMUs/complex_ship/ShaftSpeedController.fmu]
       - [THROTTLE_CONTROLLER, FMUs/complex_ship/ThrottleController.fmu]
       - [COLAV, FMUs/complex_ship/CollisionAvoidanceCOLREGS.fmu]
@@ -144,8 +144,8 @@ ships:
       - [TS_TRACKING_EKF_TS1, estimated_own_north,        SHIP_EKF,         estimated_n]
       - [TS_TRACKING_EKF_TS1, estimated_own_east,         SHIP_EKF,         estimated_e]
       - [TS_TRACKING_EKF_TS1, estimated_own_yaw_angle,    SHIP_EKF,         estimated_psi]
-      - [TS_TRACKING_EKF_TS1, estimated_own_speed_north,  SHIP_EKF,         estimated_u]
-      - [TS_TRACKING_EKF_TS1, estimated_own_speed_east,   SHIP_EKF,         estimated_v]
+      - [TS_TRACKING_EKF_TS1, estimated_own_speed_north,  SHIP_EKF,         estimated_vn]
+      - [TS_TRACKING_EKF_TS1, estimated_own_speed_east,   SHIP_EKF,         estimated_ve]
       - [TS_TRACKING_EKF_TS1, RADAR_valid,                RADAR,            measurement_valid]
       - [TS_TRACKING_EKF_TS1, CAMERA_FORE_valid,          CAMERA_FORE,      measurement_valid]
       - [TS_TRACKING_EKF_TS1, CAMERA_AFT_valid,           CAMERA_AFT,       measurement_valid]
@@ -218,6 +218,25 @@ ships:
       - [SHIP_EKF, estimated_u,   "Speed [m/s]"]
       - [SHIP_EKF, estimated_v,   "Speed [m/s]"]
       - [SHIP_EKF, estimated_r,   "Angular Speed [rad/s]"]
+
+      - [TS_TRACKING_EKF_TS1, estimated_n,   "Position [m]"]
+      - [TS_TRACKING_EKF_TS1, estimated_e,   "Position [m]"]
+
+      - [RADAR, tar_1_range,      "Position [m]"]
+      - [RADAR, tar_1_range_rate, "Speed [m/s]"]
+      - [RADAR, tar_1_bearing,    "Angle [rad]"]
+
+      - [CAMERA_FORE, tar_1_range,      "Position [m]"]
+      - [CAMERA_FORE, tar_1_bearing,    "Angle [rad]"]
+
+      - [CAMERA_AFT, tar_1_range,      "Position [m]"]
+      - [CAMERA_AFT, tar_1_bearing,    "Angle [rad]"]
+
+      - [CAMERA_PORT, tar_1_range,      "Position [m]"]
+      - [CAMERA_PORT, tar_1_bearing,    "Angle [rad]"]
+
+      - [CAMERA_STARBOARD, tar_1_range,      "Position [m]"]
+      - [CAMERA_STARBOARD, tar_1_bearing,    "Angle [rad]"]
 
       - [SURFACE_CURRENT, current_speed, "Speed [m/s]"]
       - [SURFACE_CURRENT, current_direction_deg, "Angle [deg]"]
@@ -483,13 +502,13 @@ ships:
       forward_speed: 0.0
 
     route:
-      north: [10000.0 , 0.0     ]
-      east:  [0.0     , 10000.0 ]
-      speed: [5.0]          # Upon reaching the next waypoint
+      north: [10000 , 2000, 0     ]
+      east:  [0     , 8000, 10000 ]
+      speed: [5.1     , 3.5   ]          # Upon reaching the next waypoint
 
     SHIP_BLOCKS:
       - [MISSION_MANAGER, FMUs/simplified_ship/MissionManager.fmu]
-      - [AUTOPILOT, FMUs/simplified_ship/Autopilot.fmu]
+      - [AUTOPILOT, FMUs/simplified_ship/HeadingOffsetAutopilot.fmu]
       - [SPEED_CONTROLLER, FMUs/simplified_ship/SpeedController.fmu]
       - [RUDDER, FMUs/simplified_ship/Rudder.fmu]
       - [SHIP_MODEL, FMUs/simplified_ship/ShipModel.fmu]

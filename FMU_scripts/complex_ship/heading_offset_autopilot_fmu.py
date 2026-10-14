@@ -1,6 +1,7 @@
 """
 Autopilot Python FMU implementation.
-This FMU manages a heading controller (autopilot) based on PID Controller with Line-of-Sight Guidance.
+This FMU manages a heading controller (autopilot) based on PID Controller with Line-of-Sight Guidanc
+with Heading Offset support
 
 Authors : Andreas R.G. Sitorus
 Date    : Januari 2026
@@ -10,10 +11,10 @@ from pythonfmu import Fmi2Causality, Fmi2Slave, Fmi2Variability, Real, Integer, 
 import math
 import traceback
 
-class Autopilot(Fmi2Slave):
+class HeadingOffsetAutopilot(Fmi2Slave):
     
     author = "Andreas R.G. Sitorus"
-    description = "PID-Based Heading Controller with Line-of-Sight Guidance Algorithm"
+    description = "PID-Based Heading Controller with Line-of-Sight Guidance Algorithm with Heading Offset support"
     
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -189,7 +190,7 @@ class Autopilot(Fmi2Slave):
             self.rudder_angle_deg   = math.degrees(rudder_angle_rad)
         except Exception as e:
             # IMPORTANT: do not crash host
-            print(f"[Autopilot] ERROR t={current_time} dt={step_size}: {type(e).__name__}: {e}")
+            print(f"[HeadingOffsetAutopilot] ERROR t={current_time} dt={step_size}: {type(e).__name__}: {e}")
             print(traceback.format_exc())
 
             # Freeze dynamics safely (keep last state/outputs)

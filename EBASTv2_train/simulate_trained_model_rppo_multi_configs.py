@@ -80,7 +80,7 @@ recurrent_ppo_model = RecurrentPPO.load(model_path)
 # Run the trained model and log the episode
 # =========================
 simulate    = False
-# simulate    = True
+simulate    = True
 
 if simulate:
     # Set the environment to evaluation mode
@@ -186,7 +186,7 @@ if simulate:
     )
 
 evaluate_failure    = False    
-evaluate_failure    = True
+# evaluate_failure    = True
 
 if evaluate_failure:
     indices=list(range(100))

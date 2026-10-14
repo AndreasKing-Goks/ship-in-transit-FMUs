@@ -426,46 +426,46 @@ class TargetShipTrackingEKF(Fmi2Slave):
         self.R  = np.diag([
             self.sigma_radar_range **2,
             self.sigma_radar_range_rate **2,
-            self._wrap_to_pi(np.deg2rad(self.sigma_radar_bearing_deg)) ** 2,
+            np.deg2rad(self.sigma_radar_bearing_deg) ** 2,
             self.sigma_fore_camera_range ** 2,
-            self._wrap_to_pi(np.deg2rad(self.sigma_fore_camera_bearing_deg)) ** 2,
+            np.deg2rad(self.sigma_fore_camera_bearing_deg) ** 2,
             self.sigma_aft_camera_range ** 2,
-            self._wrap_to_pi(np.deg2rad(self.sigma_aft_camera_bearing_deg)) ** 2,
+            np.deg2rad(self.sigma_aft_camera_bearing_deg) ** 2,
             self.sigma_port_camera_range ** 2,
-            self._wrap_to_pi(np.deg2rad(self.sigma_port_camera_bearing_deg)) ** 2,
+            np.deg2rad(self.sigma_port_camera_bearing_deg) ** 2,
             self.sigma_starboard_camera_range ** 2,
-            self._wrap_to_pi(np.deg2rad(self.sigma_starboard_camera_bearing_deg)) ** 2,
+            np.deg2rad(self.sigma_starboard_camera_bearing_deg) ** 2,
         ])
         
         # Radar Covariance
         self.R_radar  = np.diag([
             self.sigma_radar_range **2,
             self.sigma_radar_range_rate **2,
-            self._wrap_to_pi(self.sigma_radar_bearing_deg) ** 2,
+            np.deg2rad(self.sigma_radar_bearing_deg) ** 2,
         ])
         
         # Fore Camera Covariance
         self.R_fore_camera  = np.diag([
             self.sigma_fore_camera_range ** 2,
-            self._wrap_to_pi(self.sigma_fore_camera_bearing_deg) ** 2,
+            np.deg2rad(self.sigma_fore_camera_bearing_deg) ** 2,
         ])
         
         # Aft Camera Covariance
         self.R_aft_camera  = np.diag([
             self.sigma_aft_camera_range ** 2,
-            self._wrap_to_pi(self.sigma_aft_camera_bearing_deg) ** 2,
+            np.deg2rad(self.sigma_aft_camera_bearing_deg) ** 2,
         ])
         
         # Port Camera Covariance
         self.R_port_camera  = np.diag([
             self.sigma_port_camera_range ** 2,
-            self._wrap_to_pi(self.sigma_port_camera_bearing_deg) ** 2,
+            np.deg2rad(self.sigma_port_camera_bearing_deg) ** 2,
         ])
         
         # Starboard Camera Covariance
         self.R_starboard_camera  = np.diag([
             self.sigma_starboard_camera_range ** 2,
-            self._wrap_to_pi(self.sigma_starboard_camera_bearing_deg) ** 2,
+            np.deg2rad(self.sigma_starboard_camera_bearing_deg) ** 2,
         ])
     
     def predict(self) -> np.ndarray:

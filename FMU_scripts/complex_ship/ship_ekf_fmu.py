@@ -80,12 +80,17 @@ class ShipEKF(Fmi2Slave):
         self.measured_ship_speed        = 0.0
         
         ## Output
+        # BODY FRAME
         self.estimated_n                = 0.0
         self.estimated_e                = 0.0
         self.estimated_psi              = 0.0
         self.estimated_u                = 0.0
         self.estimated_v                = 0.0
         self.estimated_r                = 0.0
+        
+        # NED FRAME
+        self.estimated_vn               = 0.0
+        self.estimated_ve               = 0.0
         
         ## Internal variables
         self._precomputed               = False
@@ -173,6 +178,9 @@ class ShipEKF(Fmi2Slave):
         self.register_variable(Real("estimated_u", causality=Fmi2Causality.output))
         self.register_variable(Real("estimated_v", causality=Fmi2Causality.output))
         self.register_variable(Real("estimated_r", causality=Fmi2Causality.output))
+        
+        self.register_variable(Real("estimated_vn", causality=Fmi2Causality.output))
+        self.register_variable(Real("estimated_ve", causality=Fmi2Causality.output))
         
     def _wrap_to_pi(self, a):
         return (a + np.pi) % (2*np.pi) - np.pi
@@ -525,6 +533,18 @@ class ShipEKF(Fmi2Slave):
             self.estimated_u    = self.x[3]
             self.estimated_v    = self.x[4]
             self.estimated_r    = self.x[5]
+            
+            # Rotation matrix
+            R_psi   = np.array([
+                [np.cos(self.estimated_psi), -np.sin(self.estimated_psi)],
+                [np.sin(self.estimated_psi), np.cos(self.estimated_psi)],
+            ], dtype=float)
+            
+            V_body  = np.array([self.estimated_u, self.estimated_v], dtype=float)
+            V_NED   = R_psi @ V_body
+            
+            self.estimated_vn   = float(V_NED[0])
+            self.estimated_ve   = float(V_NED[1])
                 
         except Exception as e:
             # IMPORTANT: do not crash host
@@ -538,5 +558,17 @@ class ShipEKF(Fmi2Slave):
             self.estimated_u    = self.x[3]
             self.estimated_v    = self.x[4]
             self.estimated_r    = self.x[5]
+            
+            # Rotation matrix
+            R_psi   = np.array([
+                [np.cos(self.estimated_psi), -np.sin(self.estimated_psi)],
+                [np.sin(self.estimated_psi), np.cos(self.estimated_psi)],
+            ], dtype=float)
+            
+            V_body  = np.array([self.estimated_u, self.estimated_v], dtype=float)
+            V_NED   = R_psi @ V_body
+            
+            self.estimated_vn   = float(V_NED[0])
+            self.estimated_ve   = float(V_NED[1])
         
         return True

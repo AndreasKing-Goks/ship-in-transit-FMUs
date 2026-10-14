@@ -26,6 +26,16 @@ class ShipInTransitCoSimulation(CoSimInstance):
     '''
         This class is the extension of the CoSimInstance class
         especially built for running the FMU-based Ship In Transit Simulator
+        
+        SUSPECTED ISSUE!
+        The simulator groups all FMU blocks that shares similar purposes (controller, ship model,
+        etc.) for all ship assets within the same group (consequently: <XX>_CONTROLLER, AUTOPILOT, 
+        etc.). Apparently, for FMU within the same group should have the same architecture, sus-
+        pected in the context of exposed input-output channel despite them belong to different ship
+        assets. (For example: newer AUTOPILOT supports colav_heading_offset input while the older
+        one does not). This might cause a mismatch value referencing because orchestrator deemed all
+        AUTOPILOT the same, and it forces the same access protocol to all FMUs. Need to be investi-
+        gated even more.
     '''
     def __init__(self,
                  config                 : dict,
@@ -404,7 +414,7 @@ class ShipInTransitCoSimulation(CoSimInstance):
     
     def check_sensors_availability(self, spawn: dict, fmu_params: dict):
         # Check the sensors avaliability
-        radar_exists            = isinstance(fmu_params.get("RADAR", None), dict) or isinstance(fmu_params.get("DOPPLER_RADAR", None), dict)
+        radar_exists            = isinstance(fmu_params.get("RADAR", None), dict)
         fore_camera_exists      = isinstance(fmu_params.get("CAMERA_FORE", None), dict)
         aft_camera_exists       = isinstance(fmu_params.get("CAMERA_AFT", None), dict)
         port_camera_exists      = isinstance(fmu_params.get("CAMERA_PORT", None), dict)
@@ -419,33 +429,33 @@ class ShipInTransitCoSimulation(CoSimInstance):
             fmu_params["RADAR"]["initial_own_yaw_angle"]    = np.deg2rad(spawn.get("yaw_angle_deg", 0.0))
             
             # If doppler radar
-            is_doppler_radar = isinstance(fmu_params["RADAR"].get("initial_own_measured_speed", None), float)
+            is_doppler_radar = is_doppler_radar = ("initial_own_measured_speed" in fmu_params["RADAR"])
             if is_doppler_radar:
                 fmu_params["RADAR"]["initial_own_measured_speed"]   = spawn.get("forward_speed", 0.0)
         
         if fore_camera_exists:
             # Set the initial based on the spawn point
-            fmu_params["RADAR"]["initial_own_north"]        = spawn["north"]
-            fmu_params["RADAR"]["initial_own_east"]         = spawn["east"]
-            fmu_params["RADAR"]["initial_own_yaw_angle"]    = np.deg2rad(spawn.get("yaw_angle_deg", 0.0))
+            fmu_params["CAMERA_FORE"]["initial_own_north"]        = spawn["north"]
+            fmu_params["CAMERA_FORE"]["initial_own_east"]         = spawn["east"]
+            fmu_params["CAMERA_FORE"]["initial_own_yaw_angle"]    = np.deg2rad(spawn.get("yaw_angle_deg", 0.0))
         
         if aft_camera_exists:
             # Set the initial based on the spawn point
-            fmu_params["RADAR"]["initial_own_north"]        = spawn["north"]
-            fmu_params["RADAR"]["initial_own_east"]         = spawn["east"]
-            fmu_params["RADAR"]["initial_own_yaw_angle"]    = np.deg2rad(spawn.get("yaw_angle_deg", 0.0))
+            fmu_params["CAMERA_AFT"]["initial_own_north"]        = spawn["north"]
+            fmu_params["CAMERA_AFT"]["initial_own_east"]         = spawn["east"]
+            fmu_params["CAMERA_AFT"]["initial_own_yaw_angle"]    = np.deg2rad(spawn.get("yaw_angle_deg", 0.0))
         
         if port_camera_exists:
             # Set the initial based on the spawn point
-            fmu_params["RADAR"]["initial_own_north"]        = spawn["north"]
-            fmu_params["RADAR"]["initial_own_east"]         = spawn["east"]
-            fmu_params["RADAR"]["initial_own_yaw_angle"]    = np.deg2rad(spawn.get("yaw_angle_deg", 0.0))
+            fmu_params["CAMERA_PORT"]["initial_own_north"]        = spawn["north"]
+            fmu_params["CAMERA_PORT"]["initial_own_east"]         = spawn["east"]
+            fmu_params["CAMERA_PORT"]["initial_own_yaw_angle"]    = np.deg2rad(spawn.get("yaw_angle_deg", 0.0))
         
         if starboard_camera_exists:
             # Set the initial based on the spawn point
-            fmu_params["RADAR"]["initial_own_north"]        = spawn["north"]
-            fmu_params["RADAR"]["initial_own_east"]         = spawn["east"]
-            fmu_params["RADAR"]["initial_own_yaw_angle"]    = np.deg2rad(spawn.get("yaw_angle_deg", 0.0))
+            fmu_params["CAMERA_STARBOARD"]["initial_own_north"]        = spawn["north"]
+            fmu_params["CAMERA_STARBOARD"]["initial_own_east"]         = spawn["east"]
+            fmu_params["CAMERA_STARBOARD"]["initial_own_yaw_angle"]    = np.deg2rad(spawn.get("yaw_angle_deg", 0.0))
         
         return radar_exists, is_doppler_radar, fore_camera_exists, aft_camera_exists, port_camera_exists, starboard_camera_exists
         
@@ -567,8 +577,8 @@ class ShipInTransitCoSimulation(CoSimInstance):
         targets = [sc for sc in ship_configs if sc.get("id") != prefix]
         
         # Check sensor availability to determine the connections
-        self.enable_situational_aware_colav = (radar_exists and fore_camera_exists and aft_camera_exists and
-                                               port_camera_exists and starboard_camera_exists)
+        self.enable_situational_aware_colav = (radar_exists or fore_camera_exists or aft_camera_exists or
+                                               port_camera_exists or starboard_camera_exists)
         
         if self.enable_situational_aware_colav:
             # List of available sensors
@@ -591,7 +601,7 @@ class ShipInTransitCoSimulation(CoSimInstance):
                         slaveOutputName=self.ship_slave(tgt_prefix, "SHIP_MODEL"),
                         slaveOutputVar="east",
                     )
-                    if is_doppler_radar:
+                    if sensor == "RADAR" and is_doppler_radar:
                         self.AddSlaveConnection(
                             slaveInputName=self.ship_slave(prefix, sensor),
                             slaveInputVar=f"tar_{idx}_yaw_angle",
@@ -631,7 +641,7 @@ class ShipInTransitCoSimulation(CoSimInstance):
                         slaveOutputVar=f"tar_{idx}_bearing",
                     )
                     
-                    if is_doppler_radar:
+                    if sensor == "RADAR" and is_doppler_radar:
                         self.AddSlaveConnection(
                             slaveInputName=self.ship_slave(prefix, f"TS_TRACKING_EKF_{tgt_prefix}"),
                             slaveInputVar=f"{sensor}_measured_range_rate",

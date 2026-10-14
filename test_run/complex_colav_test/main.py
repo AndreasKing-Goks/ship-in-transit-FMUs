@@ -90,10 +90,10 @@ instance.PlotFleetTrajectory(mode="quick", ship_scale=1.0)
 key_group_list = [
     ## Own Ship
     # Base results
-    ["OS0.SHIP_MODEL.north"],
-    ["OS0.SHIP_MODEL.east"],
+    ["OS0.SHIP_MODEL.north", "OS0.SHIP_EKF.estimated_n"],
+    ["OS0.SHIP_MODEL.east", "OS0.SHIP_EKF.estimated_e"],
     ["OS0.SHIP_MODEL.forward_speed", "OS0.MISSION_MANAGER.next_wp_speed", "OS0.SHIP_MODEL.total_ship_speed"],
-    ["OS0.SHIP_MODEL.yaw_angle_rad", "OS0.AUTOPILOT.yaw_angle_ref_rad"],
+    ["OS0.SHIP_MODEL.yaw_angle_rad", "OS0.AUTOPILOT.yaw_angle_ref_rad", "OS0.SHIP_EKF.estimated_psi"],
     ["OS0.AUTOPILOT.rudder_angle_deg"],
     ["OS0.AUTOPILOT.e_ct"],
     ["OS0.MACHINERY_SYSTEM.shaft_speed_rpm", "OS0.SHAFT_SPEED_CONTROLLER.shaft_speed_cmd_rpm"],
@@ -118,16 +118,33 @@ key_group_list = [
     # ["OS0.GPS.measured_east"],
     # ["OS0.GYROCOMPASS.measured_ship_heading_rad"],
     # ["OS0.SPEED_LOG.measured_ship_speed"],
+    # ["OS0.RADAR.tar_1_range"],
+    # ["OS0.RADAR.tar_1_range_rate"],
+    # ["OS0.RADAR.tar_1_bearing"],
+    # ["OS0.CAMERA_FORE.tar_1_range"],
+    # ["OS0.CAMERA_FORE.tar_1_bearing"],
+    # ["OS0.CAMERA_AFT.tar_1_range"],
+    # ["OS0.CAMERA_AFT.tar_1_bearing"],
+    # ["OS0.CAMERA_PORT.tar_1_range"],
+    # ["OS0.CAMERA_PORT.tar_1_bearing"],
+    # ["OS0.CAMERA_STARBOARD.tar_1_range"],
+    # ["OS0.CAMERA_STARBOARD.tar_1_bearing"],
     
     ## Target Ship(s)
     # Base results
-    ["TS1.SHIP_MODEL.north"],
-    ["TS1.SHIP_MODEL.east"],
+    ["TS1.SHIP_MODEL.north", "OS0.TS_TRACKING_EKF_TS1.estimated_n"],
+    ["TS1.SHIP_MODEL.east", "OS0.TS_TRACKING_EKF_TS1.estimated_e"],
     ["TS1.SHIP_MODEL.forward_speed", "TS1.MISSION_MANAGER.next_wp_speed", "TS1.SHIP_MODEL.total_ship_speed"],
     ["TS1.SHIP_MODEL.yaw_angle_rad", "TS1.AUTOPILOT.yaw_angle_ref_rad"],
     ["TS1.AUTOPILOT.rudder_angle_deg"],
     ["TS1.AUTOPILOT.e_ct"],
-    ["TS1.SPEED_CONTROLLER.thrust_force"]
+    ["TS1.SPEED_CONTROLLER.thrust_force"],
+    
+    ["TS1.MISSION_MANAGER.prev_wp_north"],
+    ["TS1.MISSION_MANAGER.prev_wp_east"],
+    ["TS1.MISSION_MANAGER.next_wp_north"],
+    ["TS1.MISSION_MANAGER.next_wp_east"],
+    ["TS1.AUTOPILOT.yaw_angle_ref_rad"],
 ]
 
 # Plot Time Series
