@@ -424,14 +424,10 @@ class ShipInTransitCoSimulation(CoSimInstance):
         
         if radar_exists:
             # Set the initial based on the spawn point
-            fmu_params["RADAR"]["initial_own_north"]        = spawn["north"]
-            fmu_params["RADAR"]["initial_own_east"]         = spawn["east"]
-            fmu_params["RADAR"]["initial_own_yaw_angle"]    = np.deg2rad(spawn.get("yaw_angle_deg", 0.0))
-            
-            # If doppler radar
-            is_doppler_radar = is_doppler_radar = ("initial_own_measured_speed" in fmu_params["RADAR"])
-            if is_doppler_radar:
-                fmu_params["RADAR"]["initial_own_measured_speed"]   = spawn.get("forward_speed", 0.0)
+            fmu_params["RADAR"]["initial_own_north"]            = spawn["north"]
+            fmu_params["RADAR"]["initial_own_east"]             = spawn["east"]
+            fmu_params["RADAR"]["initial_own_yaw_angle"]        = np.deg2rad(spawn.get("yaw_angle_deg", 0.0))
+            fmu_params["RADAR"]["initial_own_measured_speed"]   = spawn.get("forward_speed", 0.0)
         
         if fore_camera_exists:
             # Set the initial based on the spawn point
@@ -457,7 +453,7 @@ class ShipInTransitCoSimulation(CoSimInstance):
             fmu_params["CAMERA_STARBOARD"]["initial_own_east"]         = spawn["east"]
             fmu_params["CAMERA_STARBOARD"]["initial_own_yaw_angle"]    = np.deg2rad(spawn.get("yaw_angle_deg", 0.0))
         
-        return radar_exists, is_doppler_radar, fore_camera_exists, aft_camera_exists, port_camera_exists, starboard_camera_exists
+        return radar_exists, fore_camera_exists, aft_camera_exists, port_camera_exists, starboard_camera_exists
         
     
     def GetShipSpawn(self,
@@ -565,13 +561,13 @@ class ShipInTransitCoSimulation(CoSimInstance):
         
         return ship_configs
     
-    
-    def AddCOLAVConnections(self, prefix, ship_configs, radar_exists=False, is_doppler_radar=False,
-                            fore_camera_exists=False, aft_camera_exists=False, 
-                            port_camera_exists=False, starboard_camera_exists=False):
+    def InitializeTargetShipTrackingEKF(self, prefix, ship_configs, fmu_params,
+                                        radar_exists=False, fore_camera_exists=False, 
+                                        aft_camera_exists=False, port_camera_exists=False, 
+                                        starboard_camera_exists=False):
         '''
-            Add necessary FMU connections responsible for enabling COLAV
-            with situational awareness EKF and sensor fusion.
+            Initialize Target Ship Tracking EKF. Set the correct initial state for 
+            all tracked target ships to enable situational aware COLAV
         '''
         # All other ships (exclude self)
         targets = [sc for sc in ship_configs if sc.get("id") != prefix]
@@ -579,6 +575,31 @@ class ShipInTransitCoSimulation(CoSimInstance):
         # Check sensor availability to determine the connections
         self.enable_situational_aware_colav = (radar_exists or fore_camera_exists or aft_camera_exists or
                                                port_camera_exists or starboard_camera_exists)
+        
+        if self.enable_situational_aware_colav:
+            for idx, tgt in enumerate(targets, start=1):
+                tgt_prefix  = tgt.get("id")
+                tgt_spawn   = tgt.get("spawn")
+                
+                north           = tgt_spawn["north"]
+                east            = tgt_spawn["east"]
+                yaw_angle_rad   = np.deg2rad(tgt_spawn["yaw_angle_deg"])
+                speed_north     = tgt_spawn["forward_speed"] * np.cos(yaw_angle_rad)
+                speed_east      = tgt_spawn["forward_speed"] * np.sin(yaw_angle_rad)
+
+                # Set the target ships initial based on the spawn point
+                fmu_params[f"TS_TRACKING_EKF_{tgt_prefix}"]["initial_measured_tar_north"]       = north
+                fmu_params[f"TS_TRACKING_EKF_{tgt_prefix}"]["initial_measured_tar_east"]        = east
+                fmu_params[f"TS_TRACKING_EKF_{tgt_prefix}"]["initial_measured_tar_speed_north"] = speed_north
+                fmu_params[f"TS_TRACKING_EKF_{tgt_prefix}"]["initial_measured_tar_speed_east"]  = speed_east
+    
+    def AddCOLAVConnections(self, prefix, ship_configs):
+        '''
+            Add necessary FMU connections responsible for enabling COLAV
+            with situational awareness EKF and sensor fusion.
+        '''
+        # All other ships (exclude self)
+        targets = [sc for sc in ship_configs if sc.get("id") != prefix]
         
         if self.enable_situational_aware_colav:
             # List of available sensors
@@ -601,7 +622,7 @@ class ShipInTransitCoSimulation(CoSimInstance):
                         slaveOutputName=self.ship_slave(tgt_prefix, "SHIP_MODEL"),
                         slaveOutputVar="east",
                     )
-                    if sensor == "RADAR" and is_doppler_radar:
+                    if sensor == "RADAR":
                         self.AddSlaveConnection(
                             slaveInputName=self.ship_slave(prefix, sensor),
                             slaveInputVar=f"tar_{idx}_yaw_angle",
@@ -641,7 +662,7 @@ class ShipInTransitCoSimulation(CoSimInstance):
                         slaveOutputVar=f"tar_{idx}_bearing",
                     )
                     
-                    if sensor == "RADAR" and is_doppler_radar:
+                    if sensor == "RADAR":
                         self.AddSlaveConnection(
                             slaveInputName=self.ship_slave(prefix, f"TS_TRACKING_EKF_{tgt_prefix}"),
                             slaveInputVar=f"{sensor}_measured_range_rate",
@@ -738,8 +759,7 @@ class ShipInTransitCoSimulation(CoSimInstance):
             fmu_params          = self.spawn_ship(ship_id=prefix, spawn=spawn, fmu_params=fmu_params)
             
             # Check sensor availability
-            (radar_exists, is_doppler_radar,
-             fore_camera_exists, aft_camera_exists, 
+            (radar_exists,fore_camera_exists, aft_camera_exists, 
              port_camera_exists, starboard_camera_exists) = self.check_sensors_availability(spawn=spawn, 
                                                                                             fmu_params=fmu_params)
             
@@ -765,9 +785,12 @@ class ShipInTransitCoSimulation(CoSimInstance):
             
             # Add COLAV FMU for the ship that has it
             if enable_colav:
-                self.AddCOLAVConnections(prefix, ship_configs, radar_exists, is_doppler_radar,
-                                         fore_camera_exists, aft_camera_exists, 
-                                         port_camera_exists, starboard_camera_exists)
+                self.InitializeTargetShipTrackingEKF(prefix, ship_configs, fmu_params,
+                                                     radar_exists, fore_camera_exists, 
+                                                     aft_camera_exists, port_camera_exists, 
+                                                     starboard_camera_exists)
+                
+                self.AddCOLAVConnections(prefix, ship_configs)
                     
             # Add observers (namespaced keys)
             for block, var, label in SHIP_OBSERVERS:
@@ -1324,11 +1347,11 @@ class ShipInTransitCoSimulation(CoSimInstance):
         
         # If COLAV is enabled
         if ship_config["enable_colav"] is True:
+            # Get the list of collider candidates
+            candidate_list = [sid for sid in self.ship_ids if sid != ship_id]
+                
             for test_ship_config in self.ship_configs:
                 test_sid = test_ship_config["id"]
-                
-                # Get the list of collider candidates
-                candidate_list = [ship_id for ship_id in self.ship_ids if ship_id != test_sid]
                 
                 # If evaluating on the same ship, skip
                 if test_sid == ship_id:

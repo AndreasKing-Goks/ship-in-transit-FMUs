@@ -105,6 +105,10 @@ key_group_list = [
     # ["OS0.WIND.wind_speed"],
     # ["OS0.WIND.wind_direction_deg"],
     
+    # COLAV
+    ["OS0.COLAV.colav_speed_reduction_factor"],
+    ["OS0.COLAV.colav_heading_offset_deg"],
+    
     # # For Ship EKF
     # ["OS0.SHIP_EKF.estimated_n"],
     # ["OS0.SHIP_EKF.estimated_e"],
@@ -140,11 +144,11 @@ key_group_list = [
     ["TS1.AUTOPILOT.e_ct"],
     ["TS1.SPEED_CONTROLLER.thrust_force"],
     
-    ["TS1.MISSION_MANAGER.prev_wp_north"],
-    ["TS1.MISSION_MANAGER.prev_wp_east"],
-    ["TS1.MISSION_MANAGER.next_wp_north"],
-    ["TS1.MISSION_MANAGER.next_wp_east"],
-    ["TS1.AUTOPILOT.yaw_angle_ref_rad"],
+    # ["TS1.MISSION_MANAGER.prev_wp_north"],
+    # ["TS1.MISSION_MANAGER.prev_wp_east"],
+    # ["TS1.MISSION_MANAGER.next_wp_north"],
+    # ["TS1.MISSION_MANAGER.next_wp_east"],
+    # ["TS1.AUTOPILOT.yaw_angle_ref_rad"],
 ]
 
 # Plot Time Series

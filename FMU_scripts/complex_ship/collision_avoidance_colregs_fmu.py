@@ -137,67 +137,97 @@ class CollisionAvoidanceCOLREGS(Fmi2Slave):
         speed_reduction_factor      = 1.0
         
         if turning_direction == "PORT":
-            direction = self.PORT
+            direction       = self.PORT
+            opst_direction  = self.STARBOARD
         else:
-            direction = self.STARBOARD
+            direction       = self.STARBOARD
+            opst_direction  = self.PORT
         
         # Overtaking give-way
         if own_is_overtaking_tar:
             encounter               = "OVERTAKING"
             role                    = "GIVE_WAY"
-            # High danger
-            if risk_score > 0.75:
+            # Near collision -> STOP, turn hard
+            if risk_score > 0.95:
                 heading_offset_deg      = direction * self.hard_heading_offset_deg
-                speed_reduction_factor = 0.0                           # Stop
-            # Moderate danger
-            elif 0.25 < risk_score <= 0.75:
+                speed_reduction_factor  = 0.0
+            # High danger -> Half speed, hard heading offset
+            if 0.85 <risk_score <= 0.95:
                 heading_offset_deg      = direction * self.hard_heading_offset_deg
-                speed_reduction_factor = 0.5                           # Half throttle
-            # Low danger
-            elif risk_score <= 0.25:
+                speed_reduction_factor  = 0.5
+            # Moderate danger -> Full speed, hard heading offset
+            elif 0.75 < risk_score <= 0.85:
+                heading_offset_deg      = direction * self.hard_heading_offset_deg
+                speed_reduction_factor  = 1.0
+            # Low danger -> Full speed, soft heading offset
+            elif 0.6 < risk_score <= 0.75:
                 heading_offset_deg      = direction * self.soft_heading_offset_deg
-                speed_reduction_factor = 1.0                           # Full speed
+                speed_reduction_factor  = 1.0
+            # Warning -> Full speed, no heading offset
+            elif risk_score <= 0.6:
+                heading_offset_deg      = 0.0
+                speed_reduction_factor  = 1.0
         
         # Overtaking stand-on
         elif tar_is_overtaking_own:
             encounter               = "OVERTAKING"
             role                    = "STAND_ON"
-            heading_offset_deg        = 0.0
-            speed_reduction_factor = 1.0
+            heading_offset_deg      = 0.0
+            speed_reduction_factor  = 1.0
+            # Warning -> Half speed, hard heading offset
+            if risk_score > 0.6:
+                heading_offset_deg      = direction * self.hard_heading_offset_deg
+                speed_reduction_factor  = 0.5      
             
         # Head on
         elif is_head_on:
             encounter               = "HEAD_ON"
             role                    = "GIVE_WAY"
-            # High danger
-            if risk_score > 0.75:
-                heading_offset_deg     = direction * self.hard_heading_offset_deg
-                speed_reduction_factor = 0.0                           # Stop
-            # Moderate danger
-            elif 0.25 < risk_score <= 0.75:
-                heading_offset_deg     = direction * self.hard_heading_offset_deg
-                speed_reduction_factor = 0.5                           # Half throttle
-            # Low danger
-            elif risk_score <= 0.25:
-                heading_offset_deg     = direction * self.soft_heading_offset_deg
-                speed_reduction_factor = 1.0                           # Full speed
+            # Near collision -> STOP, turn hard
+            if risk_score > 0.95:
+                heading_offset_deg      = direction * self.hard_heading_offset_deg
+                speed_reduction_factor  = 0.0
+            # High danger -> Half speed, hard heading offset
+            if 0.85 <risk_score <= 0.95:
+                heading_offset_deg      = direction * self.hard_heading_offset_deg
+                speed_reduction_factor  = 0.5
+            # Moderate danger -> Full speed, hard heading offset
+            elif 0.75 < risk_score <= 0.85:
+                heading_offset_deg      = direction * self.hard_heading_offset_deg
+                speed_reduction_factor  = 1.0
+            # Low danger -> Full speed, soft heading offset
+            elif 0.6 < risk_score <= 0.75:
+                heading_offset_deg      = direction * self.soft_heading_offset_deg
+                speed_reduction_factor  = 1.0
+            # Warning -> Full speed, no heading offset
+            elif risk_score <= 0.6:
+                heading_offset_deg      = 0.0
+                speed_reduction_factor  = 1.0
             
         # Crossing give-way
         elif tar_on_starboard:
             encounter               = "CROSSING"
             role                    = "GIVE_WAY"
-            # High danger
-            if risk_score > 0.75:
-                heading_offset_deg     = direction * self.hard_heading_offset_deg
-                speed_reduction_factor = 0.0                           # Stop
-            # Moderate danger
-            elif 0.25 < risk_score <= 0.75:
-                heading_offset_deg     = direction * self.hard_heading_offset_deg
-                speed_reduction_factor = 0.5                           # Half throttle
-            # Low danger
-            elif risk_score <= 0.25:
-                heading_offset_deg     = direction * self.soft_heading_offset_deg
-                speed_reduction_factor = 1.0                           # Full speed
+            # Near collision -> STOP, turn hard
+            if risk_score > 0.95:
+                heading_offset_deg      = direction * self.hard_heading_offset_deg
+                speed_reduction_factor  = 0.0
+            # High danger -> Half speed, hard heading offset
+            if 0.85 <risk_score <= 0.95:
+                heading_offset_deg      = direction * self.hard_heading_offset_deg
+                speed_reduction_factor  = 0.5
+            # Moderate danger -> Full speed, hard heading offset
+            elif 0.75 < risk_score <= 0.85:
+                heading_offset_deg      = direction * self.hard_heading_offset_deg
+                speed_reduction_factor  = 1.0
+            # Low danger -> Full speed, soft heading offset
+            elif 0.6 < risk_score <= 0.75:
+                heading_offset_deg      = direction * self.soft_heading_offset_deg
+                speed_reduction_factor  = 1.0
+            # Warning -> Full speed, no heading offset
+            elif risk_score <= 0.6:
+                heading_offset_deg      = 0.0
+                speed_reduction_factor  = 1.0
         
         # Crossing stand-on
         elif tar_on_port:
@@ -205,6 +235,10 @@ class CollisionAvoidanceCOLREGS(Fmi2Slave):
             role                    = "STAND_ON"
             heading_offset_deg      = 0.0
             speed_reduction_factor  = 1.0
+            # Warning -> Half speed, hard heading offset, opposite direction
+            if risk_score > 0.6:
+                heading_offset_deg      = opst_direction * self.hard_heading_offset_deg
+                speed_reduction_factor  = 0.5   
             
         return encounter, role, heading_offset_deg, speed_reduction_factor
     
@@ -396,7 +430,7 @@ class CollisionAvoidanceCOLREGS(Fmi2Slave):
                     
                 # If prioritize one target use held_target_idx, else use idx
                 use_idx         = self.held_target_idx if self.prioritize_one_target else idx
-                
+                 
                 # Get the score by index list following the holding logic
                 score_by_idx    = {target_idx: score for score, target_idx in candidates}
                 

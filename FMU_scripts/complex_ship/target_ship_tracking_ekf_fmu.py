@@ -27,13 +27,6 @@ class TargetShipTrackingEKF(Fmi2Slave):
         self.sigma_acc_north                    = 0.2   # m/s2
         self.sigma_acc_east                     = 0.2   # m/s2
         
-        # Own ship initial states
-        self.initial_estimated_own_north        = 0.0
-        self.initial_estimated_own_east         = 0.0
-        self.initial_estimated_own_yaw_angle    = 0.0
-        self.initial_estimated_own_speed_north  = 0.0
-        self.initial_estimated_own_speed_east   = 0.0
-        
         # Target ship initial states
         self.initial_measured_tar_north         = 0.0
         self.initial_measured_tar_east          = 0.0
@@ -166,13 +159,6 @@ class TargetShipTrackingEKF(Fmi2Slave):
         self.register_variable(Real("sigma_port_camera_bearing_deg", causality=Fmi2Causality.parameter, variability=Fmi2Variability.fixed))
         self.register_variable(Real("sigma_starboard_camera_range", causality=Fmi2Causality.parameter, variability=Fmi2Variability.fixed))
         self.register_variable(Real("sigma_starboard_camera_bearing_deg", causality=Fmi2Causality.parameter, variability=Fmi2Variability.fixed))
-        
-        # Own ship initial measurement
-        self.register_variable(Real("initial_estimated_own_north", causality=Fmi2Causality.parameter, variability=Fmi2Variability.fixed))
-        self.register_variable(Real("initial_estimated_own_east", causality=Fmi2Causality.parameter, variability=Fmi2Variability.fixed))
-        self.register_variable(Real("initial_estimated_own_yaw_angle", causality=Fmi2Causality.parameter, variability=Fmi2Variability.fixed))
-        self.register_variable(Real("initial_estimated_own_speed_north", causality=Fmi2Causality.parameter, variability=Fmi2Variability.fixed))
-        self.register_variable(Real("initial_estimated_own_speed_east", causality=Fmi2Causality.parameter, variability=Fmi2Variability.fixed))
         
         # Target ship initial measurement
         self.register_variable(Real("initial_measured_tar_north", causality=Fmi2Causality.parameter, variability=Fmi2Variability.fixed))

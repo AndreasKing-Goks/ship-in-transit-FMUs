@@ -1121,11 +1121,11 @@ class ShipInTransitCoSimulation(CoSimInstance):
         
         # If COLAV is enabled
         if ship_config["enable_colav"] is True:
+            # Get the list of collider candidates
+            candidate_list = [ship_id for ship_id in self.ship_ids if ship_id != test_sid]
+                
             for test_ship_config in self.ship_configs:
                 test_sid = test_ship_config["id"]
-                
-                # Get the list of collider candidates
-                candidate_list = [ship_id for ship_id in self.ship_ids if ship_id != test_sid]
                 
                 # If evaluating on the same ship, skip
                 if test_sid == ship_id:
