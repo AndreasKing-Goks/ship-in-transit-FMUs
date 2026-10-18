@@ -524,9 +524,10 @@ ships:
     SHIP_BLOCKS:
       - [MISSION_MANAGER, FMUs/simplified_ship/MissionManager.fmu]
       - [AUTOPILOT, FMUs/simplified_ship/HeadingOffsetAutopilot.fmu]
-      - [SPEED_CONTROLLER, FMUs/simplified_ship/SpeedController.fmu]
+      - [SPEED_CONTROLLER, FMUs/simplified_ship/ScaledSpeedController.fmu]
       - [RUDDER, FMUs/simplified_ship/Rudder.fmu]
       - [SHIP_MODEL, FMUs/simplified_ship/ShipModel.fmu]
+      - [COLAV, FMUs/simplified_ship/CollisionAvoidanceCOLREGS.fmu]
       - [SURFACE_CURRENT, FMUs/env_loads/SurfaceCurrentModel.fmu]
       - [WIND, FMUs/env_loads/WindModel.fmu]
 
@@ -562,6 +563,12 @@ ships:
       - [SHIP_MODEL, wind_speed,       WIND,             wind_speed]
       - [SHIP_MODEL, wind_dir_rad ,    WIND,             wind_direction_rad]
 
+      # Collision Avoidance (Only Internal Ports)
+      - [COLAV, own_north,          SHIP_MODEL,           north]
+      - [COLAV, own_east,           SHIP_MODEL,           east]
+      - [COLAV, own_speed_north,    SHIP_MODEL,           d_north]
+      - [COLAV, own_speed_east,     SHIP_MODEL,           d_east]
+
     SHIP_OBSERVERS:
       - [MISSION_MANAGER, prev_wp_north, "Waypoint [m]"]
       - [MISSION_MANAGER, prev_wp_east, "Waypoint [m]"]
@@ -592,6 +599,9 @@ ships:
       - [SHIP_MODEL, d_forward_speed, "Acceleration [m/s2]"]
       - [SHIP_MODEL, d_sideways_speed, "Acceleration [m/s2]"]
       - [SHIP_MODEL, d_yaw_rate, "Angular Acc. [rad/s2]"]
+
+      - [COLAV, colav_speed_reduction_factor, "Scale %"]
+      - [COLAV, colav_heading_offset_deg,     "Angle [deg]"]
 
       - [SURFACE_CURRENT, current_speed, "Speed [m/s]"]
       - [SURFACE_CURRENT, current_direction_deg, "Angle [deg]"]
@@ -650,6 +660,17 @@ ships:
         initial_forward_speed_m_per_s: 0.0
         initial_sideways_speed_m_per_s: 0.0
         initial_yaw_rate_rad_per_s: 0.0
+
+      COLAV:
+        soft_heading_offset_deg: 30
+        hard_heading_offset_deg: 45
+        danger_zone_radius: 926.0
+        collision_zone_radius: 100.0
+        max_target_ship_count: 3
+        hold_time: 900.0
+        T_lookahead: 900.0
+        own_ship_sog_max: 6.0
+        turning_direction: "STARBOARD"
       
       SURFACE_CURRENT:
         seed: 0

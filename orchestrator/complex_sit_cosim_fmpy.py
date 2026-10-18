@@ -412,7 +412,7 @@ class ShipInTransitCoSimulation(CoSimInstance):
         return fmu_params
     
     
-    def check_sensors_availability(self, spawn: dict, fmu_params: dict):
+    def check_sensors_availability(self, prefix, ship_configs:dict, spawn: dict, fmu_params: dict):
         # Check the sensors avaliability
         radar_exists            = isinstance(fmu_params.get("RADAR", None), dict)
         fore_camera_exists      = isinstance(fmu_params.get("CAMERA_FORE", None), dict)
@@ -420,38 +420,65 @@ class ShipInTransitCoSimulation(CoSimInstance):
         port_camera_exists      = isinstance(fmu_params.get("CAMERA_PORT", None), dict)
         starboard_camera_exists = isinstance(fmu_params.get("CAMERA_STARBOARD", None), dict)
         
-        is_doppler_radar        = False
-        
+        targets = [sc for sc in ship_configs if sc.get("id") != prefix]
+            
         if radar_exists:
             # Set the initial based on the spawn point
-            fmu_params["RADAR"]["initial_own_north"]            = spawn["north"]
-            fmu_params["RADAR"]["initial_own_east"]             = spawn["east"]
-            fmu_params["RADAR"]["initial_own_yaw_angle"]        = np.deg2rad(spawn.get("yaw_angle_deg", 0.0))
-            fmu_params["RADAR"]["initial_own_measured_speed"]   = spawn.get("forward_speed", 0.0)
+            fmu_params["RADAR"]["initial_own_north"]                = spawn["north"]
+            fmu_params["RADAR"]["initial_own_east"]                 = spawn["east"]
+            fmu_params["RADAR"]["initial_own_yaw_angle"]            = np.deg2rad(spawn.get("yaw_angle_deg", 0.0))
+            fmu_params["RADAR"]["initial_own_measured_speed"]       = spawn.get("forward_speed", 0.0)
+            
+            for idx, tgt in enumerate(targets, start=1):
+                tgt_spawn   = tgt.get("spawn")
+                fmu_params["RADAR"][f"init_tar_{idx}_north"]            = tgt_spawn["north"]
+                fmu_params["RADAR"][f"init_tar_{idx}_east"]             = tgt_spawn["east"]
+                fmu_params["RADAR"][f"init_tar_{idx}_yaw_angle"]        = np.deg2rad(tgt_spawn.get("yaw_angle_deg", 0.0))
+                fmu_params["RADAR"][f"init_tar_{idx}_measured_speed"]   = tgt_spawn.get("forward_speed", 0.0)
         
         if fore_camera_exists:
             # Set the initial based on the spawn point
-            fmu_params["CAMERA_FORE"]["initial_own_north"]        = spawn["north"]
-            fmu_params["CAMERA_FORE"]["initial_own_east"]         = spawn["east"]
-            fmu_params["CAMERA_FORE"]["initial_own_yaw_angle"]    = np.deg2rad(spawn.get("yaw_angle_deg", 0.0))
+            fmu_params["CAMERA_FORE"]["initial_own_north"]          = spawn["north"]
+            fmu_params["CAMERA_FORE"]["initial_own_east"]           = spawn["east"]
+            fmu_params["CAMERA_FORE"]["initial_own_yaw_angle"]      = np.deg2rad(spawn.get("yaw_angle_deg", 0.0))
+            
+            for idx, tgt in enumerate(targets, start=1):
+                tgt_spawn   = tgt.get("spawn")
+                fmu_params["CAMERA_FORE"][f"init_tar_{idx}_north"]      = tgt_spawn["north"]
+                fmu_params["CAMERA_FORE"][f"init_tar_{idx}_east"]       = tgt_spawn["east"]
         
         if aft_camera_exists:
             # Set the initial based on the spawn point
-            fmu_params["CAMERA_AFT"]["initial_own_north"]        = spawn["north"]
-            fmu_params["CAMERA_AFT"]["initial_own_east"]         = spawn["east"]
-            fmu_params["CAMERA_AFT"]["initial_own_yaw_angle"]    = np.deg2rad(spawn.get("yaw_angle_deg", 0.0))
+            fmu_params["CAMERA_AFT"]["initial_own_north"]           = spawn["north"]
+            fmu_params["CAMERA_AFT"]["initial_own_east"]            = spawn["east"]
+            fmu_params["CAMERA_AFT"]["initial_own_yaw_angle"]       = np.deg2rad(spawn.get("yaw_angle_deg", 0.0))
+            
+            for idx, tgt in enumerate(targets, start=1):
+                tgt_spawn   = tgt.get("spawn")
+                fmu_params["CAMERA_AFT"][f"init_tar_{idx}_north"]       = tgt_spawn["north"]
+                fmu_params["CAMERA_AFT"][f"init_tar_{idx}_east"]        = tgt_spawn["east"]
         
         if port_camera_exists:
             # Set the initial based on the spawn point
-            fmu_params["CAMERA_PORT"]["initial_own_north"]        = spawn["north"]
-            fmu_params["CAMERA_PORT"]["initial_own_east"]         = spawn["east"]
-            fmu_params["CAMERA_PORT"]["initial_own_yaw_angle"]    = np.deg2rad(spawn.get("yaw_angle_deg", 0.0))
+            fmu_params["CAMERA_PORT"]["initial_own_north"]          = spawn["north"]
+            fmu_params["CAMERA_PORT"]["initial_own_east"]           = spawn["east"]
+            fmu_params["CAMERA_PORT"]["initial_own_yaw_angle"]      = np.deg2rad(spawn.get("yaw_angle_deg", 0.0))
+            
+            for idx, tgt in enumerate(targets, start=1):
+                tgt_spawn   = tgt.get("spawn")
+                fmu_params["CAMERA_PORT"][f"init_tar_{idx}_north"]      = tgt_spawn["north"]
+                fmu_params["CAMERA_PORT"][f"init_tar_{idx}_east"]       = tgt_spawn["east"]
         
         if starboard_camera_exists:
             # Set the initial based on the spawn point
-            fmu_params["CAMERA_STARBOARD"]["initial_own_north"]        = spawn["north"]
-            fmu_params["CAMERA_STARBOARD"]["initial_own_east"]         = spawn["east"]
-            fmu_params["CAMERA_STARBOARD"]["initial_own_yaw_angle"]    = np.deg2rad(spawn.get("yaw_angle_deg", 0.0))
+            fmu_params["CAMERA_STARBOARD"]["initial_own_north"]     = spawn["north"]
+            fmu_params["CAMERA_STARBOARD"]["initial_own_east"]      = spawn["east"]
+            fmu_params["CAMERA_STARBOARD"]["initial_own_yaw_angle"] = np.deg2rad(spawn.get("yaw_angle_deg", 0.0))
+            
+            for idx, tgt in enumerate(targets, start=1):
+                tgt_spawn   = tgt.get("spawn")
+                fmu_params["CAMERA_STARBOARD"][f"init_tar_{idx}_north"] = tgt_spawn["north"]
+                fmu_params["CAMERA_STARBOARD"][f"init_tar_{idx}_east"]  = tgt_spawn["east"]
         
         return radar_exists, fore_camera_exists, aft_camera_exists, port_camera_exists, starboard_camera_exists
         
@@ -702,7 +729,21 @@ class ShipInTransitCoSimulation(CoSimInstance):
         else:
             for idx, tgt in enumerate(targets, start=1):
                 tgt_prefix = tgt.get("id")
-
+                
+                # COLREGS-compliant COLAV tag
+                try:
+                    colregs_compliant_tag = self._get_value(
+                        slaveName=f"{tgt_prefix}__COLAV",
+                        variable="colav_tag"
+                    )
+                    # Decode the bytes value from the FMU
+                    if isinstance(colregs_compliant_tag, bytes):
+                        colregs_compliant_tag = colregs_compliant_tag.decode("utf-8")
+                except (KeyError, ValueError):
+                    colregs_compliant_tag = None
+                
+                colregs_compliant = colregs_compliant_tag == "colregs-compliant_colav"
+                
                 self.AddSlaveConnection(
                     slaveInputName=self.ship_slave(prefix, "COLAV"),
                     slaveInputVar=f"tar_{idx}_north",
@@ -715,18 +756,32 @@ class ShipInTransitCoSimulation(CoSimInstance):
                     slaveOutputName=self.ship_slave(tgt_prefix, "SHIP_MODEL"),
                     slaveOutputVar="east",
                 )
-                self.AddSlaveConnection(
-                    slaveInputName=self.ship_slave(prefix, "COLAV"),
-                    slaveInputVar=f"tar_{idx}_yaw_angle",
-                    slaveOutputName=self.ship_slave(tgt_prefix, "SHIP_MODEL"),
-                    slaveOutputVar="yaw_angle_rad",
-                )
-                self.AddSlaveConnection(
-                    slaveInputName=self.ship_slave(prefix, "COLAV"),
-                    slaveInputVar=f"tar_{idx}_measured_speed",
-                    slaveOutputName=self.ship_slave(tgt_prefix, "SHIP_MODEL"),
-                    slaveOutputVar="total_ship_speed",
-                )
+                if colregs_compliant:
+                    self.AddSlaveConnection(
+                        slaveInputName=self.ship_slave(prefix, "COLAV"),
+                        slaveInputVar=f"tar_{idx}_speed_north",
+                        slaveOutputName=self.ship_slave(tgt_prefix, "SHIP_MODEL"),
+                        slaveOutputVar="d_north",
+                    )
+                    self.AddSlaveConnection(
+                        slaveInputName=self.ship_slave(prefix, "COLAV"),
+                        slaveInputVar=f"tar_{idx}_speed_east",
+                        slaveOutputName=self.ship_slave(tgt_prefix, "SHIP_MODEL"),
+                        slaveOutputVar="d_east",
+                    )
+                else:
+                    self.AddSlaveConnection(
+                        slaveInputName=self.ship_slave(prefix, "COLAV"),
+                        slaveInputVar=f"tar_{idx}_yaw_angle",
+                        slaveOutputName=self.ship_slave(tgt_prefix, "SHIP_MODEL"),
+                        slaveOutputVar="yaw_angle_rad",
+                    )
+                    self.AddSlaveConnection(
+                        slaveInputName=self.ship_slave(prefix, "COLAV"),
+                        slaveInputVar=f"tar_{idx}_measured_speed",
+                        slaveOutputName=self.ship_slave(tgt_prefix, "SHIP_MODEL"),
+                        slaveOutputVar="total_ship_speed",
+                    )
         
         
     def AddAllShips(self,
@@ -760,7 +815,9 @@ class ShipInTransitCoSimulation(CoSimInstance):
             
             # Check sensor availability
             (radar_exists,fore_camera_exists, aft_camera_exists, 
-             port_camera_exists, starboard_camera_exists) = self.check_sensors_availability(spawn=spawn, 
+             port_camera_exists, starboard_camera_exists) = self.check_sensors_availability(prefix=prefix,
+                                                                                            ship_configs=ship_configs,
+                                                                                            spawn=spawn, 
                                                                                             fmu_params=fmu_params)
             
             # Add slaves
@@ -839,17 +896,42 @@ class ShipInTransitCoSimulation(CoSimInstance):
         ## Get the base FMU name
         in_slave_base_name = self.get_fmu_base_name(in_slave)
         ship_model_name = self.ship_slave(ship_id, "SHIP_MODEL")
-
+        
+        # COLREGS-compliant COLAV tag
+        try:
+            colregs_compliant_tag = self._get_value(
+                slaveName=f"{ship_id}__COLAV",
+                variable="colav_tag"
+            )
+            # Decode the bytes value from the FMU
+            if isinstance(colregs_compliant_tag, bytes):
+                colregs_compliant_tag = colregs_compliant_tag.decode("utf-8")
+        except (KeyError, ValueError):
+            colregs_compliant_tag = None
+        
+        colregs_compliant = colregs_compliant_tag == "colregs-compliant_colav"
+        
         ## Positional input
-        passthrough_from_ship_model = {
-            ("MISSION_MANAGER", "north"): "north",
-            ("MISSION_MANAGER", "east"): "east",
+        if colregs_compliant:
+            passthrough_from_ship_model = {
+                ("MISSION_MANAGER", "north"): "north",
+                ("MISSION_MANAGER", "east"): "east",
 
-            ("COLAV", "own_north"): "north",
-            ("COLAV", "own_east"): "east",
-            ("COLAV", "own_yaw_angle"): "yaw_angle_rad",
-            ("COLAV", "own_measured_speed"): "total_ship_speed",
-        }
+                ("COLAV", "own_north"): "north",
+                ("COLAV", "own_east"): "east",
+                ("COLAV", "own_speed_north"): "d_north",
+                ("COLAV", "own_speed_east"): "d_east",
+            }
+        else:
+            passthrough_from_ship_model = {
+                ("MISSION_MANAGER", "north"): "north",
+                ("MISSION_MANAGER", "east"): "east",
+
+                ("COLAV", "own_north"): "north",
+                ("COLAV", "own_east"): "east",
+                ("COLAV", "own_yaw_angle"): "yaw_angle_rad",
+                ("COLAV", "own_measured_speed"): "total_ship_speed",
+            }
 
         key = (in_slave_base_name, in_var)
         if key in passthrough_from_ship_model:
@@ -916,9 +998,10 @@ class ShipInTransitCoSimulation(CoSimInstance):
             if in_var.endswith("_east") and not in_var.endswith("_speed_east"):
                 return 1e9
             
-            # For situational aware colav, use speed north and speed east.
-            # For standard colav, use yaw angle and measured speed
-            if self.enable_situational_aware_colav:
+            # * For situational aware colav, or COLREGS-complaint COLAV, 
+            # use speed north and speed east.
+            # * For standard colav, use yaw angle and measured speed
+            if self.enable_situational_aware_colav or colregs_compliant:
                 if in_var.endswith(("_speed_north", "_speed_east")):
                     return 0.0
             else:
@@ -973,8 +1056,8 @@ class ShipInTransitCoSimulation(CoSimInstance):
 
                 if is_delayed or is_reach_end_waypoint:
                     out_val = self.get_masked_input_val_for_inactive_ship(ship_id=ship_id,
-                                                                           in_slave=in_slave,
-                                                                           in_var=in_var)
+                                                                          in_slave=in_slave,
+                                                                          in_var=in_var)
                 else:
                     out_val = self.GetLastValue(slaveName=out_slave, slaveVar=out_var)
 

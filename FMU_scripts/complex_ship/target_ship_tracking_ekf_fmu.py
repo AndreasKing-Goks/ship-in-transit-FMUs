@@ -70,35 +70,35 @@ class TargetShipTrackingEKF(Fmi2Slave):
         self.estimated_own_speed_east           = 0.0
         
         # Measurement validity flags
-        self.RADAR_valid                        = True
-        self.CAMERA_FORE_valid                  = True
-        self.CAMERA_AFT_valid                   = True
-        self.CAMERA_PORT_valid                  = True
-        self.CAMERA_STARBOARD_valid             = True
+        self.RADAR_valid                        = False
+        self.CAMERA_FORE_valid                  = False
+        self.CAMERA_AFT_valid                   = False
+        self.CAMERA_PORT_valid                  = False
+        self.CAMERA_STARBOARD_valid             = False
         
         # Radar
-        self.RADAR_detection                    = True
+        self.RADAR_detection                    = False
         self.RADAR_measured_range               = 0.0
         self.RADAR_measured_range_rate          = 0.0
         self.RADAR_measured_bearing             = 0.0
         
         # Fore Camera
-        self.CAMERA_FORE_detection              = True
+        self.CAMERA_FORE_detection              = False
         self.CAMERA_FORE_measured_range         = 0.0
         self.CAMERA_FORE_measured_bearing       = 0.0
         
         # Aft Camera
-        self.CAMERA_AFT_detection               = True
+        self.CAMERA_AFT_detection               = False
         self.CAMERA_AFT_measured_range          = 0.0
         self.CAMERA_AFT_measured_bearing        = 0.0
         
         # Port Camera
-        self.CAMERA_PORT_detection              = True
+        self.CAMERA_PORT_detection              = False
         self.CAMERA_PORT_measured_range         = 0.0
         self.CAMERA_PORT_measured_bearing       = 0.0
         
         # Starboard Camera
-        self.CAMERA_STARBOARD_detection         = True
+        self.CAMERA_STARBOARD_detection         = False
         self.CAMERA_STARBOARD_measured_range    = 0.0
         self.CAMERA_STARBOARD_measured_bearing  = 0.0
         
@@ -490,6 +490,14 @@ class TargetShipTrackingEKF(Fmi2Slave):
         return self.x
     
     def update_radar(self):
+        # Check if the own ship and target ship are at the same position. If yes skip update.
+        dn = self.x[0] - self.estimated_own_north
+        de = self.x[1] - self.estimated_own_east
+        
+        predicted_range = np.hypot(dn, de)
+        if predicted_range < 1e-6:
+            return
+        
         ## Actual measurement
         z = np.array([
             self.RADAR_measured_range,
@@ -514,6 +522,14 @@ class TargetShipTrackingEKF(Fmi2Slave):
         self._update(z=z, h=h, dhdx=dhdx, R=self.R_radar, angle_indices=[2])
         
     def update_camera(self, orientation="fore"):
+        # Check if the own ship and target ship are at the same position. If yes skip update.
+        dn = self.x[0] - self.estimated_own_north
+        de = self.x[1] - self.estimated_own_east
+        
+        predicted_range = np.hypot(dn, de)
+        if predicted_range < 1e-6:
+            return
+        
         # Get lever arm
         if orientation == "fore":
             measured_range      = self.CAMERA_FORE_measured_range
