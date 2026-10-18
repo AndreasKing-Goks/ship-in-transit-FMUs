@@ -911,7 +911,9 @@ class ShipInTransitCoSimulation(CoSimInstance):
         
         colregs_compliant = colregs_compliant_tag == "colregs-compliant_colav"
         
-        ## Positional input
+        # ----------------------------------------------------------------------------------
+        # Positional input for passthrough. Don't write it to zero and keep original value
+        # ----------------------------------------------------------------------------------
         if colregs_compliant:
             passthrough_from_ship_model = {
                 ("MISSION_MANAGER", "north"): "north",
@@ -940,7 +942,10 @@ class ShipInTransitCoSimulation(CoSimInstance):
                 slaveVar=passthrough_from_ship_model[key]
             )
 
-        ## Actuation Input
+        # ----------------------------------------------------------------------------------
+        # This is the sections where we determine which parameters set to zero
+        # ----------------------------------------------------------------------------------
+        # Actuation Input
         zero_mask = {
             ("AUTOPILOT", "north"),
             ("AUTOPILOT", "east"),
@@ -976,11 +981,15 @@ class ShipInTransitCoSimulation(CoSimInstance):
             ("SHIP_MODEL", "current_dir_rad"),
         }
 
-        # Different output channel between standard and situational aware colav
-        if self.enable_situational_aware_colav:
+        
+        # Different output channel between standard and situational aware colav (or colregs compliant)
+        if self.enable_situational_aware_colav or colregs_compliant:
             zero_mask.update({
                 ("COLAV", "colav_speed_reduction_factor"),
                 ("COLAV", "colav_heading_offset_deg"),
+                ("SHAFT_SPEED_CONTROLLER", "colav_speed_reduction_factor"),
+                ("SPEED_CONTROLLER", "colav_speed_reduction_factor"),
+                ("AUTOPILOT", "colav_heading_offset_deg")
             })
         else:
             zero_mask.update({
@@ -991,6 +1000,9 @@ class ShipInTransitCoSimulation(CoSimInstance):
         if key in zero_mask:
             return 0.0
 
+        # ----------------------------------------------------------------------------------
+        # For COLAV, we set the initial value to be far away and not moving
+        # ----------------------------------------------------------------------------------
         if in_slave_base_name == "COLAV" and in_var.startswith("tar_"):
             # Common target position masking
             if in_var.endswith("_north") and not in_var.endswith("_speed_north"):

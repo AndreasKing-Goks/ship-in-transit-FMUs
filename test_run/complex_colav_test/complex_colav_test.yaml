@@ -63,7 +63,7 @@ ships:
       # Shaft speed controller
       - [SHAFT_SPEED_CONTROLLER, desired_ship_speed,           MISSION_MANAGER,  next_wp_speed]
       - [SHAFT_SPEED_CONTROLLER, measured_ship_speed,          SHIP_EKF,         estimated_u]
-      - [SHAFT_SPEED_CONTROLLER, colav_speed_reduction_factor, COLAV,            colav_speed_reduction_factor]
+      - [SHAFT_SPEED_CONTROLLER, colav_speed_reduction_factor, COLAV,            colav_speed_reduction_factor]      
 
       # Throttle controller
       - [THROTTLE_CONTROLLER, desired_shaft_speed_rpm,  SHAFT_SPEED_CONTROLLER, shaft_speed_cmd_rpm]
@@ -207,6 +207,9 @@ ships:
 
       - [COLAV, colav_speed_reduction_factor, "Scale %"]
       - [COLAV, colav_heading_offset_deg,     "Angle [deg]"]
+      - [COLAV, risk_score_tar_1,             "Score"]
+      - [COLAV, encounter_tar_1,              "Encounter"]
+      - [COLAV, role_tar_1,                   "Role"]
 
       - [GPS, measured_north, "Position [m]"]
       - [GPS, measured_east, "Position [m]"]
@@ -303,8 +306,8 @@ ships:
         max_rudder_angle_positive_deg: 30
 
       COLAV:
-        soft_heading_offset_deg: 30
-        hard_heading_offset_deg: 45
+        soft_heading_offset_deg: 45
+        hard_heading_offset_deg: 60
         danger_zone_radius: 926.0
         collision_zone_radius: 100.0
         max_target_ship_count: 3
@@ -312,6 +315,11 @@ ships:
         T_lookahead: 900.0
         own_ship_sog_max: 6.0
         turning_direction: "STARBOARD"
+        give_way_low_risk_score: 0.6
+        give_way_medium_risk_score: 0.75
+        give_way_high_risk_score: 0.85
+        give_way_danger_risk_score: 0.95
+        stand_on_danger_risk_score: 0.95
 
       SHIP_MODEL:
         dead_weight_tonnage: 3850000
@@ -507,7 +515,7 @@ ships:
     route:
       north: [10000 , 2000, 0     ]
       east:  [0     , 8000, 10000 ]
-      speed: [5.1     , 3.5   ]          # Upon reaching the next waypoint
+      speed: [5.0   , 3.5   ]          # Upon reaching the next waypoint
 
     # spawn:
     #   start_time: 0.0
@@ -519,7 +527,7 @@ ships:
     # route:
     #   north: [0     , 8000, 10000]
     #   east:  [10000 , 2000, 0    ]
-    #   speed: [5.1     , 3.5   ]          # Upon reaching the next waypoint
+    #   speed: [5.0     , 3.5   ]          # Upon reaching the next waypoint
 
     SHIP_BLOCKS:
       - [MISSION_MANAGER, FMUs/simplified_ship/MissionManager.fmu]
@@ -537,17 +545,19 @@ ships:
       - [MISSION_MANAGER, east,  SHIP_MODEL, east]
 
       # Autopilot
-      - [AUTOPILOT, north,         SHIP_MODEL,      north]
-      - [AUTOPILOT, east,          SHIP_MODEL,      east]
-      - [AUTOPILOT, yaw_angle_rad, SHIP_MODEL,      yaw_angle_rad]
-      - [AUTOPILOT, prev_wp_north, MISSION_MANAGER, prev_wp_north]
-      - [AUTOPILOT, prev_wp_east,  MISSION_MANAGER, prev_wp_east]
-      - [AUTOPILOT, next_wp_north, MISSION_MANAGER, next_wp_north]
-      - [AUTOPILOT, next_wp_east,  MISSION_MANAGER, next_wp_east]
+      - [AUTOPILOT, north,                      SHIP_MODEL,      north]
+      - [AUTOPILOT, east,                       SHIP_MODEL,      east]
+      - [AUTOPILOT, yaw_angle_rad,              SHIP_MODEL,      yaw_angle_rad]
+      - [AUTOPILOT, prev_wp_north,              MISSION_MANAGER, prev_wp_north]
+      - [AUTOPILOT, prev_wp_east,               MISSION_MANAGER, prev_wp_east]
+      - [AUTOPILOT, next_wp_north,              MISSION_MANAGER, next_wp_north]
+      - [AUTOPILOT, next_wp_east,               MISSION_MANAGER, next_wp_east]
+      - [AUTOPILOT, colav_heading_offset_deg,   COLAV,           colav_heading_offset_deg]
 
       # Speed controller
-      - [SPEED_CONTROLLER, desired_ship_speed,  MISSION_MANAGER,  next_wp_speed]
-      - [SPEED_CONTROLLER, measured_ship_speed, SHIP_MODEL,       forward_speed]
+      - [SPEED_CONTROLLER, desired_ship_speed,            MISSION_MANAGER,  next_wp_speed]
+      - [SPEED_CONTROLLER, measured_ship_speed,           SHIP_MODEL,       forward_speed]
+      - [SPEED_CONTROLLER, colav_speed_reduction_factor,  COLAV,            colav_speed_reduction_factor]
 
       # Rudder
       - [RUDDER, rudder_angle_deg, AUTOPILOT,  rudder_angle_deg]
@@ -602,6 +612,9 @@ ships:
 
       - [COLAV, colav_speed_reduction_factor, "Scale %"]
       - [COLAV, colav_heading_offset_deg,     "Angle [deg]"]
+      - [COLAV, risk_score_tar_1,             "Score"]
+      - [COLAV, encounter_tar_1,              "Encounter"]
+      - [COLAV, role_tar_1,                   "Role"]
 
       - [SURFACE_CURRENT, current_speed, "Speed [m/s]"]
       - [SURFACE_CURRENT, current_direction_deg, "Angle [deg]"]
@@ -619,14 +632,14 @@ ships:
         integrator_limit: 5000
         kp: 0.5
         ki: 0.00015
-        kd: 5.0
+        kd: 15.0
         max_rudder_rate_deg_per_sec: 2.3
         max_rudder_angle_deg: 30
 
       SPEED_CONTROLLER:
-        kp: 150.0
-        ki: 350.0
-        kd: 200.0
+        kp: 250.0
+        ki: 200.0
+        kd: 50.0
 
       RUDDER:
         rudder_angle_to_sway_force_coefficient: 50000
@@ -662,8 +675,8 @@ ships:
         initial_yaw_rate_rad_per_s: 0.0
 
       COLAV:
-        soft_heading_offset_deg: 30
-        hard_heading_offset_deg: 45
+        soft_heading_offset_deg: 45
+        hard_heading_offset_deg: 60
         danger_zone_radius: 926.0
         collision_zone_radius: 100.0
         max_target_ship_count: 3
@@ -671,6 +684,11 @@ ships:
         T_lookahead: 900.0
         own_ship_sog_max: 6.0
         turning_direction: "STARBOARD"
+        give_way_low_risk_score: 0.6
+        give_way_medium_risk_score: 0.75
+        give_way_high_risk_score: 0.85
+        give_way_danger_risk_score: 0.95
+        stand_on_danger_risk_score: 0.95
       
       SURFACE_CURRENT:
         seed: 0

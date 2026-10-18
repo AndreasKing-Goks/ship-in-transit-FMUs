@@ -30,6 +30,12 @@ class CollisionAvoidanceCOLREGS(Fmi2Slave):
         self.turning_direction              = "STARBOARD"
         self.colav_tag                      = "colregs-compliant_colav"
         
+        self.give_way_low_risk_score        = 0.6
+        self.give_way_medium_risk_score     = 0.75
+        self.give_way_high_risk_score       = 0.85
+        self.give_way_danger_risk_score     = 0.95
+        self.stand_on_danger_risk_score     = 0.95
+        
         ## Input
         self.own_north                      = 0.0
         self.own_east                       = 0.0
@@ -60,6 +66,10 @@ class CollisionAvoidanceCOLREGS(Fmi2Slave):
             setattr(self, f"dcpa_own_to_tar_{i}", 0.0)
             setattr(self, f"dist_own_to_tar_{i}", 0.0)
             setattr(self, f"rr_own_to_tar_{i}", 0.0)
+            setattr(self, f"risk_score_tar_{i}", 0.0)
+            setattr(self, f"encounter_tar_{i}", 0)
+            setattr(self, f"role_tar_{i}", 0)
+            
         
         # Internal Variable
         self.prioritize_one_target          = False
@@ -80,6 +90,12 @@ class CollisionAvoidanceCOLREGS(Fmi2Slave):
         self.register_variable(Real("own_ship_sog_max", causality=Fmi2Causality.parameter, variability=Fmi2Variability.tunable))
         self.register_variable(String("turning_direction", causality=Fmi2Causality.parameter, variability=Fmi2Variability.tunable))
         self.register_variable(String("colav_tag", causality=Fmi2Causality.parameter, variability=Fmi2Variability.tunable))
+        
+        self.register_variable(Real("give_way_low_risk_score", causality=Fmi2Causality.parameter, variability=Fmi2Variability.tunable))
+        self.register_variable(Real("give_way_medium_risk_score", causality=Fmi2Causality.parameter, variability=Fmi2Variability.tunable))
+        self.register_variable(Real("give_way_high_risk_score", causality=Fmi2Causality.parameter, variability=Fmi2Variability.tunable))
+        self.register_variable(Real("give_way_danger_risk_score", causality=Fmi2Causality.parameter, variability=Fmi2Variability.tunable))
+        self.register_variable(Real("stand_on_danger_risk_score", causality=Fmi2Causality.parameter, variability=Fmi2Variability.tunable))
         
         # Input        
         self.register_variable(Real("own_north", causality=Fmi2Causality.input))
@@ -110,6 +126,9 @@ class CollisionAvoidanceCOLREGS(Fmi2Slave):
             self.register_variable(Real(f"dcpa_own_to_tar_{i}", causality=Fmi2Causality.output))
             self.register_variable(Real(f"dist_own_to_tar_{i}", causality=Fmi2Causality.output))
             self.register_variable(Real(f"rr_own_to_tar_{i}", causality=Fmi2Causality.output))
+            self.register_variable(Real(f"risk_score_tar_{i}", causality=Fmi2Causality.output))
+            self.register_variable(Integer(f"encounter_tar_{i}", causality=Fmi2Causality.output, variability=Fmi2Variability.discrete))
+            self.register_variable(Integer(f"role_tar_{i}", causality=Fmi2Causality.output, variability=Fmi2Variability.discrete))
         
     
     def _wrap_to_pi(self, a):
@@ -148,23 +167,23 @@ class CollisionAvoidanceCOLREGS(Fmi2Slave):
             encounter               = "OVERTAKING"
             role                    = "GIVE_WAY"
             # Near collision -> STOP, turn hard
-            if risk_score > 0.95:
+            if risk_score > self.give_way_danger_risk_score:
                 heading_offset_deg      = direction * self.hard_heading_offset_deg
                 speed_reduction_factor  = 0.0
             # High danger -> Half speed, hard heading offset
-            if 0.85 <risk_score <= 0.95:
+            if self.give_way_high_risk_score <risk_score <= self.give_way_danger_risk_score:
                 heading_offset_deg      = direction * self.hard_heading_offset_deg
                 speed_reduction_factor  = 0.5
             # Moderate danger -> Full speed, hard heading offset
-            elif 0.75 < risk_score <= 0.85:
+            elif self.give_way_medium_risk_score < risk_score <= self.give_way_high_risk_score:
                 heading_offset_deg      = direction * self.hard_heading_offset_deg
                 speed_reduction_factor  = 1.0
             # Low danger -> Full speed, soft heading offset
-            elif 0.6 < risk_score <= 0.75:
+            elif self.give_way_low_risk_score < risk_score <= self.give_way_medium_risk_score:
                 heading_offset_deg      = direction * self.soft_heading_offset_deg
                 speed_reduction_factor  = 1.0
             # Warning -> Full speed, no heading offset
-            elif risk_score <= 0.6:
+            elif risk_score <= self.give_way_low_risk_score:
                 heading_offset_deg      = 0.0
                 speed_reduction_factor  = 1.0
         
@@ -174,33 +193,33 @@ class CollisionAvoidanceCOLREGS(Fmi2Slave):
             role                    = "STAND_ON"
             heading_offset_deg      = 0.0
             speed_reduction_factor  = 1.0
-            # Warning -> Half speed, hard heading offset
-            if risk_score > 0.6:
-                heading_offset_deg      = direction * self.hard_heading_offset_deg
-                speed_reduction_factor  = 0.5      
+            # Warning -> Half speed, hard heading offset, opposite direction
+            if risk_score > self.stand_on_danger_risk_score:
+                heading_offset_deg      = opst_direction * self.hard_heading_offset_deg
+                speed_reduction_factor  = 0.5     
             
         # Head on
         elif is_head_on:
             encounter               = "HEAD_ON"
             role                    = "GIVE_WAY"
             # Near collision -> STOP, turn hard
-            if risk_score > 0.95:
+            if risk_score > self.give_way_danger_risk_score:
                 heading_offset_deg      = direction * self.hard_heading_offset_deg
                 speed_reduction_factor  = 0.0
             # High danger -> Half speed, hard heading offset
-            if 0.85 <risk_score <= 0.95:
+            if self.give_way_high_risk_score <risk_score <= self.give_way_danger_risk_score:
                 heading_offset_deg      = direction * self.hard_heading_offset_deg
                 speed_reduction_factor  = 0.5
             # Moderate danger -> Full speed, hard heading offset
-            elif 0.75 < risk_score <= 0.85:
+            elif self.give_way_medium_risk_score < risk_score <= self.give_way_high_risk_score:
                 heading_offset_deg      = direction * self.hard_heading_offset_deg
                 speed_reduction_factor  = 1.0
             # Low danger -> Full speed, soft heading offset
-            elif 0.6 < risk_score <= 0.75:
+            elif self.give_way_low_risk_score < risk_score <= self.give_way_medium_risk_score:
                 heading_offset_deg      = direction * self.soft_heading_offset_deg
                 speed_reduction_factor  = 1.0
             # Warning -> Full speed, no heading offset
-            elif risk_score <= 0.6:
+            elif risk_score <= self.give_way_low_risk_score:
                 heading_offset_deg      = 0.0
                 speed_reduction_factor  = 1.0
             
@@ -209,23 +228,23 @@ class CollisionAvoidanceCOLREGS(Fmi2Slave):
             encounter               = "CROSSING"
             role                    = "GIVE_WAY"
             # Near collision -> STOP, turn hard
-            if risk_score > 0.95:
+            if risk_score > self.give_way_danger_risk_score:
                 heading_offset_deg      = direction * self.hard_heading_offset_deg
                 speed_reduction_factor  = 0.0
             # High danger -> Half speed, hard heading offset
-            if 0.85 <risk_score <= 0.95:
+            if self.give_way_high_risk_score <risk_score <= self.give_way_danger_risk_score:
                 heading_offset_deg      = direction * self.hard_heading_offset_deg
                 speed_reduction_factor  = 0.5
             # Moderate danger -> Full speed, hard heading offset
-            elif 0.75 < risk_score <= 0.85:
+            elif self.give_way_medium_risk_score < risk_score <= self.give_way_high_risk_score:
                 heading_offset_deg      = direction * self.hard_heading_offset_deg
                 speed_reduction_factor  = 1.0
             # Low danger -> Full speed, soft heading offset
-            elif 0.6 < risk_score <= 0.75:
+            elif self.give_way_low_risk_score < risk_score <= self.give_way_medium_risk_score:
                 heading_offset_deg      = direction * self.soft_heading_offset_deg
                 speed_reduction_factor  = 1.0
             # Warning -> Full speed, no heading offset
-            elif risk_score <= 0.6:
+            elif risk_score <= self.give_way_low_risk_score:
                 heading_offset_deg      = 0.0
                 speed_reduction_factor  = 1.0
         
@@ -236,11 +255,41 @@ class CollisionAvoidanceCOLREGS(Fmi2Slave):
             heading_offset_deg      = 0.0
             speed_reduction_factor  = 1.0
             # Warning -> Half speed, hard heading offset, opposite direction
-            if risk_score > 0.6:
+            if risk_score > self.stand_on_danger_risk_score:
                 heading_offset_deg      = opst_direction * self.hard_heading_offset_deg
                 speed_reduction_factor  = 0.5   
             
         return encounter, role, heading_offset_deg, speed_reduction_factor
+    
+    
+    def output_ecounter_and_role(self, idx, encounter, role):
+        # Encounter classification
+        encounter_mapping = {
+            "None": 0,
+            "OVERTAKING": 1,
+            "HEAD_ON": 2,
+            "CROSSING": 3
+        }
+
+        # Role classification
+        role_mapping = {
+            "None": 0,
+            "GIVE_WAY": 1,
+            "STAND_ON": 2
+        }
+
+        setattr(
+            self,
+            f"encounter_tar_{idx}",
+            encounter_mapping.get(encounter, 0)
+        )
+
+        setattr(
+            self,
+            f"role_tar_{idx}",
+            role_mapping.get(role, 0)
+        )
+    
     
     def do_step(self, current_time: float, step_size: float) -> bool:
         try:
@@ -304,7 +353,7 @@ class CollisionAvoidanceCOLREGS(Fmi2Slave):
                 beta_own_to_tar_list.append(beta_own_to_tar)
                 
                 # Relative Bearing Tar -> Own
-                target_speed        = np.linalg.norm(v_tar)
+                target_speed        = np.linalg.norm(v_tar_list[i])
                 
                 if target_speed > 1e-3:
                     target_course       = np.arctan2(v_tar_list[i][1], v_tar_list[i][0])
@@ -403,7 +452,34 @@ class CollisionAvoidanceCOLREGS(Fmi2Slave):
                 score       = (tcpa_coeff * tcpa_score) + (dcpa_coeff * dcpa_score) + (rr_coeff * rr_score)
                 candidates.append((score,i))
             
-            self.colav_active   = bool(candidates) # OUTPUTS
+            # OUTPUTS
+            self.colav_active   = bool(candidates)
+            # Reset outputs for all targets
+            for i in range(1, 4):
+                setattr(self, f"risk_score_tar_{i}", 0.0)
+                setattr(self, f"encounter_tar_{i}", 0)          # No encounter defined
+                setattr(self, f"role_tar_{i}", 0)               # No role defined
+                
+            # Then update scores encounter and role
+            for score, i in candidates:
+                ship_num = i + 1    # i is just list indexing. 
+                setattr(self, f"risk_score_tar_{ship_num}", float(score))
+                
+                # Individual encounter classification
+                encounter, role, _, _ = self.COLREG_situation_assessment(
+                    beta_own_to_tar_list[i],
+                    beta_tar_to_own_list[i],
+                    range_rate_list[i],
+                    float(score),
+                    turning_direction=self.turning_direction
+                )
+
+                # Individual encounter and role outputs
+                self.output_ecounter_and_role(
+                    ship_num,
+                    encounter,
+                    role
+                )
             
             # Index Hold Logic
             def is_still_candidate(i):
