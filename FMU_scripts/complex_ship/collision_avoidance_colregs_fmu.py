@@ -67,9 +67,8 @@ class CollisionAvoidanceCOLREGS(Fmi2Slave):
             setattr(self, f"dist_own_to_tar_{i}", 0.0)
             setattr(self, f"rr_own_to_tar_{i}", 0.0)
             setattr(self, f"risk_score_tar_{i}", 0.0)
-            setattr(self, f"encounter_tar_{i}", 0)
-            setattr(self, f"role_tar_{i}", 0)
-            
+            setattr(self, f"encounter_wrt_tar_{i}", 0)
+            setattr(self, f"role_wrt_tar_{i}", 0)
         
         # Internal Variable
         self.prioritize_one_target          = False
@@ -127,10 +126,10 @@ class CollisionAvoidanceCOLREGS(Fmi2Slave):
             self.register_variable(Real(f"dist_own_to_tar_{i}", causality=Fmi2Causality.output))
             self.register_variable(Real(f"rr_own_to_tar_{i}", causality=Fmi2Causality.output))
             self.register_variable(Real(f"risk_score_tar_{i}", causality=Fmi2Causality.output))
-            self.register_variable(Integer(f"encounter_tar_{i}", causality=Fmi2Causality.output, variability=Fmi2Variability.discrete))
-            self.register_variable(Integer(f"role_tar_{i}", causality=Fmi2Causality.output, variability=Fmi2Variability.discrete))
-        
-    
+            self.register_variable(Integer(f"encounter_wrt_tar_{i}", causality=Fmi2Causality.output, variability=Fmi2Variability.discrete))
+            self.register_variable(Integer(f"role_wrt_tar_{i}", causality=Fmi2Causality.output, variability=Fmi2Variability.discrete))
+
+
     def _wrap_to_pi(self, a):
         return (a + np.pi) % (2*np.pi) - np.pi
     
@@ -171,7 +170,7 @@ class CollisionAvoidanceCOLREGS(Fmi2Slave):
                 heading_offset_deg      = direction * self.hard_heading_offset_deg
                 speed_reduction_factor  = 0.0
             # High danger -> Half speed, hard heading offset
-            if self.give_way_high_risk_score <risk_score <= self.give_way_danger_risk_score:
+            if self.give_way_high_risk_score < risk_score <= self.give_way_danger_risk_score:
                 heading_offset_deg      = direction * self.hard_heading_offset_deg
                 speed_reduction_factor  = 0.5
             # Moderate danger -> Full speed, hard heading offset
@@ -207,7 +206,7 @@ class CollisionAvoidanceCOLREGS(Fmi2Slave):
                 heading_offset_deg      = direction * self.hard_heading_offset_deg
                 speed_reduction_factor  = 0.0
             # High danger -> Half speed, hard heading offset
-            if self.give_way_high_risk_score <risk_score <= self.give_way_danger_risk_score:
+            if self.give_way_high_risk_score < risk_score <= self.give_way_danger_risk_score:
                 heading_offset_deg      = direction * self.hard_heading_offset_deg
                 speed_reduction_factor  = 0.5
             # Moderate danger -> Full speed, hard heading offset
@@ -232,7 +231,7 @@ class CollisionAvoidanceCOLREGS(Fmi2Slave):
                 heading_offset_deg      = direction * self.hard_heading_offset_deg
                 speed_reduction_factor  = 0.0
             # High danger -> Half speed, hard heading offset
-            if self.give_way_high_risk_score <risk_score <= self.give_way_danger_risk_score:
+            if self.give_way_high_risk_score < risk_score <= self.give_way_danger_risk_score:
                 heading_offset_deg      = direction * self.hard_heading_offset_deg
                 speed_reduction_factor  = 0.5
             # Moderate danger -> Full speed, hard heading offset
@@ -280,13 +279,13 @@ class CollisionAvoidanceCOLREGS(Fmi2Slave):
 
         setattr(
             self,
-            f"encounter_tar_{idx}",
+            f"encounter_wrt_tar_{idx}",
             encounter_mapping.get(encounter, 0)
         )
 
         setattr(
             self,
-            f"role_tar_{idx}",
+            f"role_wrt_tar_{idx}",
             role_mapping.get(role, 0)
         )
     
@@ -457,16 +456,22 @@ class CollisionAvoidanceCOLREGS(Fmi2Slave):
             # Reset outputs for all targets
             for i in range(1, 4):
                 setattr(self, f"risk_score_tar_{i}", 0.0)
-                setattr(self, f"encounter_tar_{i}", 0)          # No encounter defined
-                setattr(self, f"role_tar_{i}", 0)               # No role defined
-                
+                setattr(self, f"encounter_wrt_tar_{i}", 0)          # No encounter defined
+                setattr(self, f"role_wrt_tar_{i}", 0)               # No role defined
+            
+            # Collected COLAV command
+            hod_lists   = []
+            srf_lists   = []
+            enc_lists   = []
+            rol_lists   = []
+            
             # Then update scores encounter and role
             for score, i in candidates:
                 ship_num = i + 1    # i is just list indexing. 
                 setattr(self, f"risk_score_tar_{ship_num}", float(score))
                 
                 # Individual encounter classification
-                encounter, role, _, _ = self.COLREG_situation_assessment(
+                encounter, role, heading_offset_deg, speed_reduction_factor = self.COLREG_situation_assessment(
                     beta_own_to_tar_list[i],
                     beta_tar_to_own_list[i],
                     range_rate_list[i],
@@ -480,6 +485,12 @@ class CollisionAvoidanceCOLREGS(Fmi2Slave):
                     encounter,
                     role
                 )
+                
+                # Record the COLAV command
+                srf_lists.append((speed_reduction_factor, i))
+                hod_lists.append((heading_offset_deg, i))
+                enc_lists.append((encounter, i))
+                rol_lists.append((role, i))
             
             # Index Hold Logic
             def is_still_candidate(i):
@@ -505,23 +516,15 @@ class CollisionAvoidanceCOLREGS(Fmi2Slave):
                     self.timer = 0.0
                     
                 # If prioritize one target use held_target_idx, else use idx
-                use_idx         = self.held_target_idx if self.prioritize_one_target else idx
-                 
-                # Get the score by index list following the holding logic
-                score_by_idx    = {target_idx: score for score, target_idx in candidates}
+                self.ship_priority_idx  = self.held_target_idx if self.prioritize_one_target else idx
                 
-                # Assess the COLREG situation
-                beta_own_to_tar = beta_own_to_tar_list[use_idx]
-                beta_tar_to_own = beta_tar_to_own_list[use_idx]
-                range_rate      = range_rate_list[use_idx]
-                risk_score      = score_by_idx[use_idx]
-                (encounter, role, heading_offset_deg, speed_reduction_factor) = self.COLREG_situation_assessment(beta_own_to_tar,
-                                                                                                                 beta_tar_to_own,
-                                                                                                                 range_rate, risk_score,
-                                                                                                                 turning_direction=self.turning_direction)
-                
-                # Outputs prioritized target ship index
-                self.ship_priority_idx  = use_idx
+                # Retrieve the COLAV command
+                # srf_lists = (srf, i)
+                # hod_lists = (hod, i)
+                speed_reduction_factor  = next((srf for srf, i in srf_lists if i == idx), 1.0)
+                heading_offset_deg      = next((hod for hod, i in hod_lists if i == idx), 0.0)
+                encounter               = next((enc for enc, i in enc_lists if i == idx), "None")
+                role                    = next((rol for rol, i in rol_lists if i == idx), "None")
                 
                 # OUTPUTS
                 self.colav_speed_reduction_factor   = speed_reduction_factor  # clamp after scaling

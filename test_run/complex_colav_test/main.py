@@ -88,16 +88,16 @@ instance.PlotFleetTrajectory(mode="quick", ship_scale=1.0)
 
 # Plot Simulation Results
 key_group_list = [
-    # ## Own Ship
-    # # Base results
-    # ["OS0.SHIP_MODEL.north", "OS0.SHIP_EKF.estimated_n"],
-    # ["OS0.SHIP_MODEL.east", "OS0.SHIP_EKF.estimated_e"],
-    # ["OS0.SHIP_MODEL.forward_speed", "OS0.MISSION_MANAGER.next_wp_speed", "OS0.SHIP_MODEL.total_ship_speed"],
-    # ["OS0.SHIP_MODEL.yaw_angle_rad", "OS0.AUTOPILOT.yaw_angle_ref_rad", "OS0.SHIP_EKF.estimated_psi"],
-    # ["OS0.AUTOPILOT.rudder_angle_deg"],
-    # ["OS0.AUTOPILOT.e_ct"],
-    # ["OS0.MACHINERY_SYSTEM.shaft_speed_rpm", "OS0.SHAFT_SPEED_CONTROLLER.shaft_speed_cmd_rpm"],
-    # ["OS0.THROTTLE_CONTROLLER.throttle_cmd"],
+    ## Own Ship
+    # Base results
+    ["OS0.SHIP_MODEL.north", "OS0.SHIP_EKF.estimated_n"],
+    ["OS0.SHIP_MODEL.east", "OS0.SHIP_EKF.estimated_e"],
+    ["OS0.SHIP_MODEL.forward_speed", "OS0.MISSION_MANAGER.next_wp_speed", "OS0.SHIP_MODEL.total_ship_speed"],
+    ["OS0.SHIP_MODEL.yaw_angle_rad", "OS0.AUTOPILOT.yaw_angle_ref_rad", "OS0.SHIP_EKF.estimated_psi"],
+    ["OS0.AUTOPILOT.rudder_angle_deg"],
+    ["OS0.AUTOPILOT.e_ct"],
+    ["OS0.MACHINERY_SYSTEM.shaft_speed_rpm", "OS0.SHAFT_SPEED_CONTROLLER.shaft_speed_cmd_rpm"],
+    ["OS0.THROTTLE_CONTROLLER.throttle_cmd"],
     
     # # For environment load-enabled simulation only
     # ["OS0.SURFACE_CURRENT.current_speed"],
@@ -105,17 +105,25 @@ key_group_list = [
     # ["OS0.WIND.wind_speed"],
     # ["OS0.WIND.wind_direction_deg"],
     
-    # COLAV
-    ["OS0.COLAV.colav_speed_reduction_factor"],
-    ["OS0.COLAV.colav_heading_offset_deg"],
-    ["OS0.COLAV.risk_score_tar_1"],
-    ["OS0.COLAV.encounter_tar_1"],
-    ["OS0.COLAV.role_tar_1"],
-    ["TS1.COLAV.colav_speed_reduction_factor"],
-    ["TS1.COLAV.colav_heading_offset_deg"],
-    ["TS1.COLAV.risk_score_tar_1"],
-    ["TS1.COLAV.encounter_tar_1"],
-    ["TS1.COLAV.role_tar_1"],
+    # # OS COLAV
+    # ["OS0.COLAV.colav_speed_reduction_factor"],
+    # ["OS0.COLAV.colav_heading_offset_deg"],
+    # ["OS0.COLAV.risk_score_tar_1"],
+    # ["OS0.COLAV.encounter_wrt_tar_1"],
+    # ["OS0.COLAV.role_wrt_tar_1"],
+    # ["OS0.COLAV.beta_own_to_tar_1"],
+    # ["OS0.COLAV.beta_tar_to_own_1"],
+    # ["OS0.COLAV.rr_own_to_tar_1"],
+    
+    # # TS COLAV
+    # ["TS1.COLAV.colav_speed_reduction_factor"],
+    # ["TS1.COLAV.colav_heading_offset_deg"],
+    # ["TS1.COLAV.risk_score_tar_1"],
+    # ["TS1.COLAV.encounter_wrt_tar_1"],
+    # ["TS1.COLAV.role_wrt_tar_1"],
+    # ["TS1.COLAV.beta_own_to_tar_1"],
+    # ["TS1.COLAV.beta_tar_to_own_1"],
+    # ["TS1.COLAV.rr_own_to_tar_1"],
     
     # # For Ship EKF
     # ["OS0.SHIP_EKF.estimated_n"],
