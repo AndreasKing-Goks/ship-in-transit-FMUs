@@ -359,7 +359,7 @@ class ShipInTransitCoSimulation(CoSimInstance):
         return f"{prefix}__{block}"
     
     
-    def spawn_ship(self, ship_id:str, spawn: dict, fmu_params: dict):
+    def spawn_ship(self, ship_id:str, spawn: dict, fmu_params: dict, route: dict=None):
         """
             Function to spawn the ship in the simulator. Act of spawning meaning 
             placing the Ships in its designated initial states before stepping up the simulator.
@@ -370,6 +370,13 @@ class ShipInTransitCoSimulation(CoSimInstance):
         fmu_params["SHIP_MODEL"]["initial_east_position_m"]       = spawn["east"]
         fmu_params["SHIP_MODEL"]["initial_yaw_angle_rad"]         = np.deg2rad(spawn.get("yaw_angle_deg", 0.0))
         fmu_params["SHIP_MODEL"]["initial_forward_speed_m_per_s"] = spawn.get("forward_speed", 0.0)
+        
+        if route is not None:
+            d_north_route   = route["north"][1] - route["north"][0]
+            d_east_route    = route["east"][1]  - route["east"][0]
+            
+            initial_yaw_angle_ref_rad = np.atan2(d_east_route, d_north_route)
+            fmu_params["AUTOPILOT"]["initial_yaw_angle_ref_rad"]     = initial_yaw_angle_ref_rad
         
         # Set the sensors
         gps_exists          = isinstance(fmu_params.get("GPS", None), dict)
@@ -397,7 +404,7 @@ class ShipInTransitCoSimulation(CoSimInstance):
             fmu_params["SHIP_EKF"]["initial_measured_north"]        = spawn["north"]
             fmu_params["SHIP_EKF"]["initial_measured_east"]         = spawn["east"]
             fmu_params["SHIP_EKF"]["initial_measured_heading"]      = np.deg2rad(spawn.get("yaw_angle_deg", 0.0))
-            fmu_params["SHIP_EKF"]["initial_measured_ship_speedm "]   = spawn.get("forward_speed", 0.0)
+            fmu_params["SHIP_EKF"]["initial_measured_ship_speed"]   = spawn.get("forward_speed", 0.0)
             
         # Set the ship reach end waypoint status at False first
         self.ship_reach_end_waypoint[ship_id].append(False)
@@ -811,7 +818,8 @@ class ShipInTransitCoSimulation(CoSimInstance):
             
             # Spawn the ship into the simulator
             spawn               = ship_config["spawn"]
-            fmu_params          = self.spawn_ship(ship_id=prefix, spawn=spawn, fmu_params=fmu_params)
+            route               = ship_config.get("route", None)
+            fmu_params          = self.spawn_ship(ship_id=prefix, spawn=spawn, fmu_params=fmu_params, route=route)
             
             # Check sensor availability
             (

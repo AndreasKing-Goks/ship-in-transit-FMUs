@@ -32,11 +32,14 @@ class HeadingOffsetAutopilot(Fmi2Slave):
         self.max_rudder_rate_deg_per_sec    = 0.0
         self.max_rudder_angle_deg           = 0.0
         
+        self.initial_yaw_angle_ref_rad      = 0.0
+        
         # Internal Variables
         self.e_ct_int                       = 0.0       # Cross Track Error Integral Value
         self.error_i                        = 0.0
         self.prev_error                     = 0.0
         self.prev_rudder_angle_rad          = 0.0       # Previous Rudder Angle Command, initiated at zero degree
+        self._precomputed                   = False
         
         ## Input
         self.north                          = 0.0
@@ -68,6 +71,7 @@ class HeadingOffsetAutopilot(Fmi2Slave):
         self.register_variable(Real("kd", causality=Fmi2Causality.parameter,variability=Fmi2Variability.tunable))
         self.register_variable(Real("max_rudder_rate_deg_per_sec", causality=Fmi2Causality.parameter,variability=Fmi2Variability.fixed))
         self.register_variable(Real("max_rudder_angle_deg", causality=Fmi2Causality.parameter,variability=Fmi2Variability.fixed))
+        self.register_variable(Real("initial_yaw_angle_ref_rad", causality=Fmi2Causality.parameter,variability=Fmi2Variability.tunable))
         
         # Input
         self.register_variable(Real("north", causality=Fmi2Causality.input))
@@ -167,27 +171,34 @@ class HeadingOffsetAutopilot(Fmi2Slave):
     
     def do_step(self, current_time: float, step_size: float) -> bool:
         try:
-            # Get the heading reference and the measured heading using input
-            yaw_angle_ref_rad, e_ct = self.los_guidance(self.north, self.east, 
-                                                        self.next_wp_north, self.next_wp_east, 
-                                                        self.prev_wp_north, self.prev_wp_east)
-            
-            # Add COLAV offset correction
-            yaw_angle_ref_rad    = yaw_angle_ref_rad + math.radians(self.colav_heading_offset_deg)
-            
-            # Compute the control signal
-            rudder_angle_des_rad = self.pid_ctrl(setpoint=yaw_angle_ref_rad, measurement=self.yaw_angle_rad, step_size=step_size) # self.heading_mea is input
-            
-            # Apply slew limiter around the previous rudder command
-            rudder_angle_rad = self.apply_slew_limit(rudder_angle_des_rad, self.prev_rudder_angle_rad, step_size=step_size)
-            
-            # Store current to previous rudder angle command
-            self.prev_rudder_angle_rad = rudder_angle_rad
-            
-            # Outputs
-            self.yaw_angle_ref_rad  = yaw_angle_ref_rad
-            self.e_ct               = e_ct
-            self.rudder_angle_deg   = math.degrees(rudder_angle_rad)
+            if not self._precomputed:
+                self.yaw_angle_ref_rad  = self.initial_yaw_angle_ref_rad
+                self.e_ct               = 0.0
+                self.rudder_angle_deg   = 0.0
+                
+                self._precomputed       = True
+            else:
+                # Get the heading reference and the measured heading using input
+                yaw_angle_ref_rad, e_ct = self.los_guidance(self.north, self.east, 
+                                                            self.next_wp_north, self.next_wp_east, 
+                                                            self.prev_wp_north, self.prev_wp_east)
+                
+                # Add COLAV offset correction
+                yaw_angle_ref_rad    = yaw_angle_ref_rad + math.radians(self.colav_heading_offset_deg)
+                
+                # Compute the control signal
+                rudder_angle_des_rad = self.pid_ctrl(setpoint=yaw_angle_ref_rad, measurement=self.yaw_angle_rad, step_size=step_size) # self.heading_mea is input
+                
+                # Apply slew limiter around the previous rudder command
+                rudder_angle_rad = self.apply_slew_limit(rudder_angle_des_rad, self.prev_rudder_angle_rad, step_size=step_size)
+                
+                # Store current to previous rudder angle command
+                self.prev_rudder_angle_rad = rudder_angle_rad
+                
+                # Outputs
+                self.yaw_angle_ref_rad  = yaw_angle_ref_rad
+                self.e_ct               = e_ct
+                self.rudder_angle_deg   = math.degrees(rudder_angle_rad)
         except Exception as e:
             # IMPORTANT: do not crash host
             print(f"[HeadingOffsetAutopilot] ERROR t={current_time} dt={step_size}: {type(e).__name__}: {e}")
