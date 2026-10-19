@@ -68,7 +68,7 @@ instance.AnimateFleetTrajectory(
         margin_frac=0.08,
         equal_aspect=True,
         interval_ms=60,
-        frame_step=10,
+        frame_step=5,
         trail_len=300,
         plot_routes=True,
         plot_waypoints=True,

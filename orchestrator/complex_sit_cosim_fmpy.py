@@ -937,6 +937,7 @@ class ShipInTransitCoSimulation(CoSimInstance):
 
                 ("COLAV", "own_north"): "north",
                 ("COLAV", "own_east"): "east",
+                ("COLAV", "own_yaw_angle"): "yaw_angle_rad",
                 ("COLAV", "own_speed_north"): "d_north",
                 ("COLAV", "own_speed_east"): "d_east",
             }

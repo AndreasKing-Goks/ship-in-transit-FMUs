@@ -89,6 +89,7 @@ ships:
       # Collision Avoidance (Only Internal Ports)
       - [COLAV, own_north,          SHIP_MODEL,           north]
       - [COLAV, own_east,           SHIP_MODEL,           east]
+      - [COLAV, own_yaw_angle,      SHIP_MODEL,           yaw_angle_rad]
       - [COLAV, own_speed_north,    SHIP_MODEL,           d_north]
       - [COLAV, own_speed_east,     SHIP_MODEL,           d_east]
 
@@ -261,7 +262,7 @@ ships:
         r: 1000
         ki_ct: 0.002
         integrator_limit: 5000
-        kp: 0.5
+        kp: 0.3
         ki: 0.00015
         kd: 50.0
         max_rudder_rate_deg_per_sec: 2.3
@@ -508,29 +509,29 @@ ships:
 
   - id: TS1
 
-    spawn:
-      start_time: 0.0
-      north: 10000.0
-      east: 0.0
-      yaw_angle_deg: 135.0
-      forward_speed: 0.0
-
-    route:
-      north: [10000 , 2000, 0     ]
-      east:  [0     , 8000, 10000 ]
-      speed: [5.0   , 3.5   ]          # Upon reaching the next waypoint
-
     # spawn:
     #   start_time: 0.0
-    #   north: 0.0
-    #   east: 10000.0
-    #   yaw_angle_deg: -45
+    #   north: 10000.0
+    #   east: 0.0
+    #   yaw_angle_deg: 135.0
     #   forward_speed: 0.0
 
     # route:
-    #   north: [0     , 8000, 10000]
-    #   east:  [10000 , 2000, 0    ]
-    #   speed: [5.0     , 3.5   ]          # Upon reaching the next waypoint
+    #   north: [10000 , 2000, 0     ]
+    #   east:  [0     , 8000, 10000 ]
+    #   speed: [5.3   , 3.5   ]          # Upon reaching the next waypoint
+
+    spawn:
+      start_time: 0.0
+      north: 0.0
+      east: 10000.0
+      yaw_angle_deg: -45
+      forward_speed: 0.0
+
+    route:
+      north: [0     , 8000, 10000]
+      east:  [10000 , 2000, 0    ]
+      speed: [5.0     , 3.5   ]          # Upon reaching the next waypoint
 
     SHIP_BLOCKS:
       - [MISSION_MANAGER, FMUs/simplified_ship/MissionManager.fmu]
@@ -555,12 +556,12 @@ ships:
       - [AUTOPILOT, prev_wp_east,               MISSION_MANAGER, prev_wp_east]
       - [AUTOPILOT, next_wp_north,              MISSION_MANAGER, next_wp_north]
       - [AUTOPILOT, next_wp_east,               MISSION_MANAGER, next_wp_east]
-      # - [AUTOPILOT, colav_heading_offset_deg,   COLAV,           colav_heading_offset_deg]
+      - [AUTOPILOT, colav_heading_offset_deg,   COLAV,           colav_heading_offset_deg]
 
       # Speed controller
       - [SPEED_CONTROLLER, desired_ship_speed,            MISSION_MANAGER,  next_wp_speed]
       - [SPEED_CONTROLLER, measured_ship_speed,           SHIP_MODEL,       forward_speed]
-      # - [SPEED_CONTROLLER, colav_speed_reduction_factor,  COLAV,            colav_speed_reduction_factor]
+      - [SPEED_CONTROLLER, colav_speed_reduction_factor,  COLAV,            colav_speed_reduction_factor]
 
       # Rudder
       - [RUDDER, rudder_angle_deg, AUTOPILOT,  rudder_angle_deg]
@@ -579,6 +580,7 @@ ships:
       # Collision Avoidance (Only Internal Ports)
       - [COLAV, own_north,          SHIP_MODEL,           north]
       - [COLAV, own_east,           SHIP_MODEL,           east]
+      - [COLAV, own_yaw_angle,      SHIP_MODEL,           yaw_angle_rad]
       - [COLAV, own_speed_north,    SHIP_MODEL,           d_north]
       - [COLAV, own_speed_east,     SHIP_MODEL,           d_east]
 

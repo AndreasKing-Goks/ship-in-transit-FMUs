@@ -355,6 +355,8 @@ class CollisionAvoidanceCOLREGS(Fmi2Slave):
                 target_speed        = np.linalg.norm(v_tar_list[i])
                 
                 if target_speed > 1e-3:
+                    # This assumes that target ship course == target ship heading
+                    # Which may not be true at all time. But this is for simplification
                     target_course       = np.arctan2(v_tar_list[i][1], v_tar_list[i][0])
                     theta_tar_to_own    = np.arctan2(-r[1], -r[0])
                     beta_tar_to_own     = self._wrap_to_pi(theta_tar_to_own - target_course)
