@@ -105,15 +105,15 @@ key_group_list = [
     # ["OS0.WIND.wind_speed"],
     # ["OS0.WIND.wind_direction_deg"],
     
-    # # OS COLAV
-    # ["OS0.COLAV.colav_speed_reduction_factor"],
-    # ["OS0.COLAV.colav_heading_offset_deg"],
-    # ["OS0.COLAV.risk_score_tar_1"],
-    # ["OS0.COLAV.encounter_wrt_tar_1"],
-    # ["OS0.COLAV.role_wrt_tar_1"],
-    # ["OS0.COLAV.beta_own_to_tar_1"],
-    # ["OS0.COLAV.beta_tar_to_own_1"],
-    # ["OS0.COLAV.rr_own_to_tar_1"],
+    # OS COLAV
+    ["OS0.COLAV.colav_speed_reduction_factor"],
+    ["OS0.COLAV.colav_heading_offset_deg"],
+    ["OS0.COLAV.risk_score_tar_1"],
+    ["OS0.COLAV.encounter_wrt_tar_1"],
+    ["OS0.COLAV.role_wrt_tar_1"],
+    ["OS0.COLAV.beta_own_to_tar_1"],
+    ["OS0.COLAV.beta_tar_to_own_1"],
+    ["OS0.COLAV.rr_own_to_tar_1"],
     
     # # TS COLAV
     # ["TS1.COLAV.colav_speed_reduction_factor"],
