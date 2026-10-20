@@ -56,8 +56,8 @@ class CollisionAvoidanceCOLREGS(Fmi2Slave):
         self.colav_active                   = False
         self.ship_collision                 = False
         self.ship_priority_idx              = -1
-        self.encounter_status               = "None"
-        self.role_status                    = "None"
+        self.held_encounter_status          = 0
+        self.held_role_status               = 0
         
         for i in range (1,4):
             setattr(self, f"beta_own_to_tar_{i}", 0.0)
@@ -115,8 +115,8 @@ class CollisionAvoidanceCOLREGS(Fmi2Slave):
         self.register_variable(Integer("ship_priority_idx", causality=Fmi2Causality.output, variability=Fmi2Variability.discrete))
         self.register_variable(Boolean("colav_active", causality=Fmi2Causality.output, variability=Fmi2Variability.discrete))
         self.register_variable(Boolean("ship_collision", causality=Fmi2Causality.output, variability=Fmi2Variability.discrete))
-        self.register_variable(String("encounter_status", causality=Fmi2Causality.output, variability=Fmi2Variability.discrete))
-        self.register_variable(String("role_status", causality=Fmi2Causality.output, variability=Fmi2Variability.discrete))
+        self.register_variable(Integer("held_encounter_status", causality=Fmi2Causality.output, variability=Fmi2Variability.discrete))
+        self.register_variable(Integer("held_role_status", causality=Fmi2Causality.output, variability=Fmi2Variability.discrete))
         
         for i in range(1,4):
             self.register_variable(Real(f"beta_own_to_tar_{i}", causality=Fmi2Causality.output))
@@ -261,7 +261,7 @@ class CollisionAvoidanceCOLREGS(Fmi2Slave):
         return encounter, role, heading_offset_deg, speed_reduction_factor
     
     
-    def output_ecounter_and_role(self, idx, encounter, role):
+    def output_ecounter_and_role(self, idx, encounter, role, held:Boolean=False):
         # Encounter classification
         encounter_mapping = {
             "None": 0,
@@ -277,17 +277,15 @@ class CollisionAvoidanceCOLREGS(Fmi2Slave):
             "STAND_ON": 2
         }
 
-        setattr(
-            self,
-            f"encounter_wrt_tar_{idx}",
-            encounter_mapping.get(encounter, 0)
-        )
+        if held:
+            setattr(self, f"held_encounter_status", encounter_mapping.get(encounter, 0))
 
-        setattr(
-            self,
-            f"role_wrt_tar_{idx}",
-            role_mapping.get(role, 0)
-        )
+            setattr(self, f"held_role_status", role_mapping.get(role, 0))
+        
+        else:
+            setattr(self, f"encounter_wrt_tar_{idx}", encounter_mapping.get(encounter, 0))
+
+            setattr(self, f"role_wrt_tar_{idx}", role_mapping.get(role, 0))
     
     
     def do_step(self, current_time: float, step_size: float) -> bool:
@@ -431,20 +429,9 @@ class CollisionAvoidanceCOLREGS(Fmi2Slave):
                     continue
                 
                 # Risk score
-                tcpa_score = np.clip(
-                    1.0 - tcpa / self.T_lookahead,
-                    0.0, 1.0
-                )
-
-                dcpa_score = np.clip(
-                    1.0 - dcpa / self.danger_zone_radius,
-                    0.0, 1.0
-                )
-
-                rr_score = np.clip(
-                    -rr / self.own_ship_sog_max,
-                    0.0, 1.0
-                )
+                tcpa_score = np.clip(1.0 - tcpa / self.T_lookahead, 0.0, 1.0)
+                dcpa_score = np.clip(1.0 - dcpa / self.danger_zone_radius, 0.0, 1.0)
+                rr_score = np.clip(-rr / self.own_ship_sog_max, 0.0, 1.0)
 
                 # All coeffs must sum to 1
                 tcpa_coeff  = 0.4
@@ -485,7 +472,8 @@ class CollisionAvoidanceCOLREGS(Fmi2Slave):
                 self.output_ecounter_and_role(
                     ship_num,
                     encounter,
-                    role
+                    role,
+                    held=False
                 )
                 
                 # Record the COLAV command
@@ -510,6 +498,10 @@ class CollisionAvoidanceCOLREGS(Fmi2Slave):
                 # _, idx = max(candidates)
                 best_score, idx  = max(candidates, key=lambda x: x[0]) # For every tuple in candidates, looks at element 0, i.e. the score
                 
+                # Evaluate encounter and role
+                encounter               = next((enc for enc, i in enc_lists if i == idx), "None")
+                role                    = next((rol for rol, i in rol_lists if i == idx), "None")
+                
                 ## Prioritize one_target if multiple ship in vicinity (and not yet prioritizing one target)
                 # Start tracking the target
                 if len(candidates) > 1 and (not self.prioritize_one_target):
@@ -525,15 +517,19 @@ class CollisionAvoidanceCOLREGS(Fmi2Slave):
                 # hod_lists = (hod, i)
                 speed_reduction_factor  = next((srf for srf, i in srf_lists if i == idx), 1.0)
                 heading_offset_deg      = next((hod for hod, i in hod_lists if i == idx), 0.0)
-                encounter               = next((enc for enc, i in enc_lists if i == idx), "None")
-                role                    = next((rol for rol, i in rol_lists if i == idx), "None")
                 
                 # OUTPUTS
-                self.colav_speed_reduction_factor   = speed_reduction_factor  # clamp after scaling
+                self.colav_speed_reduction_factor   = speed_reduction_factor
                 self.colav_heading_offset_deg       = heading_offset_deg
-                self.encounter_status               = encounter
-                self.role_status                    = role
-                    
+                
+                # Individual encounter and role outputs
+                self.output_ecounter_and_role(
+                    ship_num,
+                    encounter,
+                    role,
+                    held=True
+                )
+                
                 if self.prioritize_one_target:                        
                     self.timer += step_size
                     if self.timer >= self.hold_time:
@@ -544,8 +540,8 @@ class CollisionAvoidanceCOLREGS(Fmi2Slave):
                 # OUTPUTS
                 self.colav_speed_reduction_factor   = 1.0
                 self.colav_heading_offset_deg       = 0.0 # OUTPUT
-                self.encounter_status               = "None"
-                self.role_status                    = "None"
+                self.held_encounter_status          = 0
+                self.held_role_status               = 0
                 
                 # No target ship is prioritized
                 self.ship_priority_idx              = -1
@@ -560,8 +556,8 @@ class CollisionAvoidanceCOLREGS(Fmi2Slave):
             self.colav_heading_offset_deg       = 0.0 # OUTPUT
             self.colav_active                   = False
             self.ship_collision                 = False
-            self.encounter_status               = "None"
-            self.role_status                    = "None"
+            self.held_encounter_status          = 0
+            self.held_role_status               = 0
             
         return True
             
