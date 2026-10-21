@@ -1,22 +1,10 @@
 simulation:
   instanceName: more
-  stopTime: 100000
+  stopTime: 10000
   stepSize: 5.0
 
 ships:
   - id: OS0
-    
-    spawn:
-      start_time: 0.0
-      north: 0.0
-      east: 0.0
-      yaw_angle_deg: 45.0
-      forward_speed: 0.0
-
-    route:
-      north: [0, 10000 ]
-      east:  [0, 10000 ]
-      speed: [5, ]          # Upon reaching the next waypoint
 
     SHIP_BLOCKS:
       - [MISSION_MANAGER, FMUs/complex_ship/MissionManager.fmu]
@@ -508,21 +496,12 @@ ships:
 ##########################################################
 
   - id: TS1
-
-    spawn:
-      start_time: 0.0
-      north: 0.0
-      east: 10000.0
-      yaw_angle_deg: -45
-      forward_speed: 0.0
-
-    route:
-      north: [0     , 10000]
-      east:  [10000 , 0    ]
-      speed: [5.0    ]          # Upon reaching the next waypoint
+    IW_sampling:
+      active: True
+      animated: True
 
     SHIP_BLOCKS:
-      - [MISSION_MANAGER, FMUs/simplified_ship/MissionManager.fmu]
+      - [MISSION_MANAGER, FMUs/simplified_ship/MissionManagerAST.fmu]
       - [AUTOPILOT, FMUs/simplified_ship/HeadingOffsetAutopilot.fmu]
       - [SPEED_CONTROLLER, FMUs/simplified_ship/ScaledSpeedController.fmu]
       - [RUDDER, FMUs/simplified_ship/Rudder.fmu]
@@ -621,6 +600,9 @@ ships:
     fmu_params:
       MISSION_MANAGER:
         ra: 300
+        time_to_start_iw_sampler: 250
+        max_sampled_inter_wp: 2
+        scope_angle_max_deg: 30
 
       AUTOPILOT:
         r: 1000

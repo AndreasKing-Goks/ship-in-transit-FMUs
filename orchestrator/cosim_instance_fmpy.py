@@ -330,7 +330,18 @@ class CoSimInstance:
         for slave_data in self.slaves.values():
             slave_data["fmu"].enterInitializationMode()
         for (slaveName, slaveVar), value in self.initial_values.items():
-            self._set_value(slaveName, slaveVar, value)
+            # If the parameters unavailable in this FMU version, gives warning
+            try:
+                self._set_value(slaveName, slaveVar, value)
+            except Exception as e:
+                if f"Could not locate the variable {slaveVar} in the model" in str(e):
+                    print(
+                        f"[WARNING] FMU '{slaveName}': "
+                        f"Parameter '{slaveVar}' is not available in this FMU version. "
+                        f"Skipping initialization."
+                    )
+                else:
+                    raise
         for slave_data in self.slaves.values():
             slave_data["fmu"].exitInitializationMode()
         self.initialized = True

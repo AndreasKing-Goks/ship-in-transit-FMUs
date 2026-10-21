@@ -18,6 +18,7 @@ if str(ROOT) not in sys.path:
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
 # Important to keep to prevent sb3-contrib importing torch from ARS that causes error
+from itertools import product
 import numpy as np
 import torch
 
@@ -167,11 +168,8 @@ def main():
     # =========================
     # Paths
     config_path = [
-        ROOT / "EBASTv2_train" / "complex_colav_os_give_way_test.yaml",
-        ROOT / "EBASTv2_train" / "complex_colav_os_stand_on_test.yaml"
+        ROOT / "EBASTv2_train" / "EBASTv2MBSE.yaml",
     ]
-    encounter_settings_path     = ROOT / "EBASTv2_train" / "encounter_settings.json"
-    spawn_requests_bank_path    = ROOT / "EBASTv2_train" / "spawn_request_bank_ebastv2.pkl"
     
     (model_path, train_args_log_path, 
      episode_log_path, tb_path, 
@@ -184,10 +182,54 @@ def main():
     # =========================
     # Instantiate the environment wrapper - parallelized
     # =========================
-    # Load the spawn requests bank
-    spawn_requests_bank = load_spawn_requests_bank_path(spawn_requests_bank_path)
-    print_debug("[MAIN] Spawn request bank loaded",
-                debug=args.debug)
+    ## Define custom spawn requests bank
+    # Common own ship configuration
+    own_ship = {
+        "start_time": 0.0,
+        "north_route": [0, 10000],
+        "east_route": [0, 10000],
+        "speed_setpoints": 5.0,
+    }
+
+    # Target ship routes for each case [(north_routes, east_routes)]
+    target_routes = [
+        ([0, 10000], [10000, 0]),  # Case 0: OS0 Give Way
+        ([10000, 0], [0, 10000]),  # Case 1: OS0 Stand On
+    ]
+    target_start_times  = [0.0, 300.0, 600.0]
+
+    # Generate cases
+    cases = [
+        {
+            "case_id": i,
+            "spawn_requests": {
+                "OS0": own_ship,
+                "TS1": {
+                    "start_time": start_time,
+                    "north_route": north,
+                    "east_route": east,
+                    "speed_setpoints": 5.0,
+                },
+            },
+            "own_ship_initial": None,
+            "encounters": None,
+        }
+        for i, ((north, east), start_time) in enumerate(product(target_routes, target_start_times))
+    ]
+
+    # Spawn request bank
+    margin  = 1000
+    rounded_north_bound = [-margin, 10000+margin]
+    rounded_east_bound  = [-margin, 10000+margin]
+    
+    spawn_requests_bank = {
+        "path": None,
+        "n_cases": len(cases),
+        "start_eval_case_id": 0,
+        "cases": cases,
+        "rounded_north_bound": rounded_north_bound,
+        "rounded_east_bound": rounded_east_bound,
+    }
     
     # DummyVecEnv and SubprocVecEnv except function, not instance, hence:
     def make_env(rank):
@@ -195,7 +237,6 @@ def main():
             env = EBASTv2EnvMBSE(
                 ROOT=ROOT,
                 config_path=config_path,
-                encounter_settings_path=encounter_settings_path,
                 spawn_requests_bank=spawn_requests_bank,
                 debug=args.debug
             )
@@ -383,9 +424,7 @@ def main():
         eval_env = EBASTv2EnvMBSE(
             ROOT=ROOT,
             config_path=args.config_path,
-            encounter_settings_path=args.encounter_settings_path,
             spawn_requests_bank=spawn_requests_bank,
-            use_fmpy=args.use_fmpy,
             debug=args.debug
         )
 

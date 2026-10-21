@@ -381,8 +381,8 @@ ships:
         range_sigma: 50.0
         bearing_sigma_deg: 0.1
         camera_position: "fore"
-        camera_far_depth_of_field_limit: 2000
-        camera_horizontal_fov_angle_limit_deg: 120
+        camera_far_depth_of_field_limit: 6000
+        camera_horizontal_fov_angle_limit_deg: 160
       
       CAMERA_AFT:
         seed: 42
@@ -392,8 +392,8 @@ ships:
         range_sigma: 50.0
         bearing_sigma_deg: 0.1
         camera_position: "aft"
-        camera_far_depth_of_field_limit: 2000
-        camera_horizontal_fov_angle_limit_deg: 120
+        camera_far_depth_of_field_limit: 6000
+        camera_horizontal_fov_angle_limit_deg: 160
       
       CAMERA_PORT:
         seed: 42
@@ -403,8 +403,8 @@ ships:
         range_sigma: 50.0
         bearing_sigma_deg: 0.1
         camera_position: "port"
-        camera_far_depth_of_field_limit: 2000
-        camera_horizontal_fov_angle_limit_deg: 120
+        camera_far_depth_of_field_limit: 6000
+        camera_horizontal_fov_angle_limit_deg: 160
       
       CAMERA_STARBOARD:
         seed: 42
@@ -414,8 +414,8 @@ ships:
         range_sigma: 50.0
         bearing_sigma_deg: 0.1
         camera_position: "starboard"
-        camera_far_depth_of_field_limit: 2000
-        camera_horizontal_fov_angle_limit_deg: 120
+        camera_far_depth_of_field_limit: 4000
+        camera_horizontal_fov_angle_limit_deg: 160
 
       SHIP_EKF:
         max_dt: 0.5
@@ -509,29 +509,29 @@ ships:
 
   - id: TS1
 
-    spawn:
-      start_time: 0.0
-      north: 10000.0
-      east: 0.0
-      yaw_angle_deg: 135.0
-      forward_speed: 0.0
-
-    route:
-      north: [10000 , 0     ]
-      east:  [0     , 10000 ]
-      speed: [5.3]          # Upon reaching the next waypoint
-
     # spawn:
     #   start_time: 0.0
-    #   north: 0.0
-    #   east: 10000.0
-    #   yaw_angle_deg: -45
+    #   north: 10000.0
+    #   east: 0.0
+    #   yaw_angle_deg: 135.0
     #   forward_speed: 0.0
 
     # route:
-    #   north: [0     , 10000]
-    #   east:  [10000 , 0    ]
-    #   speed: [5.0   ]          # Upon reaching the next waypoint
+    #   north: [10000 , 0     ]
+    #   east:  [0     , 10000 ]
+    #   speed: [5.3]          # Upon reaching the next waypoint
+
+    spawn:
+      start_time: 0.0
+      north: 0.0
+      east: 10000.0
+      yaw_angle_deg: -45
+      forward_speed: 0.0
+
+    route:
+      north: [0     , 10000]
+      east:  [10000 , 0    ]
+      speed: [5.0   ]          # Upon reaching the next waypoint
 
     SHIP_BLOCKS:
       - [MISSION_MANAGER, FMUs/simplified_ship/MissionManager.fmu]

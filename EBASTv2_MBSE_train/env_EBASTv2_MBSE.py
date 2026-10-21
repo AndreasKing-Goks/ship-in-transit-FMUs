@@ -29,8 +29,7 @@ class EBASTv2EnvMBSE(gym.Env):
     def __init__(self,
                  ROOT,
                  config_path,
-                 encounter_settings_path,
-                 spawn_requests_bank,
+                 spawn_requests_bank=None,
                  skip_map_evaluation: bool=True,
                  custom_pos_bound: dict=None,
                  debug: bool=False,
@@ -50,7 +49,6 @@ class EBASTv2EnvMBSE(gym.Env):
         # Store necessary path
         self.ROOT                       = ROOT
         self.config_path                = config_path
-        self.encounter_settings_path    = encounter_settings_path
         
         # Custom bound
         self.custom_pos_bound           = custom_pos_bound
@@ -60,10 +58,17 @@ class EBASTv2EnvMBSE(gym.Env):
         
         # Store the spawn requests to generate finite encounter cases
         self.spawn_requests_bank        = spawn_requests_bank
-        self.n_spawn_cases              = self.spawn_requests_bank["n_cases"]
-        self.start_eval_case_id         = self.spawn_requests_bank["start_eval_case_id"]
-        self.spawn_cases                = self.spawn_requests_bank["cases"]
-        self.srb_rel_path               = Path(self.spawn_requests_bank["path"])
+        self.n_spawn_cases              = None
+        self.start_eval_case_id         = None
+        self.spawn_cases                = None
+        self.srb_rel_path               = None
+        if self.spawn_requests_bank is not None:
+            self.n_spawn_cases              = self.spawn_requests_bank["n_cases"]
+            self.start_eval_case_id         = self.spawn_requests_bank["start_eval_case_id"]
+            self.spawn_cases                = self.spawn_requests_bank["cases"]
+            srb_rel_path                    = self.spawn_requests_bank.get("path", None)
+            if srb_rel_path is not None:
+                self.srb_rel_path           = Path(srb_rel_path)
             
         # Uniformly sample the config_path drawn from the self.config_path
         if not self.config_path:
@@ -230,12 +235,10 @@ class EBASTv2EnvMBSE(gym.Env):
         
         ## Observation space bounds [min, max]
         # Collision avoidance states bounds
-        new_throttle_bound      = [0.0, 1.0]
         max_rudder_angle_deg    = self.ship_configs[0]["fmu_params"]["AUTOPILOT"]["max_rudder_angle_deg"]
-        new_rudder_angle_bound  = [-max_rudder_angle_deg, max_rudder_angle_deg]
-        self.colav_states_bound = {
-            "min": np.array([new_throttle_bound[0], new_rudder_angle_bound[0]], dtype=np.float32),
-            "max": np.array([new_throttle_bound[1], new_rudder_angle_bound[1]], dtype=np.float32)
+        self.own_colav_risk_bound = {
+            "min": np.array([0.0], dtype=np.float32),
+            "max": np.array([1.0], dtype=np.float32),
         }
         
         ## Own ship bounds
@@ -300,7 +303,7 @@ class EBASTv2EnvMBSE(gym.Env):
         # Define the observation space (normalized)
         self.observation_space = gym.spaces.Dict(
             {
-                "colav_states": Box(-1.0, 1.0, shape=(2,), dtype=np.float32),
+                "own_colav_risk": Box(0.0, 1.0, shape=(self.n_ts,), dtype=np.float32),
                 "own_ship_pos": Box(-1.0, 1.0, shape=(3,), dtype=np.float32),
                 "own_ship_e_ct": Box(-1.0, 1.0, shape=(1,), dtype=np.float32),
                 "own_ship_rud_ang": Box(-1.0, 1.0, shape=(1,), dtype=np.float32),
@@ -375,7 +378,7 @@ class EBASTv2EnvMBSE(gym.Env):
             Normalized the actual observation to [-1,1]
         """
         observation_norm = {
-            "colav_states": self._normalize(observation["colav_states"], self.colav_states_bound["min"], self.colav_states_bound["max"]),
+            "own_colav_risk": self._normalize(observation["own_colav_risk"], self.own_colav_risk_bound["min"], self.own_colav_risk_bound["max"]),
             "own_ship_pos": self._normalize(observation["own_ship_pos"], self.own_ship_pos_bound["min"], self.own_ship_pos_bound["max"]),
             "own_ship_e_ct": self._normalize(observation["own_ship_e_ct"], self.own_ship_e_ct_bound["min"], self.own_ship_e_ct_bound["max"]),
             "own_ship_rud_ang": self._normalize(observation["own_ship_rud_ang"], self.own_ship_rudder_angle_bound["min"], self.own_ship_rudder_angle_bound["max"]),
@@ -397,7 +400,7 @@ class EBASTv2EnvMBSE(gym.Env):
             Denormalized the normalized observation to its actual value
         """
         observation = {
-            "colav_states": self._denormalize(observation_norm["colav_states"], self.colav_states_bound["min"], self.colav_states_bound["max"]),
+            "own_colav_risk": self._denormalize(observation_norm["own_colav_risk"], self.own_colav_risk_bound["min"], self.own_colav_risk_bound["max"]),
             "own_ship_pos": self._denormalize(observation_norm["own_ship_pos"], self.own_ship_pos_bound["min"], self.own_ship_pos_bound["max"]),
             "own_ship_e_ct": self._denormalize(observation_norm["own_ship_e_ct"], self.own_ship_e_ct_bound["min"], self.own_ship_e_ct_bound["max"]),
             "own_ship_rud_ang": self._denormalize(observation_norm["own_ship_rud_ang"], self.own_ship_rudder_angle_bound["min"], self.own_ship_rudder_angle_bound["max"]),
@@ -433,12 +436,6 @@ class EBASTv2EnvMBSE(gym.Env):
         ## Get the actual values
         own_ship_id         = self.ship_configs[0]["id"]
         
-        # Colav states
-        new_throttle        = self.instance.GetLastValue(slaveName=f"{own_ship_id}__COLAV",
-                                                         slaveVar="new_throttle_cmd")
-        new_rudder_angle    = self.instance.GetLastValue(slaveName=f"{own_ship_id}__COLAV",
-                                                         slaveVar="new_rudder_angle_deg")
-        
         # Own ship 
         own_north           = self.instance.GetLastValue(slaveName=f"{own_ship_id}__SHIP_MODEL",
                                                          slaveVar="north")
@@ -460,8 +457,9 @@ class EBASTv2EnvMBSE(gym.Env):
         tar_ship_forward_speed_list = []
         action_masks_list           = []
         remaining_requests_list     = []
+        colav_risk_list             = []
         
-        for ship_config in self.instance.ship_configs:
+        for i, ship_config in enumerate(self.instance.ship_configs):
             # Get target ship id
             tar_ship_id = ship_config["id"]
             
@@ -477,7 +475,11 @@ class EBASTv2EnvMBSE(gym.Env):
             tar_heading         = self.instance.GetLastValue(slaveName=f"{tar_ship_id}__SHIP_MODEL",
                                                             slaveVar="yaw_angle_rad")
             tar_forward_speed   = self.instance.GetLastValue(slaveName=f"{tar_ship_id}__SHIP_MODEL",
-                                                         slaveVar="forward_speed")        
+                                                         slaveVar="forward_speed")
+            
+            # Colav risks
+            colav_risk          = self.instance.GetLastValue(slaveName=f"{own_ship_id}__COLAV",
+                                                             slaveVar=f"risk_score_tar_{i}")
             
             rel_tar_north       = tar_north - own_north
             rel_tar_east        = tar_east - own_east
@@ -486,6 +488,7 @@ class EBASTv2EnvMBSE(gym.Env):
             tar_ship_pos        = [rel_tar_north, rel_tar_east, tar_heading]
             tar_ship_pos_list.extend(tar_ship_pos)
             tar_ship_forward_speed_list.append(tar_forward_speed)
+            colav_risk_list.append(colav_risk)
             
             # For target ship that has intermediate waypoint sampling enabled
             if tar_ship_id in self.ts_iw_id:
@@ -502,7 +505,7 @@ class EBASTv2EnvMBSE(gym.Env):
                 remaining_requests_list.append(remaining_request)
         
         # Convert to numpy array
-        colav_states                 = np.array([new_throttle, new_rudder_angle], dtype=np.float32)
+        own_colav_risk               = np.array([colav_risk_list], dtype=np.float32)
         own_ship_pos                 = np.array([own_north, own_east, own_heading], dtype=np.float32)
         own_ship_e_ct                = np.array([own_e_ct], dtype=np.float32)
         own_ship_rud_ang             = np.array([own_rud_ang], dtype=np.float32)
@@ -519,7 +522,7 @@ class EBASTv2EnvMBSE(gym.Env):
         
         # Get observation
         observation = {
-                "colav_states": colav_states,
+                "own_colav_risk": own_colav_risk,
                 "own_ship_pos": own_ship_pos,
                 "own_ship_e_ct": own_ship_e_ct,
                 "own_ship_rud_ang": own_ship_rud_ang,
@@ -616,13 +619,18 @@ class EBASTv2EnvMBSE(gym.Env):
                     slaveVar="scope_length",
                     value=scope_length
                 )
+        
+        # INPUT SENSOR FAULT INJECTION HERE
+        # self.instance.SingleVariableManipulation(slaveName="OS0__RADAR", slaveVar="measurement_valid", value=False)
+        # self.instance.SingleVariableManipulation(slaveName="OS0__RADAR", slaveVar="radar_degradation", value=True)
+        
         # Step up the simulator
         self.instance.step()
     
     
     def _advance_until_next_event(self, action_dict=None):
         """
-            Do simulator step until and event is found
+            Do simulator step until an event is found
         """
         # Initial request flag
         any_request = False
@@ -634,8 +642,7 @@ class EBASTv2EnvMBSE(gym.Env):
             if self.debug:
                 print(
                     f"[ADVANCE] waiting for captain-intent request, "
-                    f"time={self.instance.time:.2f}, stopTime={self.instance.stopTime:.2f}, "
-                    f"use_fmpy={self.use_fmpy}",
+                    f"time={self.instance.time:.2f}, stopTime={self.instance.stopTime:.2f}, ",
                     flush=True,
                 )
             # Simulator integration
@@ -652,7 +659,7 @@ class EBASTv2EnvMBSE(gym.Env):
                 ts_id: min(old_val, nearest_dist_dict_temp[ts_id])
                 for ts_id, old_val in self.nearest_dist_dict.items()
             }
-
+            
             # Check if the simulator still within the maximum simulation time
             if self.instance.time > self.instance.stopTime:
                 self.truncated = True
@@ -715,7 +722,7 @@ class EBASTv2EnvMBSE(gym.Env):
         
         # Advance the simulation until an event is found
         self._advance_until_next_event(action_dict=action_dict)
-                 
+        
         # Get observation and info
         observation             = self._get_obs()                                           # This is normalized
         terminated              = self.terminated
@@ -932,31 +939,7 @@ class EBASTv2EnvMBSE(gym.Env):
             # -------------------------
             # FMPy backend
             # -------------------------
-            if self.use_fmpy:
-                if self.instance is None:
-                    self.instance = self.orchestrator(
-                        config=config,
-                        spawn_requests=spawn_requests,
-                        ROOT=self.ROOT,
-                        skip_map_evaluation=self.skip_map_evaluation,
-                        IW_sampling_animated=True
-                    )
-                    if self.debug:
-                        print("[RESET] FMPy ShipInTransitCosimulation instantiated", flush=True)
-                else:
-                    self.instance.RespawnAndReset(config=config,
-                                                  spawn_requests=spawn_requests,
-                                                  ROOT=self.ROOT)
-                    if self.debug:
-                        print("[RESET] FMPy ShipInTransitCosimulation reset", flush=True)
-            # -------------------------
-            # Libcosimpy backend
-            # -------------------------
-            else:
-                # libcosimpy backend cannot reset the existing FMUs.
-                # Drop the old simulator and construct a completely new one.
-                self._discard_instance()
-                
+            if self.instance is None:
                 self.instance = self.orchestrator(
                     config=config,
                     spawn_requests=spawn_requests,
@@ -964,9 +947,14 @@ class EBASTv2EnvMBSE(gym.Env):
                     skip_map_evaluation=self.skip_map_evaluation,
                     IW_sampling_animated=True
                 )
-
                 if self.debug:
-                    print("[RESET] Libcosimpy ShipInTransitCosimulation instantiated", flush=True)
+                    print("[RESET] FMPy ShipInTransitCosimulation instantiated", flush=True)
+            else:
+                self.instance.RespawnAndReset(config=config,
+                                                spawn_requests=spawn_requests,
+                                                ROOT=self.ROOT)
+                if self.debug:
+                    print("[RESET] FMPy ShipInTransitCosimulation reset", flush=True)
             
             # List for recording one episode
             self.obs_list                   = []

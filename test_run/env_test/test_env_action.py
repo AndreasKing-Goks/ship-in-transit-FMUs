@@ -129,7 +129,7 @@ env.instance.AnimateFleetTrajectory(
         margin_frac=0.08,
         equal_aspect=True,
         interval_ms=20,
-        frame_step=20,
+        frame_step=1,
         trail_len=50,
         plot_routes=True,
         plot_waypoints=True,
