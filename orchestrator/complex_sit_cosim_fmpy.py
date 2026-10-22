@@ -69,6 +69,9 @@ class ShipInTransitCoSimulation(CoSimInstance):
         # For colav_active printing flag
         self.print_col_msg = False
         
+        # Debug flags
+        self.debug          = debug
+        
         # =========================
         # Build the Ships
         # =========================
@@ -1295,6 +1298,16 @@ class ShipInTransitCoSimulation(CoSimInstance):
             "rew_flags"       : rew_flags,
             "collision_flags" : collision_flags
         }
+        
+        # For debugging
+        if self.debug:
+            print("any_ship_grounding               : ", self.any_ship_grounding)
+            print("any_ship_outside                 : ", self.any_ship_outside)
+            print("any_ship_nav_fail                : ", self.any_ship_nav_fail)
+            print("own_ship_reaches_end_waypoint    : ", self.own_ship_reaches_end_waypoint)
+            print("all_ship_reaches_end_waypoint    : ", self.all_ship_reaches_end_waypoint)
+            print("any_ship_collides                : ", self.any_ship_collides)
+            print("----")
         
         ## Conclude the stop flag
         self.stop = (self.any_ship_grounding

@@ -173,8 +173,8 @@ class EBASTv2EnvMBSE(gym.Env):
             max_scope_angle     = self.ship_configs[idx]["fmu_params"]["MISSION_MANAGER"]["scope_angle_max_deg"]
             self.max_scope_angles.append(max_scope_angle)
             min_scope_angle     = -max_scope_angle
-            max_scope_length    = 7500
-            min_scope_length    = 1000
+            max_scope_length    = 2500
+            min_scope_length    = 500
             
             data = {
                 "min": [min_scope_angle, min_scope_length],

@@ -1,5 +1,5 @@
 simulation:
-  instanceName: more
+  instanceName: EBASTv2_MBSE
   stopTime: 10000
   stepSize: 5.0
 
@@ -601,7 +601,7 @@ ships:
       MISSION_MANAGER:
         ra: 300
         time_to_start_iw_sampler: 250
-        max_sampled_inter_wp: 2
+        max_sampled_inter_wp: 5
         scope_angle_max_deg: 30
 
       AUTOPILOT:

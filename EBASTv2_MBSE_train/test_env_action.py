@@ -97,15 +97,15 @@ env = EBASTv2EnvMBSE(
 
 env.set_for_evaluation()
 
-case_idx    = 0
+case_idx    = 2
 obs, info   = env.reset(seed=250, specific_case_idx=case_idx)
 
 action_list = [
-    [-13,2500],
-    [-13,500],
-    # [-13,500],
-    # [-23,500],
-    # [-23,500]
+    [13,2500],
+    [13,2500],
+    [13,2500],
+    [23,2500],
+    [23,2500]
     ] # Collision
 
 n_sample = len(action_list)
@@ -118,7 +118,6 @@ while not term:
     if do_action_sampling:
         action  = env._normalize_action(action_list[i])
         obs, rew, term, trun, inf = env.step(action)
-        term = True
         i += 1
 
 # # =========================
@@ -146,7 +145,7 @@ env.instance.AnimateFleetTrajectory(
         margin_frac=0.08,
         equal_aspect=True,
         interval_ms=20,
-        frame_step=20,
+        frame_step=10,
         trail_len=50,
         plot_routes=True,
         plot_waypoints=True,
