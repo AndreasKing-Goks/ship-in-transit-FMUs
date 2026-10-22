@@ -34,7 +34,8 @@ class EBASTv2EnvMBSE(gym.Env):
                  custom_pos_bound: dict=None,
                  debug: bool=False,
                  detailed_reward=False,
-                 absolute_config_idx=None):
+                 absolute_config_idx=None,
+                 include_fault_scheduler=False):
         self.orchestrator               = ShipInTransitCoSimulation
         
         # Set up placeholder attributes for the simulator instance
@@ -102,6 +103,66 @@ class EBASTv2EnvMBSE(gym.Env):
         self.simu_config    = config["simulation"]
         self.ship_configs   = config["ships"]
         
+        # Set the fault scheduler for each ship asset
+        self.fault_scheduler_dict   = {}
+        self.fault_scheduler_exists = None
+        for config in self.ship_configs:
+            # Get ship id
+            ship_id                     = config.get("id")
+            
+            # Get the scheduler parameters
+            fault_scheduler_params      = config.get("fault_scheduler", None)
+            
+            if fault_scheduler_params is not None:
+                # Iterate through each scheduler
+                for sensor, sensor_fault_parameter in fault_scheduler_params.items():
+                    type    = sensor_fault_parameter.get("type", None)
+                    fault   = sensor_fault_parameter.get("fault")
+                    var     = fault["var"]
+                    val     = fault["val"]
+                    
+                    # If using scheduler
+                    if type == "StratifiedFaultScheduler":
+                        from EBASTv2_core.fault_scheduler import StratifiedFaultScheduler
+                        fault_scheduler = StratifiedFaultScheduler(
+                            min_episode_time=sensor_fault_parameter.get("min_episode_time"),
+                            step_size=sensor_fault_parameter.get("step_size"),
+                            fault_duration=sensor_fault_parameter.get("fault_duration"),
+                            n_strata=sensor_fault_parameter.get("n_strata"),
+                            timing_resolution=sensor_fault_parameter.get("timing_resolution"),
+                            jitter_slots=sensor_fault_parameter.get("jitter_slots"),
+                            seed=sensor_fault_parameter.get("seed"),
+                        )
+                        sensor_fault_scheduler = {
+                            sensor : {
+                                "scheduler": fault_scheduler,
+                                "time_start": None,
+                                "time_end": None,
+                                "fault_var": var,
+                                "fault_val": val,
+                            }
+                        }
+                    
+                    # If predetermined inside the configs (not using scheduler)
+                    elif type is None:
+                        time_start  = sensor_fault_parameter.get("time_start")
+                        time_end  = sensor_fault_parameter.get("time_end")
+                        sensor_fault_scheduler = {
+                            sensor : {
+                                "scheduler": None,
+                                "time_start": time_start,
+                                "time_end": time_end,
+                                "fault_var": var,
+                                "fault_val": val,
+                            }
+                        }
+                        
+                    # Compile the fault scheduler dict
+                    self.fault_scheduler_dict[ship_id] = sensor_fault_scheduler
+            
+            # If the fault scheduler exists
+            self.fault_scheduler_exists = self.fault_scheduler_dict is not None
+                
         # Count all of the ship assets
         self.n_s            = len(self.ship_configs)
         self.n_ts           = self.n_s - 1           # Minus the own ship
@@ -620,9 +681,24 @@ class EBASTv2EnvMBSE(gym.Env):
                     value=scope_length
                 )
         
-        # INPUT SENSOR FAULT INJECTION HERE
-        # self.instance.SingleVariableManipulation(slaveName="OS0__RADAR", slaveVar="measurement_valid", value=False)
-        # self.instance.SingleVariableManipulation(slaveName="OS0__RADAR", slaveVar="radar_degradation", value=True)
+        if self.fault_scheduler_exists:
+            for sid, sensor_fault_scheduler in self.fault_scheduler_dict.items():
+                for sensor, fault_scheduler in sensor_fault_scheduler.items():
+                    time_start  = fault_scheduler["time_start"]
+                    time_end    = fault_scheduler["time_end"]
+                    var         = fault_scheduler["fault_var"]
+                    val         = fault_scheduler["fault_val"]
+                    fmu_name    = self.instance.ship_slave(prefix=sid, block=sensor)
+
+                    if time_start <= self.instance.time <= time_end:
+                        val_input   = val
+                    else:
+                        val_input   = not val
+                    
+                    self.instance.SingleVariableManipulation(
+                        slaveName=fmu_name, 
+                        slaveVar=var, 
+                        value=val_input)
         
         # Step up the simulator
         self.instance.step()
@@ -812,6 +888,7 @@ class EBASTv2EnvMBSE(gym.Env):
             print("[RESET] start", flush=True)
         super().reset(seed=seed)
         
+        # Set the RL-environment RNG
         self.np_random, _ = gym.utils.seeding.np_random(seed)
         
         # Do repeated attempts of reset until an event happened
@@ -985,6 +1062,23 @@ class EBASTv2EnvMBSE(gym.Env):
             
             if self.debug:
                 print("[RESET] searching event ...", flush=True)
+                
+            # Set the fault scheduler if exists
+            if self.fault_scheduler_exists:
+                # For each ship asset
+                for _, sensor_fault_scheduler in self.fault_scheduler_dict.items():
+                    # For each enabled sensor in the ship asset
+                    for _, fault_scheduler in sensor_fault_scheduler.items():
+                        # If using scheduler, sample the time_start and time_end
+                        # Else, leave it as it is
+                        if fault_scheduler["time_start"] is None and fault_scheduler["time_end"] is None:
+                            # Sample fault injection time from the scheduler
+                            fault_time_start, fault_time_end = fault_scheduler["scheduler"].sample()
+                            
+                            # Update the time start and time end plus the current time after
+                            # an event is found
+                            fault_scheduler["time_start"] = fault_time_start + self.instance.time
+                            fault_scheduler["time_end"]   = fault_time_end + self.instance.time
             
             # Advance the simulation until an event is found
             found_event = self._advance_until_next_event()
@@ -1003,6 +1097,7 @@ class EBASTv2EnvMBSE(gym.Env):
                 self.obs_list.append(observation)
                 self.info_list.append(info)
                 self.event_timestamp_list.append(self.instance.time)
+                
                 return observation, info
 
         raise RuntimeError(

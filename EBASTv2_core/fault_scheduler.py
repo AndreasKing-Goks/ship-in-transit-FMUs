@@ -104,6 +104,7 @@ class StratifiedFaultScheduler:
         )
 
         # Convert from timing resolution to actual simulation time
-        injection_time = injection_step * self.step_size
+        injection_time_start    = injection_step * self.step_size
+        injection_time_end      = injection_time_start + self.fault_duration
 
-        return float(injection_time)
+        return float(injection_time_start), float(injection_time_end)

@@ -51,7 +51,7 @@ target_routes = [
     ([0, max_dist], [max_dist, 0]),  # Case 0: OS0 Give Way
     ([max_dist, 0], [0, max_dist]),  # Case 1: OS0 Stand On
 ]
-target_start_times  = [0.0, 300.0, 600.0]
+target_start_times  = [0.0] #[0.0, 300.0, 600.0]
 
 # Generate cases
 cases = [
@@ -86,26 +86,31 @@ spawn_requests_bank = {
     "rounded_east_bound": rounded_east_bound,
 }
 
-
 # Instantiate the RL-environment wrapper class
 env = EBASTv2EnvMBSE(
     ROOT=ROOT,
     config_path=config_path,
     spawn_requests_bank=spawn_requests_bank,
-    detailed_reward=True
+    detailed_reward=True,
+    include_fault_scheduler=True
     )
 
 env.set_for_evaluation()
 
-case_idx    = 2
+case_idx    = 0
 obs, info   = env.reset(seed=250, specific_case_idx=case_idx)
 
 action_list = [
-    [13,2500],
-    [13,2500],
-    [13,2500],
-    [23,2500],
-    [23,2500]
+    # [13,2000],
+    # [13,2000],
+    # [13,2000],
+    # [23,2000],
+    # [23,2000]
+    [0,2000],
+    [0,2000],
+    [0,2000],
+    [0,2000],
+    [0,2000],
     ] # Collision
 
 n_sample = len(action_list)
@@ -145,7 +150,7 @@ env.instance.AnimateFleetTrajectory(
         margin_frac=0.08,
         equal_aspect=True,
         interval_ms=20,
-        frame_step=10,
+        frame_step=5,
         trail_len=50,
         plot_routes=True,
         plot_waypoints=True,
@@ -165,29 +170,92 @@ env.instance.AnimateFleetTrajectory(
 # # Plot Trajectory
 # env.instance.PlotFleetTrajectory(mode="quick", ship_scale=1.0)
 
-# # Plot Simulation Results
-# key_group_list = [
-#     ## Own Ship
-#     # Base results
-#     ["OS0.north"],
-#     ["OS0.east"],
-#     ["OS0.forward_speed", "OS0.next_wp_speed", "OS0.total_ship_speed"],
-#     ["OS0.yaw_angle_rad", "OS0.yaw_angle_ref_rad"],
-#     ["OS0.rudder_angle_deg"],
-#     ["OS0.e_ct"],
-#     ["OS0.shaft_speed_rpm", "OS0.shaft_speed_cmd_rpm"],
-#     ["OS0.throttle_cmd"],
+# Plot Simulation Results
+key_group_list = [
+    ## Own Ship
+    # Base results
+    ["OS0.SHIP_MODEL.north", "OS0.SHIP_EKF.estimated_n"],
+    ["OS0.SHIP_MODEL.east", "OS0.SHIP_EKF.estimated_e"],
+    ["OS0.SHIP_MODEL.forward_speed", "OS0.MISSION_MANAGER.next_wp_speed", "OS0.SHIP_MODEL.total_ship_speed"],
+    ["OS0.SHIP_MODEL.yaw_angle_rad", "OS0.AUTOPILOT.yaw_angle_ref_rad", "OS0.SHIP_EKF.estimated_psi"],
+    ["OS0.AUTOPILOT.rudder_angle_deg"],
+    ["OS0.AUTOPILOT.e_ct"],
+    ["OS0.MACHINERY_SYSTEM.shaft_speed_rpm", "OS0.SHAFT_SPEED_CONTROLLER.shaft_speed_cmd_rpm"],
+    ["OS0.THROTTLE_CONTROLLER.throttle_cmd"],
     
-#     ## Target Ship(s)
-#     # Base results
-#     ["TS2.north"],
-#     ["TS2.east"],
-#     ["TS2.forward_speed", "TS2.next_wp_speed", "TS2.total_ship_speed"],
-#     ["TS2.yaw_angle_rad", "TS2.yaw_angle_ref_rad"],
-#     ["TS2.rudder_angle_deg"],
-#     ["TS2.e_ct"],
-#     ["TS2.thrust_force"]
-# ]
+    # # For environment load-enabled simulation only
+    # ["OS0.SURFACE_CURRENT.current_speed"],
+    # ["OS0.SURFACE_CURRENT.current_direction_deg"],
+    # ["OS0.WIND.wind_speed"],
+    # ["OS0.WIND.wind_direction_deg"],
+    
+    # OS COLAV
+    ["OS0.COLAV.colav_speed_reduction_factor"],
+    ["OS0.COLAV.colav_heading_offset_deg"],
+    ["OS0.COLAV.risk_score_tar_1"],
+    # ["OS0.COLAV.encounter_wrt_tar_1"],
+    # ["OS0.COLAV.role_wrt_tar_1"],
+    # ["OS0.COLAV.beta_own_to_tar_1"],
+    # ["OS0.COLAV.beta_tar_to_own_1"],
+    # ["OS0.COLAV.rr_own_to_tar_1"],
+    
+    # # TS COLAV
+    # ["TS1.COLAV.colav_speed_reduction_factor"],
+    # ["TS1.COLAV.colav_heading_offset_deg"],
+    # ["TS1.COLAV.risk_score_tar_1"],
+    # ["TS1.COLAV.encounter_wrt_tar_1"],
+    # ["TS1.COLAV.role_wrt_tar_1"],
+    # ["TS1.COLAV.beta_own_to_tar_1"],
+    # ["TS1.COLAV.beta_tar_to_own_1"],
+    # ["TS1.COLAV.rr_own_to_tar_1"],
+    
+    # # For Ship EKF
+    # ["OS0.SHIP_EKF.estimated_n"],
+    # ["OS0.SHIP_EKF.estimated_e"],
+    # ["OS0.SHIP_EKF.estimated_psi"],
+    # ["OS0.SHIP_EKF.estimated_u"],
+    # ["OS0.SHIP_EKF.estimated_v"],
+    # ["OS0.SHIP_EKF.estimated_r"],
+    
+    # # Sensors
+    # ["OS0.GPS.measured_north"],
+    # ["OS0.GPS.measured_east"],
+    # ["OS0.GYROCOMPASS.measured_ship_heading_rad"],
+    # ["OS0.SPEED_LOG.measured_ship_speed"],
+    # ["OS0.RADAR.tar_1_range"],
+    # ["OS0.RADAR.tar_1_range_rate"],
+    # ["OS0.RADAR.tar_1_bearing"],
+    # ["OS0.CAMERA_FORE.tar_1_range"],
+    # ["OS0.CAMERA_FORE.tar_1_bearing"],
+    # ["OS0.CAMERA_AFT.tar_1_range"],
+    # ["OS0.CAMERA_AFT.tar_1_bearing"],
+    # ["OS0.CAMERA_PORT.tar_1_range"],
+    # ["OS0.CAMERA_PORT.tar_1_bearing"],
+    # ["OS0.CAMERA_STARBOARD.tar_1_range"],
+    # ["OS0.CAMERA_STARBOARD.tar_1_bearing"],
+    
+    ## Target Ship(s)
+    # Base results
+    ["TS1.SHIP_MODEL.north", "OS0.TS_TRACKING_EKF_TS1.estimated_n"],
+    ["TS1.SHIP_MODEL.east", "OS0.TS_TRACKING_EKF_TS1.estimated_e"],
+    ["TS1.SHIP_MODEL.forward_speed", "TS1.MISSION_MANAGER.next_wp_speed", "TS1.SHIP_MODEL.total_ship_speed"],
+    ["TS1.SHIP_MODEL.yaw_angle_rad", "TS1.AUTOPILOT.yaw_angle_ref_rad"],
+    ["TS1.AUTOPILOT.rudder_angle_deg"],
+    ["TS1.AUTOPILOT.e_ct"],
+    ["TS1.SPEED_CONTROLLER.thrust_force"],
+    
+    # ["TS1.MISSION_MANAGER.prev_wp_north"],
+    # ["TS1.MISSION_MANAGER.prev_wp_east"],
+    # ["TS1.MISSION_MANAGER.next_wp_north"],
+    # ["TS1.MISSION_MANAGER.next_wp_east"],
+    # ["TS1.AUTOPILOT.yaw_angle_ref_rad"],
+]
 
-# # Plot Time Series
-# # env.instance.JoinPlotTimeSeries(list(reversed(key_group_list)),  create_title= False, legend= True, show_instance_name=False, show=True)
+# Plot Time Series
+env.instance.JoinPlotTimeSeries(list(reversed(key_group_list)),  
+                            create_title= False, 
+                            legend= True, 
+                            show_instance_name=False,
+                            show_separately=False,
+                            show=True,
+                            mode="quick")

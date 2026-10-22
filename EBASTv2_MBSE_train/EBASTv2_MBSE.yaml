@@ -6,6 +6,26 @@ simulation:
 ships:
   - id: OS0
 
+    fault_scheduler:
+      RADAR:
+        type: "StratifiedFaultScheduler"
+        fault:
+          var: "measurement_valid" # "radar_degradation"
+          val: False # True
+        min_episode_time: 3000.0
+        step_size: 5.0
+        fault_duration: 600.0
+        n_strata: 10
+        timing_resolution: 30.0
+        jitter_slots: 1
+        seed: 44
+      # RADAR:
+      #   fault:
+      #     var: "measurement_valid" # "radar_degradation"
+      #     val: False # True
+      #   time_start: 1000.0
+      #   time_end: 1600.0
+
     SHIP_BLOCKS:
       - [MISSION_MANAGER, FMUs/complex_ship/MissionManager.fmu]
 

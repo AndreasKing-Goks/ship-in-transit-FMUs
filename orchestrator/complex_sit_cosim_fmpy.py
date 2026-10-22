@@ -1669,7 +1669,7 @@ class ShipInTransitCoSimulation(CoSimInstance):
         self.Reset()
 
 
-    def step(self):
+    def step(self):        
         # Simulate
         self.CoSimManipulate()
         self.SetInputFromExternal()
