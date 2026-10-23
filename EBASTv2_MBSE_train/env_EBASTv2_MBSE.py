@@ -35,7 +35,8 @@ class EBASTv2EnvMBSE(gym.Env):
                  debug: bool=False,
                  detailed_reward=False,
                  absolute_config_idx=None,
-                 include_fault_scheduler=False):
+                 use_fmpy=True):
+        self.use_fmpy                   = use_fmpy
         self.orchestrator               = ShipInTransitCoSimulation
         
         # Set up placeholder attributes for the simulator instance

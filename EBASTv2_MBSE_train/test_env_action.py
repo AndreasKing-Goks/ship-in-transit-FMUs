@@ -12,7 +12,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from EBASTv2_MBSE_train.env_EBASTv2_MBSE import EBASTv2EnvMBSE
-from EBASTv2_core.episode_logger import log_episode_recap
+from EBASTv2_MBSE_train.MBSE_episode_logger import log_episode_recap
 from orchestrator.scenario_config import generate_spawn_request_bank, load_spawn_requests_bank_path
 
 from itertools import product
@@ -51,7 +51,7 @@ target_routes = [
     ([0, max_dist], [max_dist, 0]),  # Case 0: OS0 Give Way
     ([max_dist, 0], [0, max_dist]),  # Case 1: OS0 Stand On
 ]
-target_start_times  = [0.0] #[0.0, 300.0, 600.0]
+target_start_times  = [0.0, 150,   300.0]
 
 # Generate cases
 cases = [
@@ -80,8 +80,10 @@ rounded_east_bound  = [-margin, max_dist+margin]
 spawn_requests_bank = {
     "path": None,
     "n_cases": len(cases),
-    "start_eval_case_id": 0,
+    "start_eval_case_id": len(cases),
     "cases": cases,
+    "north_bound": rounded_north_bound,
+    "east_bound": rounded_east_bound,
     "rounded_north_bound": rounded_north_bound,
     "rounded_east_bound": rounded_east_bound,
 }
@@ -92,7 +94,6 @@ env = EBASTv2EnvMBSE(
     config_path=config_path,
     spawn_requests_bank=spawn_requests_bank,
     detailed_reward=True,
-    include_fault_scheduler=True
     )
 
 env.set_for_evaluation()
@@ -125,11 +126,11 @@ while not term:
         obs, rew, term, trun, inf = env.step(action)
         i += 1
 
-# # =========================
-# # Log the episode
-# # =========================
-# log_episode_recap(env=env, log_path=log_path)
-# print(f"Episode recap saved to: {log_path}")
+# =========================
+# Log the episode
+# =========================
+log_episode_recap(env=env, log_path=log_path)
+print(f"Episode recap saved to: {log_path}")
 
 # =========================
 # Animation and Plot
