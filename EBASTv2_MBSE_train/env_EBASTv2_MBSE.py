@@ -264,8 +264,8 @@ class EBASTv2EnvMBSE(gym.Env):
     def _init_observation_space(self, custom_pos_bound:dict=None):
         """
             Observation space is defined as collection of exposed states:
-                - COLAV states: list(float)
-                    [new_throttle, new_rudder_angle]
+                - COLAV risk: list(float)
+                    [colav_risk] * n_ts
                 - Own ship states: list(float)
                     [north, east, yaw_angle, cross_track_error, rudder_angle, throttle, forward_speed]
                 - Target ship(s) states: list(float)
@@ -299,8 +299,8 @@ class EBASTv2EnvMBSE(gym.Env):
         # Collision avoidance states bounds
         max_rudder_angle_deg    = self.ship_configs[0]["fmu_params"]["AUTOPILOT"]["max_rudder_angle_deg"]
         self.own_colav_risk_bound = {
-            "min": np.array([0.0], dtype=np.float32),
-            "max": np.array([1.0], dtype=np.float32),
+            "min": np.array([0.0]*self.n_ts, dtype=np.float32),
+            "max": np.array([1.0]*self.n_ts, dtype=np.float32),
         }
         
         ## Own ship bounds
@@ -365,7 +365,7 @@ class EBASTv2EnvMBSE(gym.Env):
         # Define the observation space (normalized)
         self.observation_space = gym.spaces.Dict(
             {
-                "own_colav_risk": Box(0.0, 1.0, shape=(self.n_ts,), dtype=np.float32),
+                "own_colav_risk": Box(-1.0, 1.0, shape=(self.n_ts,), dtype=np.float32),
                 "own_ship_pos": Box(-1.0, 1.0, shape=(3,), dtype=np.float32),
                 "own_ship_e_ct": Box(-1.0, 1.0, shape=(1,), dtype=np.float32),
                 "own_ship_rud_ang": Box(-1.0, 1.0, shape=(1,), dtype=np.float32),
@@ -567,7 +567,7 @@ class EBASTv2EnvMBSE(gym.Env):
                 remaining_requests_list.append(remaining_request)
         
         # Convert to numpy array
-        own_colav_risk               = np.array([colav_risk_list], dtype=np.float32)
+        own_colav_risk               = np.array(colav_risk_list, dtype=np.float32)
         own_ship_pos                 = np.array([own_north, own_east, own_heading], dtype=np.float32)
         own_ship_e_ct                = np.array([own_e_ct], dtype=np.float32)
         own_ship_rud_ang             = np.array([own_rud_ang], dtype=np.float32)

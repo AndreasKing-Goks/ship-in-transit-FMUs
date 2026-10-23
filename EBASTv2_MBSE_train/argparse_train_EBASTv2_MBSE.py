@@ -40,9 +40,8 @@ if sys.platform.startswith("win"):
         print(f"Warning: libcosim DLL directory not found: {dll_dir}")
 
 from EBASTv2_MBSE_train.env_EBASTv2_MBSE import EBASTv2EnvMBSE
-from EBASTv2_core.episode_logger import log_episode_recap, log_training_args
+from EBASTv2_MBSE_train.MBSE_episode_logger import log_episode_recap, log_training_args
 from EBASTv2_core.path_utils import get_RL_model_path
-from orchestrator.scenario_config import load_spawn_requests_bank_path
 
 
 def str2bool(value):
@@ -61,25 +60,13 @@ def print_debug(msg, debug):
         print(msg, flush=True)
 
 def parse_cli_args():
-    parser = argparse.ArgumentParser(description="EB-ASTv2 with RecurrentPPO model")
+    parser = argparse.ArgumentParser(description="EB-ASTv2 MBSE")
 
     # Run setup
-    parser.add_argument("--model_name", type=str, default="EB-ASTv2_train_rppo_multi_configs", metavar="MODEL_NAME",
-                        help="RUN: model/run name used for output folders (default: EB-ASTv2_train_rppo)")
-    parser.add_argument("--save_anim_filename", type=str, default="EBASTv2_train_rppo.gif", metavar="SAVE_ANIM_FILENAME",
-                        help="RUN: animation filename to save (default: EBASTv2_train_rppo.gif)")
+    parser.add_argument("--model_name", type=str, default="EB-ASTv2_MBSE", metavar="MODEL_NAME",
+                        help="RUN: model/run name used for output folders (default: EB-ASTv2_MBSE)")
     parser.add_argument("--save_reward_function", type=str2bool, default=True, metavar="SAVE_REWARD_FUNCTION",
                         help="RUN: save the reward function and automatically store it the log (default: True)")
-
-    # RL Environment and Spawn request generation
-    parser.add_argument("--n_cases", type=int, default=1000, metavar="N_CASES",
-                        help="ENV: number of spawn request cases to generate/collect (default: 1000)")
-    parser.add_argument("--training_case_ratio", type=float, default=0.9, metavar="TRAINING_CASE_RATIO",
-                        help="ENV: ratio of cases used for training in RL env (default: 0.9)")
-    parser.add_argument("--overwrite_spawn_bank", type=str2bool, default=False, metavar="OVERWRITE_SPAWN_BANK",
-                        help="ENV: whether to overwrite existing spawn request bank (default: False)")
-    parser.add_argument("--debug", type=str2bool, default=False, metavar="DEBUG",
-                        help="ENV: toogle on env debug mode (default: False)")
     
     # Environment vectorization
     parser.add_argument("--n_envs", type=int, default=64, metavar="N_ENVS",
@@ -130,18 +117,6 @@ def parse_cli_args():
     parser.add_argument("--device", type=str, default="cuda", metavar="DEVICE",
                         help="AST: device to use, e.g. cpu, cuda, auto (default: cuda)")
 
-    # Post-training run / plotting
-    parser.add_argument("--run_trained_episode", type=str2bool, default=False, metavar="RUN_TRAINED_EPISODE",
-                        help="RESULT: run the trained model once after saving/loading (default: False)")
-    parser.add_argument("--animate", type=str2bool, default=False, metavar="ANIMATE",
-                        help="RESULT: create/show/save trajectory animation (default: False)")
-    parser.add_argument("--plot", type=str2bool, default=False, metavar="PLOT",
-                        help="RESULT: plot fleet trajectory after animation (default: False)")
-    parser.add_argument("--animation_show", type=str2bool, default=False, metavar="ANIMATION_SHOW",
-                        help="RESULT: show animation window (default: False)")
-    parser.add_argument("--animation_block", type=str2bool, default=False, metavar="ANIMATION_BLOCK",
-                        help="RESULT: block execution while showing animation (default: False)")
-
     return parser.parse_args()
 
 
@@ -183,20 +158,23 @@ def main():
     # Instantiate the environment wrapper - parallelized
     # =========================
     ## Define custom spawn requests bank
+    # Maximum distance of the frame
+    max_dist = 10_000
+
     # Common own ship configuration
     own_ship = {
         "start_time": 0.0,
-        "north_route": [0, 10000],
-        "east_route": [0, 10000],
+        "north_route": [0, max_dist],
+        "east_route": [0, max_dist],
         "speed_setpoints": 5.0,
     }
 
     # Target ship routes for each case [(north_routes, east_routes)]
     target_routes = [
-        ([0, 10000], [10000, 0]),  # Case 0: OS0 Give Way
-        ([10000, 0], [0, 10000]),  # Case 1: OS0 Stand On
+        ([0, max_dist], [max_dist, 0]),  # Case 0: OS0 Give Way
+        ([max_dist, 0], [0, max_dist]),  # Case 1: OS0 Stand On
     ]
-    target_start_times  = [0.0, 300.0, 600.0]
+    target_start_times  = [0.0, 150, 300.0]
 
     # Generate cases
     cases = [
@@ -219,18 +197,20 @@ def main():
 
     # Spawn request bank
     margin  = 1000
-    rounded_north_bound = [-margin, 10000+margin]
-    rounded_east_bound  = [-margin, 10000+margin]
-    
+    rounded_north_bound = [-margin, max_dist+margin]
+    rounded_east_bound  = [-margin, max_dist+margin]
+
     spawn_requests_bank = {
         "path": None,
         "n_cases": len(cases),
-        "start_eval_case_id": 0,
+        "start_eval_case_id": len(cases),
         "cases": cases,
+        "north_bound": rounded_north_bound,
+        "east_bound": rounded_east_bound,
         "rounded_north_bound": rounded_north_bound,
         "rounded_east_bound": rounded_east_bound,
     }
-    
+
     # DummyVecEnv and SubprocVecEnv except function, not instance, hence:
     def make_env(rank):
         def _init():
@@ -413,75 +393,6 @@ def main():
         f"{recurrent_ppo_model.num_timesteps:,} timesteps",
         flush=True,
     )
-
-    # =========================
-    # Run the trained model and log the episode
-    # =========================
-    if args.run_trained_episode:
-        del recurrent_ppo_model
-        recurrent_ppo_model = RecurrentPPO.load(model_path)
-        
-        eval_env = EBASTv2EnvMBSE(
-            ROOT=ROOT,
-            config_path=args.config_path,
-            spawn_requests_bank=spawn_requests_bank,
-            debug=args.debug
-        )
-
-        obs, _ = eval_env.reset()
-        lstm_states = None
-        num_envs = 1
-        episode_starts = np.ones((num_envs,), dtype=bool)
-
-        while True:
-            action, lstm_states = recurrent_ppo_model.predict(
-                obs,
-                state=lstm_states,
-                episode_start=episode_starts,
-                deterministic=True,
-            )
-            obs, _, terminated, truncated, _ = eval_env.step(action)
-            episode_starts = terminated or truncated
-
-            if episode_starts:
-                break
-        
-        # Log the simulation episode using the trained policy
-        log_episode_recap(env=eval_env, log_path=episode_log_path)
-
-    # =========================
-    # Animation and Plot
-    # =========================
-    if args.animate and args.run_trained_episode:
-        eval_env.instance.AnimateFleetTrajectory(
-            ship_ids=None,
-            show=args.animation_show,
-            block=args.animation_block,
-            mode="quick",
-            fig_width=10.0,
-            margin_frac=0.08,
-            equal_aspect=True,
-            interval_ms=20,
-            frame_step=10,
-            trail_len=50,
-            plot_routes=True,
-            plot_waypoints=True,
-            plot_roa=True,
-            plot_start_end=True,
-            plot_inter_wp_roa=True,
-            plot_inter_wp_proj=False,
-            with_labels=True,
-            precompute_ship_outlines=True,
-            save_path=saved_animation_path,
-            writer_fps=20,
-            palette=None,
-            blit=True,
-            ship_scale=1.0,
-        )
-
-    if args.plot and args.run_trained_episode:
-        eval_env.instance.PlotFleetTrajectory(mode="quick", ship_scale=1.0)
-
 
 if __name__ == "__main__":
     freeze_support()

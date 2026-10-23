@@ -37,7 +37,6 @@ log_path = ROOT / "EBASTv2_MBSE_train" / "logs" / "EBASTv2MBSE_episode_recap.txt
 # Maximum distance of the frame
 max_dist = 10_000
 
-
 # Common own ship configuration
 own_ship = {
     "start_time": 0.0,
