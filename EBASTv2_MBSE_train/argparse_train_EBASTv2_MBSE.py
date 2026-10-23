@@ -147,7 +147,7 @@ def main():
     # =========================
     # Paths
     config_path = [
-        ROOT / "EBASTv2_train" / "EBASTv2MBSE.yaml",
+        ROOT / "EBASTv2_MBSE_train" / "EBASTv2_MBSE.yaml",
     ]
     
     (model_path, train_args_log_path, 
