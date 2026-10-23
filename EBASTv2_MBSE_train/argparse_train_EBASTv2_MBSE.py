@@ -68,6 +68,10 @@ def parse_cli_args():
     parser.add_argument("--save_reward_function", type=str2bool, default=True, metavar="SAVE_REWARD_FUNCTION",
                         help="RUN: save the reward function and automatically store it the log (default: True)")
     
+    # Debug
+    parser.add_argument("--debug", type=str2bool, default=False, metavar="DEBUG",
+                        help="ENV: toogle on env debug mode (default: False)")
+    
     # Environment vectorization
     parser.add_argument("--n_envs", type=int, default=64, metavar="N_ENVS",
                         help="VEC_ENV: The number of environment instances for computating parallelization (default: 64)")
@@ -151,7 +155,6 @@ def main():
      saved_animation_path, checkpoint_dir) = get_RL_model_path(
         root=ROOT,
         model_name=args.model_name,
-        save_anim_filename=args.save_anim_filename,
     )
 
     # =========================
