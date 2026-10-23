@@ -41,7 +41,7 @@ ships:
       - [GPS, FMUs/complex_ship/GPSSensor.fmu]
       - [GYROCOMPASS, FMUs/complex_ship/GyrocompassSensor.fmu]
       - [SPEED_LOG, FMUs/complex_ship/ShipSpeedLogSensor.fmu]
-      - [RADAR, FMUs/complex_ship/DopplerRadar.fmu]
+      - [RADAR, FMUs/complex_ship/DopplerRADAR.fmu]
       - [CAMERA_FORE, FMUs/complex_ship/StereoCameraSensor.fmu]
       - [CAMERA_AFT, FMUs/complex_ship/StereoCameraSensor.fmu]
       - [CAMERA_PORT, FMUs/complex_ship/StereoCameraSensor.fmu]
