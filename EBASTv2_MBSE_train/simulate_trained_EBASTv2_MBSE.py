@@ -127,7 +127,7 @@ if simulate:
     # env.set_for_evaluation()
     
     # Reset the trained model
-    case_idx    = 5
+    case_idx    = 0
     config_idx  = 0
     seed        = None
     obs, _      = env.reset(seed=seed, specific_case_idx=case_idx, specific_config_idx=config_idx)
@@ -153,80 +153,164 @@ if simulate:
         if done:
             break
     
-    # Log path
-    log_path                        = ROOT / "EBASTv2_MBSE_train" / "simulated_trained_model" / f"{case_idx}_episode_recap_EBASTv2_MBSE.txt"
+    # # Log path
+    # log_path                        = ROOT / "EBASTv2_MBSE_train" / "simulated_trained_model" / f"{case_idx}_episode_recap_EBASTv2_MBSE.txt"
     
-    # Log the episodes
-    log_episode_recap(env=env, log_path=log_path)
-    print(f"Episode recap saved to: {log_path}")
+    # # Log the episodes
+    # log_episode_recap(env=env, log_path=log_path)
+    # print(f"Episode recap saved to: {log_path}")
 
-    # =========================
-    # Animation and Plot
-    # =========================
-    # Available formats:
-    # - .mp4
-    # - .gif
-    # - .avi
-    # - .mov
+    # # =========================
+    # # Animation and Plot
+    # # =========================
+    # # Available formats:
+    # # - .mp4
+    # # - .gif
+    # # - .avi
+    # # - .mov
     
-    # Get the save path for animation
-    saved_animation_path            = ROOT / "EBASTv2_MBSE_train" / "simulated_trained_model" / "paper_results" / f"{case_idx}_EBASTv2_MBSE.gif"
+    # # Get the save path for animation
+    # saved_animation_path            = ROOT / "EBASTv2_MBSE_train" / "simulated_trained_model" / "paper_results" / f"{case_idx}_EBASTv2_MBSE.gif"
 
-    # Animate Simulation
-    env.instance.AnimateFleetTrajectory(
-            ship_ids=None,  
-            show=True,
-            block=True,
-            mode="quick",
-            fig_width=7.0,
-            margin_frac=0.08,
-            equal_aspect=True,
-            interval_ms=20,
-            frame_step=10,
-            trail_len=50,
-            plot_routes=True,
-            exclude_target_ships_route=True, 
-            plot_waypoints=True,
-            plot_roa=True,
-            plot_start_end=True,
-            plot_inter_wp_roa=False,
-            plot_inter_wp_proj=False,
-            with_labels=True,
-            precompute_ship_outlines=True,
-            save_path=saved_animation_path,
-            writer_fps=20,
-            palette=None,
-            blit=True,
-            ship_scale=1.0
-        )
+    # # Animate Simulation
+    # env.instance.AnimateFleetTrajectory(
+    #         ship_ids=None,  
+    #         show=True,
+    #         block=True,
+    #         mode="quick",
+    #         fig_width=7.0,
+    #         margin_frac=0.08,
+    #         equal_aspect=True,
+    #         interval_ms=20,
+    #         frame_step=10,
+    #         trail_len=50,
+    #         plot_routes=True,
+    #         exclude_target_ships_route=True, 
+    #         plot_waypoints=True,
+    #         plot_roa=True,
+    #         plot_start_end=True,
+    #         plot_inter_wp_roa=False,
+    #         plot_inter_wp_proj=False,
+    #         with_labels=True,
+    #         precompute_ship_outlines=True,
+    #         save_path=saved_animation_path,
+    #         writer_fps=20,
+    #         palette=None,
+    #         blit=True,
+    #         ship_scale=1.0
+    #     )
 
-    # Legend Location
-    # +--------------+--------------+---------------+
-    # | 'upper left' |'upper center'| 'upper right' |
-    # +--------------+--------------+---------------+
-    # |'center left' |   'center'   |'center right' |
-    # +--------------+--------------+---------------+
-    # | 'lower left' |'lower center'| 'lower right' |
-    # +--------------+--------------+---------------+
+    # # Legend Location
+    # # +--------------+--------------+---------------+
+    # # | 'upper left' |'upper center'| 'upper right' |
+    # # +--------------+--------------+---------------+
+    # # |'center left' |   'center'   |'center right' |
+    # # +--------------+--------------+---------------+
+    # # | 'lower left' |'lower center'| 'lower right' |
+    # # +--------------+--------------+---------------+
     
-    # Plot Trajectory
-    saved_figure_path = ROOT / "EBASTv2_MBSE_train" / "simulated_trained_model" / "paper_results" / f"{case_idx}_EBASTv2_MBSE.pdf"
-    # saved_figure_path = None
-    # fig_widt = 5.0 for 'quick', 2.3 for 'paper'
-    env.instance.PlotFleetTrajectory(
-        mode="paper",
-        every_n=100, 
-        fig_width=3.4,
-        exclude_target_ships_route=True,
-        disable_title=True,
-        plot_IWs=True,
-        plot_IW_names=False,
-        plot_time_line_connection=True,
-        ship_scale=10.0,
-        legend_loc='center right',
-        save_path=saved_figure_path,
-        show=False,
-    )
+    # # Plot Trajectory
+    # saved_figure_path = ROOT / "EBASTv2_MBSE_train" / "simulated_trained_model" / "paper_results" / f"{case_idx}_EBASTv2_MBSE.pdf"
+    # # saved_figure_path = None
+    # # fig_widt = 5.0 for 'quick', 2.3 for 'paper'
+    # env.instance.PlotFleetTrajectory(
+    #     mode="paper",
+    #     every_n=100, 
+    #     fig_width=3.4,
+    #     exclude_target_ships_route=True,
+    #     disable_title=True,
+    #     plot_IWs=True,
+    #     plot_IW_names=False,
+    #     plot_time_line_connection=True,
+    #     ship_scale=10.0,
+    #     legend_loc='center right',
+    #     save_path=saved_figure_path,
+    #     show=False,
+    # )
+
+
+    plot_simulation_results = False
+    plot_simulation_results = True
+
+    if plot_simulation_results:
+        save_dir_path   = ROOT / "EBASTv2_MBSE_train" / "simulated_trained_model" / "simulation_results_plot"
+        
+        key_group_list  = [
+            ## Own Ship
+            # Base results
+            (["OS0.SHIP_MODEL.north", "OS0.SHIP_EKF.estimated_n"], f"{case_idx}_OS0_north.pdf"),
+            (["OS0.SHIP_MODEL.east", "OS0.SHIP_EKF.estimated_e"], f"{case_idx}_OS0_east.pdf"),
+            (["OS0.SHIP_MODEL.forward_speed", "OS0.MISSION_MANAGER.next_wp_speed", "OS0.SHIP_MODEL.total_ship_speed"], f"{case_idx}_OS0_speed.pdf"),
+            (["OS0.SHIP_MODEL.yaw_angle_rad", "OS0.AUTOPILOT.yaw_angle_ref_rad", "OS0.SHIP_EKF.estimated_psi"], f"{case_idx}_OS0_heading.pdf"),
+            (["OS0.AUTOPILOT.rudder_angle_deg"], f"{case_idx}_OS0_rud_angle.pdf"),
+            (["OS0.AUTOPILOT.e_ct"], f"{case_idx}_OS0_ect.pdf"),
+            (["OS0.MACHINERY_SYSTEM.shaft_speed_rpm", "OS0.SHAFT_SPEED_CONTROLLER.shaft_speed_cmd_rpm"], f"{case_idx}_OS0_shaft_speed.pdf"),
+            (["OS0.THROTTLE_CONTROLLER.throttle_cmd"], f"{case_idx}_OS0_throttle.pdf"),
+            
+            # # For environment load-enabled simulation only
+            # (["OS0.SURFACE_CURRENT.current_speed"], f"{case_idx}_OS0_current_speed.pdf"),
+            # (["OS0.SURFACE_CURRENT.current_direction_deg"], f"{case_idx}_OS0_current_dir.pdf"),
+            # (["OS0.WIND.wind_speed"], f"{case_idx}_OS0_wind_speed.pdf"),
+            # (["OS0.WIND.wind_direction_deg"], f"{case_idx}_OS0_wind_dir.pdf"),
+            
+            # OS COLAV
+            (["OS0.COLAV.colav_speed_reduction_factor"], f"{case_idx}_OS0_csrf.pdf"),
+            (["OS0.COLAV.colav_heading_offset_deg"], f"{case_idx}_OS0_chod.pdf"),
+            (["OS0.COLAV.risk_score_tar_1"], f"{case_idx}_OS0_rst_1.pdf"),
+            # (["OS0.COLAV.encounter_wrt_tar_1"], f"{case_idx}_OS0_enc_t1.pdf"),
+            # (["OS0.COLAV.role_wrt_tar_1"], f"{case_idx}_OS0_rol_t1.pdf"),
+            # (["OS0.COLAV.beta_own_to_tar_1"], f"{case_idx}_OS0_beta_t1.pdf"),
+            # (["OS0.COLAV.beta_tar_to_own_1"], f"{case_idx}_OS0_beta_o1.pdf"),
+            # (["OS0.COLAV.rr_own_to_tar_1"], f"{case_idx}_OS0_rr_t1.pdf"),
+            
+            # # TS COLAV
+            # (["TS1.COLAV.colav_speed_reduction_factor"], f"{case_idx}_TS1_csrf.pdf"),
+            # (["TS1.COLAV.colav_heading_offset_deg"], f"{case_idx}_TS1_chod.pdf"),
+            # (["TS1.COLAV.risk_score_tar_1"], f"{case_idx}_TS1_rst_t1.pdf"),
+            # (["TS1.COLAV.encounter_wrt_tar_1"], f"{case_idx}_TS1_enc_t1.pdf"),
+            # (["TS1.COLAV.role_wrt_tar_1"], f"{case_idx}_TS1_rol_t1.pdf"),
+            # (["TS1.COLAV.beta_own_to_tar_1"], f"{case_idx}_TS1_beta_t1.pdf"),
+            # (["TS1.COLAV.beta_tar_to_own_1"], f"{case_idx}_TS1_beta_o1.pdf"),
+            # (["TS1.COLAV.rr_own_to_tar_1"], f"{case_idx}_TS1_rr_t1.pdf"),
+            
+            # # Sensors
+            # (["OS0.GPS.measured_north"], f"{case_idx}_OS0_gps_north.pdf"),
+            # (["OS0.GPS.measured_east"], f"{case_idx}_OS0_gps_east.pdf"),
+            # (["OS0.GYROCOMPASS.measured_ship_heading_rad"], f"{case_idx}_OS0_gyro_heading.pdf"),
+            # (["OS0.SPEED_LOG.measured_ship_speed"], f"{case_idx}_OS0_speed_log_speed.pdf"),
+            # (["OS0.RADAR.tar_1_range"], f"{case_idx}_OS0_radar_t1_range.pdf"),
+            # (["OS0.RADAR.tar_1_range_rate"], f"{case_idx}_OS0_radar_t1_range_rate.pdf"),
+            # (["OS0.RADAR.tar_1_bearing"], f"{case_idx}_OS0_radar_t1_beta.pdf"),
+            # (["OS0.CAMERA_FORE.tar_1_range"], f"{case_idx}_OS0_camf_range_t1.pdf"),
+            # (["OS0.CAMERA_FORE.tar_1_bearing"], f"{case_idx}_OS0_camf_beta_t1.pdf"),
+            # (["OS0.CAMERA_AFT.tar_1_range"], f"{case_idx}_OS0_cama_range_t1.pdf"),
+            # (["OS0.CAMERA_AFT.tar_1_bearing"], f"{case_idx}_.OS0_cama_beta_t1.pdf"),
+            # (["OS0.CAMERA_PORT.tar_1_range"], f"{case_idx}_OS0_camp_range_t1.pdf"),
+            # (["OS0.CAMERA_PORT.tar_1_bearing"], f"{case_idx}_OS0_camp_beta_t1.pdf"),
+            # (["OS0.CAMERA_STARBOARD.tar_1_range"], f"{case_idx}_OS0_cams_range_t1.pdf"),
+            # (["OS0.CAMERA_STARBOARD.tar_1_bearing"], f"{case_idx}_OS0_cams_beta_t1.pdf"),
+            
+            ## Target Ship(s)
+            # Base results
+            (["TS1.SHIP_MODEL.north", "OS0.TS_TRACKING_EKF_TS1.estimated_n"], f"{case_idx}_TS1_north.pdf"),
+            (["TS1.SHIP_MODEL.east", "OS0.TS_TRACKING_EKF_TS1.estimated_e"], f"{case_idx}_TS1_east.pdf"),
+            (["TS1.SHIP_MODEL.forward_speed", "TS1.MISSION_MANAGER.next_wp_speed", "TS1.SHIP_MODEL.total_ship_speed"], f"{case_idx}_TS1_speed.pdf"),
+            (["TS1.SHIP_MODEL.yaw_angle_rad", "TS1.AUTOPILOT.yaw_angle_ref_rad"], f"{case_idx}_TS1_heading.pdf"),
+            (["TS1.AUTOPILOT.rudder_angle_deg"], f"{case_idx}_TS1_rud_ang.pdf"),
+            (["TS1.AUTOPILOT.e_ct"], f"{case_idx}_TS1_ect.pdf"),
+            (["TS1.SPEED_CONTROLLER.thrust_force"], f"{case_idx}_TS1_throttle.pdf"),
+        ]
+        
+        # Plot Time Series
+        env.instance.SaveJoinPlotTimeSeries(list(reversed(key_group_list)), 
+                                    save_dir_path=save_dir_path,
+                                    case_idx=case_idx,
+                                    create_title= False, 
+                                    legend= True, 
+                                    show_instance_name=False,
+                                    show_separately=False,
+                                    show=False,
+                                    mode="paper")
 
 evaluate_failure    = False    
 # evaluate_failure    = True

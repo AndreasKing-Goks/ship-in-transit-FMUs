@@ -1330,7 +1330,6 @@ class ShipInTransitCoSimulation(CoSimInstance):
 
             # Gather data
             for key in key_group:
-
                 time_points, step_number, samples = self.GetObserverTimeSeries(key)
 
                 struct_time_points.append(time_points)
@@ -1375,6 +1374,125 @@ class ShipInTransitCoSimulation(CoSimInstance):
                 )
 
             plt.tight_layout()
+
+            # Show control
+            if show_separately and show:
+                plt.show()
+
+        if not show_separately and show:
+            plt.show()
+            
+    
+    def SaveJoinPlotTimeSeries(
+            self,
+            key_group_list,
+            save_dir_path,
+            case_idx=None,
+            create_title: bool = False,
+            legend: bool = True,
+            show_instance_name: bool = False,
+            show_separately: bool = False,
+            show: bool = True,
+            mode: str = "quick"
+        ):
+        """
+        Plot multiple observer time series. Also allows joint plot for multiple
+        timeseries. Ideally, the joined timeseries variables required to have the 
+        same unit.
+
+        Parameters
+        ----------
+        key_group_list : list[tuple(list[str], str)]
+            List of key groups. Each group is a tuple that contains
+            list of keys and the plot title. Each list of keys is
+            plotted in one figure.
+        create_title : bool
+            If True, include the instance name in the figure title.
+        legend : bool
+            Show legend for each plotted signal.
+        show_instance_name : bool
+            Prefix labels with simulation instance name.
+        show_separately : bool
+            If True, each group is shown immediately.
+        show : bool
+            If False, plots are created but not displayed.
+        mode : {"quick", "paper"}
+            Plot styling mode.
+            - quick: lightweight plotting for debugging
+            - paper: high-quality publication style
+        """
+
+        # Plot style
+        style = self.get_plot_style(mode)
+
+        fig_w = 9
+        fig_h = 7
+
+        for key_group_tuple in key_group_list:
+            
+            key_group, filename = key_group_tuple
+            
+            base_dir            = Path(save_dir_path)
+            
+            if case_idx is not None:
+                base_dir        = Path(save_dir_path) / f"Case_{case_idx}"
+                base_dir.mkdir(parents=True, exist_ok=True)
+                            
+            save_path           = base_dir / filename
+
+            struct_time_points  = []
+            struct_step_number  = []
+            struct_samples      = []
+            struct_labels       = []
+
+            # Gather data
+            for key in key_group:
+                time_points, step_number, samples = self.GetObserverTimeSeries(key)
+
+                struct_time_points.append(time_points)
+                struct_step_number.append(step_number)
+                struct_samples.append(samples)
+
+                label = str(key)
+                if show_instance_name:
+                    label = f"{self.instanceName}: {key}"
+
+                struct_labels.append(label)
+
+            # Create figure
+            plt.figure(figsize=(fig_w, fig_h), dpi=style["dpi"])
+
+            for i in range(len(key_group)):
+                plt.plot(
+                    struct_time_points[i],
+                    struct_samples[i],
+                    linewidth=style["own_lw"],
+                    label=struct_labels[i]
+                )
+
+            # Axes formatting
+            plt.grid(alpha=style["grid_alpha"])
+
+            plt.xticks(fontsize=style["tick_fs"])
+            plt.yticks(fontsize=style["tick_fs"])
+
+            plt.xlabel("Time [s]", fontsize=style["label_fs"])
+            plt.ylabel(self.observer_time_series_label[key_group[0]], fontsize=style["label_fs"])
+
+            # Legend
+            if legend:
+                plt.legend(fontsize=style["legend_fs"])
+
+            # Title
+            if create_title:
+                plt.title(
+                    f"Time series from co-simulation instance \"{self.instanceName}\"",
+                    fontsize=style["title_fs"]
+                )
+
+            plt.tight_layout()
+            
+            plt.savefig(save_path, dpi=style["dpi"], bbox_inches="tight", pad_inches=0.02)
 
             # Show control
             if show_separately and show:
