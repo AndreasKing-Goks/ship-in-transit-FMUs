@@ -1,0 +1,363 @@
+====================================================================================================
+Episode Recap
+====================================================================================================
+Own ship ID                              : OS0
+Target ship IDs                          : ['TS1']
+IW-enabled target ship IDs               : ['TS1']
+Number of recorded observations          : 6
+Number of recorded transitions           : 5
+
+SENSOR FAULT SCHEDULER
+  ¤ OS0
+    - Sensor      : RADAR
+      > fault type  : measurement_valid
+      > fault value : False
+      > time start  : 900.0
+      > time end    : 1500.0
+
+SPAWN REQUEST BANK
+Split 6 cases into 6 training cases and 0 evaluation cases
+Use case 4:
+
+  ¤ OS0 Initials:
+     - Start
+       > north                           : 0.0 [m]
+       > east                            : 0.0 [m]
+     - East
+       > north                           : 10000.0 [m]
+       > east                            : 10000.0 [m]
+
+Positional observation space bound [min, max]:
+ - NORTH BOUND: ['-1000.00', '11000.00'] --rounded to-> ['-1000.00', '11000.00']
+ - EAST  BOUND: ['-1000.00', '11000.00'] --rounded to-> ['-1000.00', '11000.00']
+
+----------------------------------------------------------------------------------------------------
+TRANSITION 1
+----------------------------------------------------------------------------------------------------
+Simulation time before action            : 255.0 s
+Simulation time after action             : 890.0 s
+Terminated                               : False
+Truncated                                : False
+Total Reward                             : -0.053730856917924674
+  > Termination Rewards                  : None
+  > Non-termination Rewards              : -0.053730856917924674
+
+[OBSERVATION BEFORE ACTION - DENORMALIZED]
+
+Own COLAV risk                           : [0.0] [%]
+Action masks                             : [1]
+
+Own ship [OS0]
+  Position/state vector                  : [441.6, 432.3, 0.8] [m, m, deg]
+  Cross-track error                      : -6.7 [m]
+  Rudder angle                           : 0.9 [deg]
+  Throttle                               : 0.378535 [%]
+  Forward speed                          : 5.161799 [m/s]
+
+Target ships
+  Target ship [TS1]
+    Position/state vector                : [9991.7, 14.3, 2.4] [m, m, deg]
+    Forward speed                        : 0.526330 [m/s]
+    IW-enabled                           : True
+    Action mask                          : 1
+    Remaining requests                   : 5
+
+[ACTION]
+A single action consists of [scope angle, scope length] * number of target ships with IW sampler enabled.
+
+Raw normalized action vector             : [-1.0, 1.0]
+Denormalized action vector               : [-30.0, 2500.0]
+
+IW action for target ship [TS1]
+  Normalized scope angle                 : -1.0
+  Normalized scope length                : 1.0
+  Scope angle deg                        : -30.0
+  Scope length m                         : 2500.0
+  Scope angle bounds deg                 : [-30, 30]
+  Scope length bounds m                  : [500, 2500]
+
+[OBSERVATION AFTER ACTION - DENORMALIZED]
+
+Own COLAV risk                           : [0.0] [%]
+Action masks                             : [1]
+
+Own ship [OS0]
+  Position/state vector                  : [2773.6, 2779.2, 0.8] [m, m, deg]
+  Cross-track error                      : 5.3 [m]
+  Rudder angle                           : 0.0 [deg]
+  Throttle                               : 0.243771 [%]
+  Forward speed                          : 4.985497 [m/s]
+
+Target ships
+  Target ship [TS1]
+    Position/state vector                : [9393.3, 2179.2, 1.8] [m, m, deg]
+    Forward speed                        : 5.108915 [m/s]
+    IW-enabled                           : True
+    Action mask                          : 1
+    Remaining requests                   : 4
+
+----------------------------------------------------------------------------------------------------
+TRANSITION 2
+----------------------------------------------------------------------------------------------------
+Simulation time before action            : 890.0 s
+Simulation time after action             : 985.0 s
+Terminated                               : False
+Truncated                                : False
+Total Reward                             : -0.01029099628764324
+  > Termination Rewards                  : None
+  > Non-termination Rewards              : -0.01029099628764324
+
+[OBSERVATION BEFORE ACTION - DENORMALIZED]
+
+Own COLAV risk                           : [0.0] [%]
+Action masks                             : [1]
+
+Own ship [OS0]
+  Position/state vector                  : [2773.6, 2779.2, 0.8] [m, m, deg]
+  Cross-track error                      : 5.3 [m]
+  Rudder angle                           : 0.0 [deg]
+  Throttle                               : 0.243771 [%]
+  Forward speed                          : 4.985497 [m/s]
+
+Target ships
+  Target ship [TS1]
+    Position/state vector                : [9393.3, 2179.2, 1.8] [m, m, deg]
+    Forward speed                        : 5.108915 [m/s]
+    IW-enabled                           : True
+    Action mask                          : 1
+    Remaining requests                   : 4
+
+[ACTION]
+A single action consists of [scope angle, scope length] * number of target ships with IW sampler enabled.
+
+Raw normalized action vector             : [-1.0, -1.0]
+Denormalized action vector               : [-30.0, 500.0]
+
+IW action for target ship [TS1]
+  Normalized scope angle                 : -1.0
+  Normalized scope length                : -1.0
+  Scope angle deg                        : -30.0
+  Scope length m                         : 500.0
+  Scope angle bounds deg                 : [-30, 30]
+  Scope length bounds m                  : [500, 2500]
+
+[OBSERVATION AFTER ACTION - DENORMALIZED]
+
+Own COLAV risk                           : [0.0] [%]
+Action masks                             : [1]
+
+Own ship [OS0]
+  Position/state vector                  : [3109.0, 3115.8, 0.8] [m, m, deg]
+  Cross-track error                      : 2.5 [m]
+  Rudder angle                           : -2.2 [deg]
+  Throttle                               : 0.240789 [%]
+  Forward speed                          : 5.002968 [m/s]
+
+Target ships
+  Target ship [TS1]
+    Position/state vector                : [9293.0, 2655.8, 1.8] [m, m, deg]
+    Forward speed                        : 5.136732 [m/s]
+    IW-enabled                           : True
+    Action mask                          : 1
+    Remaining requests                   : 3
+
+----------------------------------------------------------------------------------------------------
+TRANSITION 3
+----------------------------------------------------------------------------------------------------
+Simulation time before action            : 985.0 s
+Simulation time after action             : 1205.0 s
+Terminated                               : False
+Truncated                                : False
+Total Reward                             : -0.004167356859688793
+  > Termination Rewards                  : None
+  > Non-termination Rewards              : -0.004167356859688793
+
+[OBSERVATION BEFORE ACTION - DENORMALIZED]
+
+Own COLAV risk                           : [0.0] [%]
+Action masks                             : [1]
+
+Own ship [OS0]
+  Position/state vector                  : [3109.0, 3115.8, 0.8] [m, m, deg]
+  Cross-track error                      : 2.5 [m]
+  Rudder angle                           : -2.2 [deg]
+  Throttle                               : 0.240789 [%]
+  Forward speed                          : 5.002968 [m/s]
+
+Target ships
+  Target ship [TS1]
+    Position/state vector                : [9293.0, 2655.8, 1.8] [m, m, deg]
+    Forward speed                        : 5.136732 [m/s]
+    IW-enabled                           : True
+    Action mask                          : 1
+    Remaining requests                   : 3
+
+[ACTION]
+A single action consists of [scope angle, scope length] * number of target ships with IW sampler enabled.
+
+Raw normalized action vector             : [-1.0, -0.3691067695617676]
+Denormalized action vector               : [-30.0, 1130.893310546875]
+
+IW action for target ship [TS1]
+  Normalized scope angle                 : -1.0
+  Normalized scope length                : -0.3691067695617676
+  Scope angle deg                        : -30.0
+  Scope length m                         : 1130.893310546875
+  Scope angle bounds deg                 : [-30, 30]
+  Scope length bounds m                  : [500, 2500]
+
+[OBSERVATION AFTER ACTION - DENORMALIZED]
+
+Own COLAV risk                           : [0.0] [%]
+Action masks                             : [1]
+
+Own ship [OS0]
+  Position/state vector                  : [3889.0, 3894.8, 0.8] [m, m, deg]
+  Cross-track error                      : 0.8 [m]
+  Rudder angle                           : -0.9 [deg]
+  Throttle                               : 0.240881 [%]
+  Forward speed                          : 4.996357 [m/s]
+
+Target ships
+  Target ship [TS1]
+    Position/state vector                : [9032.7, 3751.3, 1.8] [m, m, deg]
+    Forward speed                        : 5.092445 [m/s]
+    IW-enabled                           : True
+    Action mask                          : 1
+    Remaining requests                   : 2
+
+----------------------------------------------------------------------------------------------------
+TRANSITION 4
+----------------------------------------------------------------------------------------------------
+Simulation time before action            : 1205.0 s
+Simulation time after action             : 1685.0 s
+Terminated                               : False
+Truncated                                : False
+Total Reward                             : -0.0004867875800246394
+  > Termination Rewards                  : None
+  > Non-termination Rewards              : -0.0004867875800246394
+
+[OBSERVATION BEFORE ACTION - DENORMALIZED]
+
+Own COLAV risk                           : [0.0] [%]
+Action masks                             : [1]
+
+Own ship [OS0]
+  Position/state vector                  : [3889.0, 3894.8, 0.8] [m, m, deg]
+  Cross-track error                      : 0.8 [m]
+  Rudder angle                           : -0.9 [deg]
+  Throttle                               : 0.240881 [%]
+  Forward speed                          : 4.996357 [m/s]
+
+Target ships
+  Target ship [TS1]
+    Position/state vector                : [9032.7, 3751.3, 1.8] [m, m, deg]
+    Forward speed                        : 5.092445 [m/s]
+    IW-enabled                           : True
+    Action mask                          : 1
+    Remaining requests                   : 2
+
+[ACTION]
+A single action consists of [scope angle, scope length] * number of target ships with IW sampler enabled.
+
+Raw normalized action vector             : [-1.0, 0.9071328043937683]
+Denormalized action vector               : [-30.0, 2407.1328125]
+
+IW action for target ship [TS1]
+  Normalized scope angle                 : -1.0
+  Normalized scope length                : 0.9071328043937683
+  Scope angle deg                        : -30.0
+  Scope length m                         : 2407.1328125
+  Scope angle bounds deg                 : [-30, 30]
+  Scope length bounds m                  : [500, 2500]
+
+[OBSERVATION AFTER ACTION - DENORMALIZED]
+
+Own COLAV risk                           : [0.33746356] [%]
+Action masks                             : [1]
+
+Own ship [OS0]
+  Position/state vector                  : [5590.9, 5586.5, 0.8] [m, m, deg]
+  Cross-track error                      : -4.6 [m]
+  Rudder angle                           : -1.7 [deg]
+  Throttle                               : 0.239591 [%]
+  Forward speed                          : 4.989523 [m/s]
+
+Target ships
+  Target ship [TS1]
+    Position/state vector                : [8417.6, 6090.5, 1.9] [m, m, deg]
+    Forward speed                        : 5.005004 [m/s]
+    IW-enabled                           : True
+    Action mask                          : 1
+    Remaining requests                   : 1
+
+----------------------------------------------------------------------------------------------------
+TRANSITION 5
+----------------------------------------------------------------------------------------------------
+Simulation time before action            : 1685.0 s
+Simulation time after action             : 2900.0 s
+Terminated                               : True
+Truncated                                : False
+Total Reward                             : -10.702747023937677
+  > Termination Rewards                  : -8.73993968963623
+  > Non-termination Rewards              : -1.9628073343014465
+
+[OBSERVATION BEFORE ACTION - DENORMALIZED]
+
+Own COLAV risk                           : [0.33746356] [%]
+Action masks                             : [1]
+
+Own ship [OS0]
+  Position/state vector                  : [5590.9, 5586.5, 0.8] [m, m, deg]
+  Cross-track error                      : -4.6 [m]
+  Rudder angle                           : -1.7 [deg]
+  Throttle                               : 0.239591 [%]
+  Forward speed                          : 4.989523 [m/s]
+
+Target ships
+  Target ship [TS1]
+    Position/state vector                : [8417.6, 6090.5, 1.9] [m, m, deg]
+    Forward speed                        : 5.005004 [m/s]
+    IW-enabled                           : True
+    Action mask                          : 1
+    Remaining requests                   : 1
+
+[ACTION]
+A single action consists of [scope angle, scope length] * number of target ships with IW sampler enabled.
+
+Raw normalized action vector             : [-1.0, -1.0]
+Denormalized action vector               : [-30.0, 500.0]
+
+IW action for target ship [TS1]
+  Normalized scope angle                 : -1.0
+  Normalized scope length                : -1.0
+  Scope angle deg                        : -30.0
+  Scope length m                         : 500.0
+  Scope angle bounds deg                 : [-30, 30]
+  Scope length bounds m                  : [500, 2500]
+
+[OBSERVATION AFTER ACTION - DENORMALIZED]
+
+Own COLAV risk                           : [0.0] [%]
+Action masks                             : [0]
+
+Own ship [OS0]
+  Position/state vector                  : [9844.8, 9847.9, 0.8] [m, m, deg]
+  Cross-track error                      : 4.8 [m]
+  Rudder angle                           : 0.8 [deg]
+  Throttle                               : 0.239893 [%]
+  Forward speed                          : 4.987742 [m/s]
+
+Target ships
+  Target ship [TS1]
+    Position/state vector                : [3630.9, 8557.0, 2.7] [m, m, deg]
+    Forward speed                        : 4.968056 [m/s]
+    IW-enabled                           : True
+    Action mask                          : 0
+    Remaining requests                   : 0
+
+----------------------------------------------------------------------------------------------------
+ACCUMULATED REWARD RECAPITULATION
+----------------------------------------------------------------------------------------------------
+Episodic accumulated total rewards       : -10.771423021582958
+Mean rewards per state-action transition : -2.1542846043165915
