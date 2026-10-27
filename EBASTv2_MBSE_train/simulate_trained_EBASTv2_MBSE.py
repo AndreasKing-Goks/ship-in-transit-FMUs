@@ -127,7 +127,7 @@ if simulate:
     # env.set_for_evaluation()
     
     # Reset the trained model
-    case_idx    = 0
+    case_idx    = 5
     config_idx  = 0
     seed        = None
     obs, _      = env.reset(seed=seed, specific_case_idx=case_idx, specific_config_idx=config_idx)
@@ -289,11 +289,11 @@ if simulate:
             # (["OS0.CAMERA_STARBOARD.tar_1_range"], f"{case_idx}_OS0_cams_range_t1.jpg"),
             # (["OS0.CAMERA_STARBOARD.tar_1_bearing"], f"{case_idx}_OS0_cams_beta_t1.jpg"),
             ([
-                # "OS0.RADAR.detect_tar_1",
-                "OS0.CAMERA_FORE.detect_tar_1", 
-                "OS0.CAMERA_AFT.detect_tar_1",
-                "OS0.CAMERA_PORT.detect_tar_1",
-                "OS0.CAMERA_STARBOARD.detect_tar_1"
+                "OS0.TS_TRACKING_EKF_TS1.RADAR_valid_detection",
+                "OS0.TS_TRACKING_EKF_TS1.CAMERA_FORE_valid_detection",
+                "OS0.TS_TRACKING_EKF_TS1.CAMERA_AFT_valid_detection",
+                "OS0.TS_TRACKING_EKF_TS1.CAMERA_PORT_valid_detection",
+                "OS0.TS_TRACKING_EKF_TS1.CAMERA_STARBOARD_valid_detection",
                 ],
              f"{case_idx}_OS0_sensors_detection_t1.jpg"),
             

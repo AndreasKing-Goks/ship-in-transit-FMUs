@@ -148,6 +148,9 @@ class DopplerRADAR(Fmi2Slave):
             p_own                  = np.array([self.own_north, self.own_east], dtype=float)
             v_own                  = self.own_measured_speed * np.array([np.cos(self.own_yaw_angle), np.sin(self.own_yaw_angle)])
             
+            # Measurement valid flag
+            self.measurement_valid = True
+            
             for i in range (c):
                 idx = i + 1
                 
@@ -226,7 +229,7 @@ class DopplerRADAR(Fmi2Slave):
                 measured_bearing    = self._wrap_to_pi(true_bearing + bearing_noise)
                 
                 if detected:
-                    setattr(self, f"detect_tar_{idx}", True)
+                    setattr(self, f"detect_tar_{idx}", True and self.measurement_valid)
                     setattr(self, f"tar_{idx}_range", measured_range)
                     setattr(self, f"tar_{idx}_range_rate", measured_range_rate)
                     setattr(self, f"tar_{idx}_bearing", measured_bearing)
@@ -235,8 +238,7 @@ class DopplerRADAR(Fmi2Slave):
                     setattr(self, f"tar_{idx}_range", 1e9)
                     setattr(self, f"tar_{idx}_range_rate", 0.0)
                     setattr(self, f"tar_{idx}_bearing", 0.0)
-            
-            self.measurement_valid  = True
+                    
         
         except Exception as e:
             # IMPORTANT: do not crash host

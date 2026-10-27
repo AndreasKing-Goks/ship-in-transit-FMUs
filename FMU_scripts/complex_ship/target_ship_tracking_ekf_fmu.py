@@ -108,6 +108,12 @@ class TargetShipTrackingEKF(Fmi2Slave):
         self.estimated_vn                       = 0.0
         self.estimated_ve                       = 0.0
         
+        self.RADAR_valid_detection              = False
+        self.CAMERA_FORE_valid_detection        = False
+        self.CAMERA_AFT_valid_detection         = False
+        self.CAMERA_PORT_valid_detection        = False
+        self.CAMERA_STARBOARD_valid_detection   = False
+        
         ## Internal variables
         self._precomputed                       = False
         # State
@@ -216,6 +222,12 @@ class TargetShipTrackingEKF(Fmi2Slave):
         self.register_variable(Real("estimated_e", causality=Fmi2Causality.output))
         self.register_variable(Real("estimated_vn", causality=Fmi2Causality.output))
         self.register_variable(Real("estimated_ve", causality=Fmi2Causality.output))
+        
+        self.register_variable(Boolean("RADAR_valid_detection", causality=Fmi2Causality.output, variability=Fmi2Variability.discrete))
+        self.register_variable(Boolean("CAMERA_FORE_valid_detection", causality=Fmi2Causality.output, variability=Fmi2Variability.discrete))
+        self.register_variable(Boolean("CAMERA_AFT_valid_detection", causality=Fmi2Causality.output, variability=Fmi2Variability.discrete))
+        self.register_variable(Boolean("CAMERA_PORT_valid_detection", causality=Fmi2Causality.output, variability=Fmi2Variability.discrete))
+        self.register_variable(Boolean("CAMERA_STARBOARD_valid_detection", causality=Fmi2Causality.output, variability=Fmi2Variability.discrete))
         
     def _wrap_to_pi(self, a):
         return (a + np.pi) % (2*np.pi) - np.pi
@@ -614,23 +626,29 @@ class TargetShipTrackingEKF(Fmi2Slave):
             # Sensor corrections
             # ========================================
             # Radar
-            if self.RADAR_valid and self.RADAR_detection:
+            self.RADAR_valid_detection = self.RADAR_valid and self.RADAR_detection
+            if self.RADAR_valid_detection:
+                self.RADAR_valid_detection = True
                 self.update_radar()
             
             # Fore Camera
-            if self.CAMERA_FORE_valid and self.CAMERA_FORE_detection:
+            self.CAMERA_FORE_valid_detection = self.CAMERA_FORE_valid and self.CAMERA_FORE_detection
+            if self.CAMERA_FORE_valid_detection:
                 self.update_camera(orientation="fore")
             
             # Aft Camera
-            if self.CAMERA_AFT_valid and self.CAMERA_AFT_detection:
+            self.CAMERA_AFT_valid_detection = self.CAMERA_AFT_valid and self.CAMERA_AFT_detection
+            if self.CAMERA_AFT_detection:
                 self.update_camera(orientation="aft")
             
             # Port Camera
-            if self.CAMERA_PORT_valid and self.CAMERA_PORT_detection:
+            self.CAMERA_PORT_valid_detection = self.CAMERA_PORT_valid and self.CAMERA_PORT_detection
+            if self.CAMERA_PORT_valid_detection:
                 self.update_camera(orientation="port")
             
             # Starboard Camera
-            if self.CAMERA_STARBOARD_valid and self.CAMERA_STARBOARD_detection:
+            self.CAMERA_STARBOARD_valid_detection = self.CAMERA_STARBOARD_valid and self.CAMERA_STARBOARD_detection
+            if self.CAMERA_STARBOARD_valid_detection:
                 self.update_camera(orientation="starboard")
                 
             # ========================================
@@ -651,5 +669,11 @@ class TargetShipTrackingEKF(Fmi2Slave):
             self.estimated_e    = self.x[1]
             self.estimated_vn    = self.x[2]
             self.estimated_ve    = self.x[3]
+            
+            self.RADAR_valid_detection              = False
+            self.CAMERA_FORE_valid_detection        = False
+            self.CAMERA_AFT_valid_detection         = False
+            self.CAMERA_PORT_valid_detection        = False
+            self.CAMERA_STARBOARD_valid_detection   = False
         
         return True
