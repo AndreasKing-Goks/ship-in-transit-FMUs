@@ -209,25 +209,24 @@ if simulate:
     # # | 'lower left' |'lower center'| 'lower right' |
     # # +--------------+--------------+---------------+
     
-    # # Plot Trajectory
-    # saved_figure_path = ROOT / "EBASTv2_MBSE_train" / "simulated_trained_model" / "paper_results" / f"{case_idx}_EBASTv2_MBSE.pdf"
-    # # saved_figure_path = None
-    # # fig_widt = 5.0 for 'quick', 2.3 for 'paper'
-    # env.instance.PlotFleetTrajectory(
-    #     mode="paper",
-    #     every_n=100, 
-    #     fig_width=3.4,
-    #     exclude_target_ships_route=True,
-    #     disable_title=True,
-    #     plot_IWs=True,
-    #     plot_IW_names=False,
-    #     plot_time_line_connection=True,
-    #     ship_scale=10.0,
-    #     legend_loc='center right',
-    #     save_path=saved_figure_path,
-    #     show=False,
-    # )
-
+    # Plot Trajectory
+    saved_figure_path = ROOT / "EBASTv2_MBSE_train" / "simulated_trained_model" / "paper_results" / f"{case_idx}_EBASTv2_MBSE.jpg"
+    # saved_figure_path = None
+    # fig_width = 5.0 for 'quick', 3.4 for 'paper'
+    env.instance.PlotFleetTrajectory(
+        mode="paper",
+        every_n=100, 
+        fig_width=3.4,
+        exclude_target_ships_route=True,
+        disable_title=True,
+        plot_IWs=True,
+        plot_IW_names=False,
+        plot_time_line_connection=True,
+        ship_scale=10.0,
+        legend_loc='center right',
+        save_path=saved_figure_path,
+        show=False,
+    )
 
     plot_simulation_results = False
     plot_simulation_results = True
@@ -238,67 +237,75 @@ if simulate:
         key_group_list  = [
             ## Own Ship
             # Base results
-            (["OS0.SHIP_MODEL.north", "OS0.SHIP_EKF.estimated_n"], f"{case_idx}_OS0_north.pdf"),
-            (["OS0.SHIP_MODEL.east", "OS0.SHIP_EKF.estimated_e"], f"{case_idx}_OS0_east.pdf"),
-            (["OS0.SHIP_MODEL.forward_speed", "OS0.MISSION_MANAGER.next_wp_speed", "OS0.SHIP_MODEL.total_ship_speed"], f"{case_idx}_OS0_speed.pdf"),
-            (["OS0.SHIP_MODEL.yaw_angle_rad", "OS0.AUTOPILOT.yaw_angle_ref_rad", "OS0.SHIP_EKF.estimated_psi"], f"{case_idx}_OS0_heading.pdf"),
-            (["OS0.AUTOPILOT.rudder_angle_deg"], f"{case_idx}_OS0_rud_angle.pdf"),
-            (["OS0.AUTOPILOT.e_ct"], f"{case_idx}_OS0_ect.pdf"),
-            (["OS0.MACHINERY_SYSTEM.shaft_speed_rpm", "OS0.SHAFT_SPEED_CONTROLLER.shaft_speed_cmd_rpm"], f"{case_idx}_OS0_shaft_speed.pdf"),
-            (["OS0.THROTTLE_CONTROLLER.throttle_cmd"], f"{case_idx}_OS0_throttle.pdf"),
+            (["OS0.SHIP_MODEL.north", "OS0.SHIP_EKF.estimated_n"], f"{case_idx}_OS0_north.jpg"),
+            (["OS0.SHIP_MODEL.east", "OS0.SHIP_EKF.estimated_e"], f"{case_idx}_OS0_east.jpg"),
+            (["OS0.SHIP_MODEL.forward_speed", "OS0.MISSION_MANAGER.next_wp_speed", "OS0.SHIP_MODEL.total_ship_speed"], f"{case_idx}_OS0_speed.jpg"),
+            (["OS0.SHIP_MODEL.yaw_angle_rad", "OS0.AUTOPILOT.yaw_angle_ref_rad", "OS0.SHIP_EKF.estimated_psi"], f"{case_idx}_OS0_heading.jpg"),
+            (["OS0.AUTOPILOT.rudder_angle_deg"], f"{case_idx}_OS0_rud_angle.jpg"),
+            (["OS0.AUTOPILOT.e_ct"], f"{case_idx}_OS0_ect.jpg"),
+            (["OS0.MACHINERY_SYSTEM.shaft_speed_rpm", "OS0.SHAFT_SPEED_CONTROLLER.shaft_speed_cmd_rpm"], f"{case_idx}_OS0_shaft_speed.jpg"),
+            (["OS0.THROTTLE_CONTROLLER.throttle_cmd"], f"{case_idx}_OS0_throttle.jpg"),
             
             # # For environment load-enabled simulation only
-            # (["OS0.SURFACE_CURRENT.current_speed"], f"{case_idx}_OS0_current_speed.pdf"),
-            # (["OS0.SURFACE_CURRENT.current_direction_deg"], f"{case_idx}_OS0_current_dir.pdf"),
-            # (["OS0.WIND.wind_speed"], f"{case_idx}_OS0_wind_speed.pdf"),
-            # (["OS0.WIND.wind_direction_deg"], f"{case_idx}_OS0_wind_dir.pdf"),
+            # (["OS0.SURFACE_CURRENT.current_speed"], f"{case_idx}_OS0_current_speed.jpg"),
+            # (["OS0.SURFACE_CURRENT.current_direction_deg"], f"{case_idx}_OS0_current_dir.jpg"),
+            # (["OS0.WIND.wind_speed"], f"{case_idx}_OS0_wind_speed.jpg"),
+            # (["OS0.WIND.wind_direction_deg"], f"{case_idx}_OS0_wind_dir.jpg"),
             
             # OS COLAV
-            (["OS0.COLAV.colav_speed_reduction_factor"], f"{case_idx}_OS0_csrf.pdf"),
-            (["OS0.COLAV.colav_heading_offset_deg"], f"{case_idx}_OS0_chod.pdf"),
-            (["OS0.COLAV.risk_score_tar_1"], f"{case_idx}_OS0_rst_1.pdf"),
-            # (["OS0.COLAV.encounter_wrt_tar_1"], f"{case_idx}_OS0_enc_t1.pdf"),
-            # (["OS0.COLAV.role_wrt_tar_1"], f"{case_idx}_OS0_rol_t1.pdf"),
-            # (["OS0.COLAV.beta_own_to_tar_1"], f"{case_idx}_OS0_beta_t1.pdf"),
-            # (["OS0.COLAV.beta_tar_to_own_1"], f"{case_idx}_OS0_beta_o1.pdf"),
-            # (["OS0.COLAV.rr_own_to_tar_1"], f"{case_idx}_OS0_rr_t1.pdf"),
+            (["OS0.COLAV.colav_speed_reduction_factor"], f"{case_idx}_OS0_csrf.jpg"),
+            (["OS0.COLAV.colav_heading_offset_deg"], f"{case_idx}_OS0_chod.jpg"),
+            (["OS0.COLAV.risk_score_tar_1"], f"{case_idx}_OS0_rst_1.jpg"),
+            (["OS0.COLAV.encounter_wrt_tar_1"], f"{case_idx}_OS0_enc_t1.jpg"),
+            (["OS0.COLAV.role_wrt_tar_1"], f"{case_idx}_OS0_rol_t1.jpg"),
+            # (["OS0.COLAV.beta_own_to_tar_1"], f"{case_idx}_OS0_beta_t1.jpg"),
+            # (["OS0.COLAV.beta_tar_to_own_1"], f"{case_idx}_OS0_beta_o1.jpg"),
+            # (["OS0.COLAV.rr_own_to_tar_1"], f"{case_idx}_OS0_rr_t1.jpg"),
             
             # # TS COLAV
-            # (["TS1.COLAV.colav_speed_reduction_factor"], f"{case_idx}_TS1_csrf.pdf"),
-            # (["TS1.COLAV.colav_heading_offset_deg"], f"{case_idx}_TS1_chod.pdf"),
-            # (["TS1.COLAV.risk_score_tar_1"], f"{case_idx}_TS1_rst_t1.pdf"),
-            # (["TS1.COLAV.encounter_wrt_tar_1"], f"{case_idx}_TS1_enc_t1.pdf"),
-            # (["TS1.COLAV.role_wrt_tar_1"], f"{case_idx}_TS1_rol_t1.pdf"),
-            # (["TS1.COLAV.beta_own_to_tar_1"], f"{case_idx}_TS1_beta_t1.pdf"),
-            # (["TS1.COLAV.beta_tar_to_own_1"], f"{case_idx}_TS1_beta_o1.pdf"),
-            # (["TS1.COLAV.rr_own_to_tar_1"], f"{case_idx}_TS1_rr_t1.pdf"),
+            # (["TS1.COLAV.colav_speed_reduction_factor"], f"{case_idx}_TS1_csrf.jpg"),
+            # (["TS1.COLAV.colav_heading_offset_deg"], f"{case_idx}_TS1_chod.jpg"),
+            # (["TS1.COLAV.risk_score_tar_1"], f"{case_idx}_TS1_rst_t1.jpg"),
+            # (["TS1.COLAV.encounter_wrt_tar_1"], f"{case_idx}_TS1_enc_t1.jpg"),
+            # (["TS1.COLAV.role_wrt_tar_1"], f"{case_idx}_TS1_rol_t1.jpg"),
+            # (["TS1.COLAV.beta_own_to_tar_1"], f"{case_idx}_TS1_beta_t1.jpg"),
+            # (["TS1.COLAV.beta_tar_to_own_1"], f"{case_idx}_TS1_beta_o1.jpg"),
+            # (["TS1.COLAV.rr_own_to_tar_1"], f"{case_idx}_TS1_rr_t1.jpg"),
             
             # # Sensors
-            # (["OS0.GPS.measured_north"], f"{case_idx}_OS0_gps_north.pdf"),
-            # (["OS0.GPS.measured_east"], f"{case_idx}_OS0_gps_east.pdf"),
-            # (["OS0.GYROCOMPASS.measured_ship_heading_rad"], f"{case_idx}_OS0_gyro_heading.pdf"),
-            # (["OS0.SPEED_LOG.measured_ship_speed"], f"{case_idx}_OS0_speed_log_speed.pdf"),
-            # (["OS0.RADAR.tar_1_range"], f"{case_idx}_OS0_radar_t1_range.pdf"),
-            # (["OS0.RADAR.tar_1_range_rate"], f"{case_idx}_OS0_radar_t1_range_rate.pdf"),
-            # (["OS0.RADAR.tar_1_bearing"], f"{case_idx}_OS0_radar_t1_beta.pdf"),
-            # (["OS0.CAMERA_FORE.tar_1_range"], f"{case_idx}_OS0_camf_range_t1.pdf"),
-            # (["OS0.CAMERA_FORE.tar_1_bearing"], f"{case_idx}_OS0_camf_beta_t1.pdf"),
-            # (["OS0.CAMERA_AFT.tar_1_range"], f"{case_idx}_OS0_cama_range_t1.pdf"),
-            # (["OS0.CAMERA_AFT.tar_1_bearing"], f"{case_idx}_.OS0_cama_beta_t1.pdf"),
-            # (["OS0.CAMERA_PORT.tar_1_range"], f"{case_idx}_OS0_camp_range_t1.pdf"),
-            # (["OS0.CAMERA_PORT.tar_1_bearing"], f"{case_idx}_OS0_camp_beta_t1.pdf"),
-            # (["OS0.CAMERA_STARBOARD.tar_1_range"], f"{case_idx}_OS0_cams_range_t1.pdf"),
-            # (["OS0.CAMERA_STARBOARD.tar_1_bearing"], f"{case_idx}_OS0_cams_beta_t1.pdf"),
+            # (["OS0.GPS.measured_north"], f"{case_idx}_OS0_gps_north.jpg"),
+            # (["OS0.GPS.measured_east"], f"{case_idx}_OS0_gps_east.jpg"),
+            # (["OS0.GYROCOMPASS.measured_ship_heading_rad"], f"{case_idx}_OS0_gyro_heading.jpg"),
+            # (["OS0.SPEED_LOG.measured_ship_speed"], f"{case_idx}_OS0_speed_log_speed.jpg"),
+            # (["OS0.RADAR.tar_1_range"], f"{case_idx}_OS0_radar_t1_range.jpg"),
+            # (["OS0.RADAR.tar_1_range_rate"], f"{case_idx}_OS0_radar_t1_range_rate.jpg"),
+            # (["OS0.RADAR.tar_1_bearing"], f"{case_idx}_OS0_radar_t1_beta.jpg"),
+            # (["OS0.CAMERA_FORE.tar_1_range"], f"{case_idx}_OS0_camf_range_t1.jpg"),
+            # (["OS0.CAMERA_FORE.tar_1_bearing"], f"{case_idx}_OS0_camf_beta_t1.jpg"),
+            # (["OS0.CAMERA_AFT.tar_1_range"], f"{case_idx}_OS0_cama_range_t1.jpg"),
+            # (["OS0.CAMERA_AFT.tar_1_bearing"], f"{case_idx}_.OS0_cama_beta_t1.jpg"),
+            # (["OS0.CAMERA_PORT.tar_1_range"], f"{case_idx}_OS0_camp_range_t1.jpg"),
+            # (["OS0.CAMERA_PORT.tar_1_bearing"], f"{case_idx}_OS0_camp_beta_t1.jpg"),
+            # (["OS0.CAMERA_STARBOARD.tar_1_range"], f"{case_idx}_OS0_cams_range_t1.jpg"),
+            # (["OS0.CAMERA_STARBOARD.tar_1_bearing"], f"{case_idx}_OS0_cams_beta_t1.jpg"),
+            ([
+                # "OS0.RADAR.detect_tar_1",
+                "OS0.CAMERA_FORE.detect_tar_1", 
+                "OS0.CAMERA_AFT.detect_tar_1",
+                "OS0.CAMERA_PORT.detect_tar_1",
+                "OS0.CAMERA_STARBOARD.detect_tar_1"
+                ],
+             f"{case_idx}_OS0_sensors_detection_t1.jpg"),
             
             ## Target Ship(s)
             # Base results
-            (["TS1.SHIP_MODEL.north", "OS0.TS_TRACKING_EKF_TS1.estimated_n"], f"{case_idx}_TS1_north.pdf"),
-            (["TS1.SHIP_MODEL.east", "OS0.TS_TRACKING_EKF_TS1.estimated_e"], f"{case_idx}_TS1_east.pdf"),
-            (["TS1.SHIP_MODEL.forward_speed", "TS1.MISSION_MANAGER.next_wp_speed", "TS1.SHIP_MODEL.total_ship_speed"], f"{case_idx}_TS1_speed.pdf"),
-            (["TS1.SHIP_MODEL.yaw_angle_rad", "TS1.AUTOPILOT.yaw_angle_ref_rad"], f"{case_idx}_TS1_heading.pdf"),
-            (["TS1.AUTOPILOT.rudder_angle_deg"], f"{case_idx}_TS1_rud_ang.pdf"),
-            (["TS1.AUTOPILOT.e_ct"], f"{case_idx}_TS1_ect.pdf"),
-            (["TS1.SPEED_CONTROLLER.thrust_force"], f"{case_idx}_TS1_throttle.pdf"),
+            (["TS1.SHIP_MODEL.north", "OS0.TS_TRACKING_EKF_TS1.estimated_n"], f"{case_idx}_TS1_north.jpg"),
+            (["TS1.SHIP_MODEL.east", "OS0.TS_TRACKING_EKF_TS1.estimated_e"], f"{case_idx}_TS1_east.jpg"),
+            (["TS1.SHIP_MODEL.forward_speed", "TS1.MISSION_MANAGER.next_wp_speed", "TS1.SHIP_MODEL.total_ship_speed"], f"{case_idx}_TS1_speed.jpg"),
+            (["TS1.SHIP_MODEL.yaw_angle_rad", "TS1.AUTOPILOT.yaw_angle_ref_rad"], f"{case_idx}_TS1_heading.jpg"),
+            (["TS1.AUTOPILOT.rudder_angle_deg"], f"{case_idx}_TS1_rud_ang.jpg"),
+            (["TS1.AUTOPILOT.e_ct"], f"{case_idx}_TS1_ect.jpg"),
+            (["TS1.SPEED_CONTROLLER.thrust_force"], f"{case_idx}_TS1_throttle.jpg"),
         ]
         
         # Plot Time Series

@@ -217,11 +217,11 @@ ships:
       - [COLAV, colav_speed_reduction_factor, "Scale %"]
       - [COLAV, colav_heading_offset_deg,     "Angle [deg]"]
       - [COLAV, risk_score_tar_1,             "Score"]
-      - [COLAV, encounter_wrt_tar_1,          "Encounter"]
-      - [COLAV, role_wrt_tar_1,               "Role"]
+      - [COLAV, encounter_wrt_tar_1,          "Encounter [bool]"]
+      - [COLAV, role_wrt_tar_1,               "Role [bool]"]
       - [COLAV, beta_own_to_tar_1,            "Angle [rad]"]
       - [COLAV, beta_tar_to_own_1,            "Angle [rad]"]
-      - [COLAV, rr_own_to_tar_1,               "Speed [m/s]"]
+      - [COLAV, rr_own_to_tar_1,              "Speed [m/s]"]
 
       - [GPS, measured_north, "Position [m]"]
       - [GPS, measured_east, "Position [m]"]
@@ -240,19 +240,24 @@ ships:
       - [TS_TRACKING_EKF_TS1, estimated_n,   "Position [m]"]
       - [TS_TRACKING_EKF_TS1, estimated_e,   "Position [m]"]
 
+      - [RADAR, detect_tar_1,     "Detection [bool]"]
       - [RADAR, tar_1_range,      "Position [m]"]
       - [RADAR, tar_1_range_rate, "Speed [m/s]"]
       - [RADAR, tar_1_bearing,    "Angle [rad]"]
 
+      - [CAMERA_FORE, detect_tar_1,     "Detection [bool]"]
       - [CAMERA_FORE, tar_1_range,      "Position [m]"]
       - [CAMERA_FORE, tar_1_bearing,    "Angle [rad]"]
 
+      - [CAMERA_AFT, detect_tar_1,     "Detection [bool]"]
       - [CAMERA_AFT, tar_1_range,      "Position [m]"]
       - [CAMERA_AFT, tar_1_bearing,    "Angle [rad]"]
 
+      - [CAMERA_PORT, detect_tar_1,     "Detection [bool]"]
       - [CAMERA_PORT, tar_1_range,      "Position [m]"]
       - [CAMERA_PORT, tar_1_bearing,    "Angle [rad]"]
 
+      - [CAMERA_STARBOARD, detect_tar_1,     "Detection [bool]"]
       - [CAMERA_STARBOARD, tar_1_range,      "Position [m]"]
       - [CAMERA_STARBOARD, tar_1_bearing,    "Angle [rad]"]
 

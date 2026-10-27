@@ -84,7 +84,23 @@ instance.AnimateFleetTrajectory(
     )
 
 # Plot Trajectory
-instance.PlotFleetTrajectory(mode="quick", ship_scale=1.0)
+saved_figure_path = ROOT / "EBASTv2_MBSE_train" / "simulated_trained_model" / "OS0_GA_EBASTv2_MBSE.jpg"
+# saved_figure_path = None
+# fig_width = 5.0 for 'quick', 3.4 for 'paper'
+instance.PlotFleetTrajectory(
+    mode="paper",
+    every_n=100, 
+    fig_width=3.4,
+    exclude_target_ships_route=True,
+    disable_title=True,
+    plot_IWs=True,
+    plot_IW_names=False,
+    plot_time_line_connection=True,
+    ship_scale=10.0,
+    legend_loc='center right',
+    save_path=saved_figure_path,
+    show=False,
+)
 
 # Plot Simulation Results
 key_group_list = [
