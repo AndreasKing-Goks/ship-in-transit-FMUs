@@ -295,12 +295,12 @@ Target ships
 TRANSITION 5
 ----------------------------------------------------------------------------------------------------
 Simulation time before action            : 1360.0 s
-Simulation time after action             : 2075.0 s
+Simulation time after action             : 3080.0 s
 Terminated                               : True
 Truncated                                : False
-Total Reward                             : -0.00026777600716737065
-  > Termination Rewards                  : 0.0
-  > Non-termination Rewards              : -0.00026777600716737065
+Total Reward                             : -11.201049118405422
+  > Termination Rewards                  : -8.887313842773438
+  > Non-termination Rewards              : -2.3137352756319847
 
 [OBSERVATION BEFORE ACTION - DENORMALIZED]
 
@@ -338,20 +338,20 @@ IW action for target ship [TS1]
 
 [OBSERVATION AFTER ACTION - DENORMALIZED]
 
-Own COLAV risk                           : [0.9907396] [%]
+Own COLAV risk                           : [0.0] [%]
 Action masks                             : [0]
 
 Own ship [OS0]
-  Position/state vector                  : [6484.2, 7048.3, 1.3] [m, m, deg]
-  Cross-track error                      : 379.6 [m]
-  Rudder angle                           : 0.1 [deg]
-  Throttle                               : 0.009026 [%]
-  Forward speed                          : 2.619952 [m/s]
+  Position/state vector                  : [9861.7, 9828.8, 0.8] [m, m, deg]
+  Cross-track error                      : -22.8 [m]
+  Rudder angle                           : 0.5 [deg]
+  Throttle                               : 0.242730 [%]
+  Forward speed                          : 4.996630 [m/s]
 
 Target ships
   Target ship [TS1]
-    Position/state vector                : [6508.6, 7121.4, -1.4] [m, m, deg]
-    Forward speed                        : 4.881111 [m/s]
+    Position/state vector                : [8676.3, 2586.6, -1.1] [m, m, deg]
+    Forward speed                        : 4.999535 [m/s]
     IW-enabled                           : True
     Action mask                          : 0
     Remaining requests                   : 0
@@ -359,5 +359,5 @@ Target ships
 ----------------------------------------------------------------------------------------------------
 ACCUMULATED REWARD RECAPITULATION
 ----------------------------------------------------------------------------------------------------
-Episodic accumulated total rewards       : -0.06133436160645576
-Mean rewards per state-action transition : -0.012266872321291152
+Episodic accumulated total rewards       : -11.26211570400471
+Mean rewards per state-action transition : -2.252423140800942

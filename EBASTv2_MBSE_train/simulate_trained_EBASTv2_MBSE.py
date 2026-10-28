@@ -36,7 +36,7 @@ model_name                      = "EB-ASTv2_MBSE_2026-10-23_21-11-07_b58a"
 
 # Get the config path
 config_path = [
-        ROOT / "EBASTv2_MBSE_train" / "EBASTv2_MBSE.yaml",
+        ROOT / "EBASTv2_MBSE_train" / "EBASTv2_MBSE_improved.yaml",
     ]
 
 # Get the trained model
@@ -127,7 +127,7 @@ if simulate:
     # env.set_for_evaluation()
     
     # Reset the trained model
-    case_idx    = 5
+    case_idx    = 2
     config_idx  = 0
     seed        = None
     obs, _      = env.reset(seed=seed, specific_case_idx=case_idx, specific_config_idx=config_idx)
@@ -153,52 +153,52 @@ if simulate:
         if done:
             break
     
-    # # Log path
-    # log_path                        = ROOT / "EBASTv2_MBSE_train" / "simulated_trained_model" / f"{case_idx}_episode_recap_EBASTv2_MBSE.txt"
+    # Log path
+    log_path                        = ROOT / "EBASTv2_MBSE_train" / "simulated_trained_model" / f"{case_idx}_episode_recap_EBASTv2_MBSE.txt"
     
-    # # Log the episodes
-    # log_episode_recap(env=env, log_path=log_path)
-    # print(f"Episode recap saved to: {log_path}")
+    # Log the episodes
+    log_episode_recap(env=env, log_path=log_path)
+    print(f"Episode recap saved to: {log_path}")
 
-    # # =========================
-    # # Animation and Plot
-    # # =========================
-    # # Available formats:
-    # # - .mp4
-    # # - .gif
-    # # - .avi
-    # # - .mov
+    # =========================
+    # Animation and Plot
+    # =========================
+    # Available formats:
+    # - .mp4
+    # - .gif
+    # - .avi
+    # - .mov
     
-    # # Get the save path for animation
-    # saved_animation_path            = ROOT / "EBASTv2_MBSE_train" / "simulated_trained_model" / "paper_results" / f"{case_idx}_EBASTv2_MBSE.gif"
+    # Get the save path for animation
+    saved_animation_path            = ROOT / "EBASTv2_MBSE_train" / "simulated_trained_model" / "paper_results" / f"{case_idx}_EBASTv2_MBSE.gif"
 
-    # # Animate Simulation
-    # env.instance.AnimateFleetTrajectory(
-    #         ship_ids=None,  
-    #         show=True,
-    #         block=True,
-    #         mode="quick",
-    #         fig_width=7.0,
-    #         margin_frac=0.08,
-    #         equal_aspect=True,
-    #         interval_ms=20,
-    #         frame_step=10,
-    #         trail_len=50,
-    #         plot_routes=True,
-    #         exclude_target_ships_route=True, 
-    #         plot_waypoints=True,
-    #         plot_roa=True,
-    #         plot_start_end=True,
-    #         plot_inter_wp_roa=False,
-    #         plot_inter_wp_proj=False,
-    #         with_labels=True,
-    #         precompute_ship_outlines=True,
-    #         save_path=saved_animation_path,
-    #         writer_fps=20,
-    #         palette=None,
-    #         blit=True,
-    #         ship_scale=1.0
-    #     )
+    # Animate Simulation
+    env.instance.AnimateFleetTrajectory(
+            ship_ids=None,  
+            show=True,
+            block=True,
+            mode="quick",
+            fig_width=7.0,
+            margin_frac=0.08,
+            equal_aspect=True,
+            interval_ms=20,
+            frame_step=10,
+            trail_len=50,
+            plot_routes=True,
+            exclude_target_ships_route=True, 
+            plot_waypoints=True,
+            plot_roa=True,
+            plot_start_end=True,
+            plot_inter_wp_roa=False,
+            plot_inter_wp_proj=False,
+            with_labels=True,
+            precompute_ship_outlines=True,
+            save_path=saved_animation_path,
+            writer_fps=20,
+            palette=None,
+            blit=True,
+            ship_scale=1.0
+        )
 
     # # Legend Location
     # # +--------------+--------------+---------------+
@@ -240,7 +240,7 @@ if simulate:
             (["OS0.SHIP_MODEL.north", "OS0.SHIP_EKF.estimated_n"], f"{case_idx}_OS0_north.jpg"),
             (["OS0.SHIP_MODEL.east", "OS0.SHIP_EKF.estimated_e"], f"{case_idx}_OS0_east.jpg"),
             (["OS0.SHIP_MODEL.forward_speed", "OS0.MISSION_MANAGER.next_wp_speed", "OS0.SHIP_MODEL.total_ship_speed"], f"{case_idx}_OS0_speed.jpg"),
-            (["OS0.SHIP_MODEL.yaw_angle_rad", "OS0.AUTOPILOT.yaw_angle_ref_rad", "OS0.SHIP_EKF.estimated_psi"], f"{case_idx}_OS0_heading.jpg"),
+            (["OS0.SHIP_MODEL.yaw_angle_rad", "OS0.SHIP_EKF.estimated_psi"], f"{case_idx}_OS0_heading.jpg"),
             (["OS0.AUTOPILOT.rudder_angle_deg"], f"{case_idx}_OS0_rud_angle.jpg"),
             (["OS0.AUTOPILOT.e_ct"], f"{case_idx}_OS0_ect.jpg"),
             (["OS0.MACHINERY_SYSTEM.shaft_speed_rpm", "OS0.SHAFT_SPEED_CONTROLLER.shaft_speed_cmd_rpm"], f"{case_idx}_OS0_shaft_speed.jpg"),
