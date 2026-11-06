@@ -29,7 +29,7 @@ saved_animation_folder_path     = ROOT / "pre_generated_spawn_requests_bank" / "
 saved_animation_folder_path.mkdir(parents=True, exist_ok=True)
 
 # Case Index
-case_idxs                       = [60, 70, 80, 90, 100] #range(20)
+case_idxs                       = [10, 20, 30, 40, 50] #range(20)
 
 # Print and save encounter description
 description_lines = []
@@ -52,7 +52,7 @@ for case_idx in case_idxs:
     spawn_requests_bank_path        = ROOT / "pre_generated_spawn_requests_bank" / "spawn_request_bank_ebastv2.pkl"
 
     # Get the save path for animation
-    saved_animation_path            = ROOT / "pre_generated_spawn_requests_bank" / "animation" / f"case_{case_idx}.gif"
+    saved_animation_path            = ROOT / "pre_generated_spawn_requests_bank" / "animation" / f"join_case_{case_idx}.gif"
     
     # =========================
     # # Instantiate Co-simulation Wrapper
@@ -100,32 +100,32 @@ for case_idx in case_idxs:
     # - .avi
     # - .mov
 
-    # # Animate Simulation
-    # instance.AnimateFleetTrajectory(
-    #         ship_ids=None,
-    #         show=False,
-    #         block=True,
-    #         mode="paper",
-    #         fig_width=10.0,
-    #         margin_frac=0.08,
-    #         equal_aspect=True,
-    #         interval_ms=20,
-    #         frame_step=10,
-    #         trail_len=50,
-    #         plot_routes=True,
-    #         plot_waypoints=True,
-    #         plot_roa=True,
-    #         plot_start_end=True,
-    #         plot_inter_wp_roa=False,
-    #         plot_inter_wp_proj=False,
-    #         with_labels=True,
-    #         precompute_ship_outlines=True,
-    #         save_path=saved_animation_path,
-    #         writer_fps=20,
-    #         palette=None,
-    #         blit=True,
-    #         ship_scale=5.0
-    #     )
+    # Animate Simulation
+    instance.AnimateFleetTrajectory(
+            ship_ids=None,
+            show=False,
+            block=True,
+            mode="paper",
+            fig_width=10.0,
+            margin_frac=0.08,
+            equal_aspect=True,
+            interval_ms=20,
+            frame_step=20,
+            trail_len=50,
+            plot_routes=True,
+            plot_waypoints=True,
+            plot_roa=True,
+            plot_start_end=True,
+            plot_inter_wp_roa=False,
+            plot_inter_wp_proj=False,
+            with_labels=True,
+            precompute_ship_outlines=True,
+            save_path=saved_animation_path,
+            writer_fps=20,
+            palette=None,
+            blit=True,
+            ship_scale=10.0
+        )
     
     # Legend Location
     # +--------------+--------------+---------------+
@@ -136,24 +136,24 @@ for case_idx in case_idxs:
     # | 'lower left' |'lower center'| 'lower right' |
     # +--------------+--------------+---------------+
     
-    # Plot Trajectory
-    saved_figure_path = ROOT / "EBASTv2_train" / "simulated_trained_model" / "plots_for_paper" / f"{case_idx}_scenario.png"
-    # saved_figure_path = None
-    # fig_widt = 5.0 for 'quick', 2.3 for 'paper'
-    instance.PlotFleetTrajectory(
-        mode="paper",
-        every_n=100, 
-        fig_width=3.4,
-        exclude_target_ships_route=True,
-        disable_title=True,
-        plot_IWs=False,
-        plot_IW_names=False,
-        plot_time_line_connection=False,
-        ship_scale=10.0,
-        legend_loc='upper right',
-        save_path=saved_figure_path,
-        show=False,
-    )
+    # # Plot Trajectory
+    # saved_figure_path = ROOT / "EBASTv2_train" / "simulated_trained_model" / "plots_for_paper" / f"{case_idx}_scenario.png"
+    # # saved_figure_path = None
+    # # fig_widt = 5.0 for 'quick', 2.3 for 'paper'
+    # instance.PlotFleetTrajectory(
+    #     mode="paper",
+    #     every_n=100, 
+    #     fig_width=3.4,
+    #     exclude_target_ships_route=True,
+    #     disable_title=True,
+    #     plot_IWs=False,
+    #     plot_IW_names=False,
+    #     plot_time_line_connection=False,
+    #     ship_scale=10.0,
+    #     legend_loc='upper right',
+    #     save_path=saved_figure_path,
+    #     show=False,
+    # )
 
 # # Compile and write the description text
 # description_text = "\n".join(description_lines)

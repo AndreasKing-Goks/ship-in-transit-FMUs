@@ -36,7 +36,7 @@ model_name                      = "EB-ASTv2_MBSE_2026-10-23_21-11-07_b58a"
 
 # Get the config path
 config_path = [
-        ROOT / "EBASTv2_MBSE_train" / "EBASTv2_MBSE_improved.yaml",
+        ROOT / "EBASTv2_MBSE_train" / "EBASTv2_MBSE.yaml",
     ]
 
 # Get the trained model
@@ -311,6 +311,8 @@ if simulate:
         # Plot Time Series
         env.instance.SaveJoinPlotTimeSeries(list(reversed(key_group_list)), 
                                     save_dir_path=save_dir_path,
+                                    width=4,
+                                    height=2,
                                     case_idx=case_idx,
                                     create_title= False, 
                                     legend= True, 

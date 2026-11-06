@@ -1387,6 +1387,8 @@ class ShipInTransitCoSimulation(CoSimInstance):
             self,
             key_group_list,
             save_dir_path,
+            width=None,
+            height=None,
             case_idx=None,
             create_title: bool = False,
             legend: bool = True,
@@ -1425,8 +1427,8 @@ class ShipInTransitCoSimulation(CoSimInstance):
         # Plot style
         style = self.get_plot_style(mode)
 
-        fig_w = 9
-        fig_h = 7
+        fig_w = 9 if width is None else width
+        fig_h = 7 if height is None else height
 
         for key_group_tuple in key_group_list:
             

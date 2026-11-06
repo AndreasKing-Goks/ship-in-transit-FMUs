@@ -8,12 +8,6 @@ Number of recorded observations          : 6
 Number of recorded transitions           : 5
 
 SENSOR FAULT SCHEDULER
-  ¤ OS0
-    - Sensor      : RADAR
-      > fault type  : measurement_valid
-      > fault value : False
-      > time start  : 900.0
-      > time end    : 1500.0
 
 SPAWN REQUEST BANK
 Split 6 cases into 6 training cases and 0 evaluation cases
@@ -295,12 +289,12 @@ Target ships
 TRANSITION 5
 ----------------------------------------------------------------------------------------------------
 Simulation time before action            : 1360.0 s
-Simulation time after action             : 3080.0 s
+Simulation time after action             : 2070.0 s
 Terminated                               : True
 Truncated                                : False
-Total Reward                             : -11.201049118405422
-  > Termination Rewards                  : -8.887313842773438
-  > Non-termination Rewards              : -2.3137352756319847
+Total Reward                             : -0.0015535522965914603
+  > Termination Rewards                  : 0.0
+  > Non-termination Rewards              : -0.0015535522965914603
 
 [OBSERVATION BEFORE ACTION - DENORMALIZED]
 
@@ -338,20 +332,20 @@ IW action for target ship [TS1]
 
 [OBSERVATION AFTER ACTION - DENORMALIZED]
 
-Own COLAV risk                           : [0.0] [%]
+Own COLAV risk                           : [0.9613378] [%]
 Action masks                             : [0]
 
 Own ship [OS0]
-  Position/state vector                  : [9861.7, 9828.8, 0.8] [m, m, deg]
-  Cross-track error                      : -22.8 [m]
-  Rudder angle                           : 0.5 [deg]
-  Throttle                               : 0.242730 [%]
-  Forward speed                          : 4.996630 [m/s]
+  Position/state vector                  : [6496.3, 7078.5, 1.3] [m, m, deg]
+  Cross-track error                      : 394.1 [m]
+  Rudder angle                           : 3.5 [deg]
+  Throttle                               : 0.025652 [%]
+  Forward speed                          : 2.778142 [m/s]
 
 Target ships
   Target ship [TS1]
-    Position/state vector                : [8676.3, 2586.6, -1.1] [m, m, deg]
-    Forward speed                        : 4.999535 [m/s]
+    Position/state vector                : [6451.7, 7138.8, -1.6] [m, m, deg]
+    Forward speed                        : 4.724491 [m/s]
     IW-enabled                           : True
     Action mask                          : 0
     Remaining requests                   : 0
@@ -359,5 +353,5 @@ Target ships
 ----------------------------------------------------------------------------------------------------
 ACCUMULATED REWARD RECAPITULATION
 ----------------------------------------------------------------------------------------------------
-Episodic accumulated total rewards       : -11.26211570400471
-Mean rewards per state-action transition : -2.252423140800942
+Episodic accumulated total rewards       : -0.06262013789587985
+Mean rewards per state-action transition : -0.01252402757917597
