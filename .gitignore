@@ -44,6 +44,11 @@ trained_model/
 pre_generated_spawn_requests_bank/animation/
 slurm_jobs/logs/
 
+# Generated animations
+saved_animation/*.mp4
+saved_animation/*.gif
+
+
 # PyInstaller
 #  Usually these files are written by a python script from a template
 #  before PyInstaller builds the exe, so as to inject date/other infos into it.
