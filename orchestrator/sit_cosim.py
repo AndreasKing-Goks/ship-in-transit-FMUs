@@ -1386,7 +1386,7 @@ class ShipInTransitCoSimulation(CoSimInstance):
     def SaveJoinPlotTimeSeries(
             self,
             key_group_list,
-            save_dir_path,
+            save_dir_path=None,
             width=None,
             height=None,
             case_idx=None,
@@ -1433,14 +1433,6 @@ class ShipInTransitCoSimulation(CoSimInstance):
         for key_group_tuple in key_group_list:
             
             key_group, filename = key_group_tuple
-            
-            base_dir            = Path(save_dir_path)
-            
-            if case_idx is not None:
-                base_dir        = Path(save_dir_path) / f"Case_{case_idx}"
-                base_dir.mkdir(parents=True, exist_ok=True)
-                            
-            save_path           = base_dir / filename
 
             struct_time_points  = []
             struct_step_number  = []
@@ -1494,7 +1486,14 @@ class ShipInTransitCoSimulation(CoSimInstance):
 
             plt.tight_layout()
             
-            plt.savefig(save_path, dpi=style["dpi"], bbox_inches="tight", pad_inches=0.02)
+            if save_dir_path is not None:
+                base_dir            = Path(save_dir_path)
+                if case_idx is not None:
+                    base_dir        = Path(save_dir_path) / f"Case_{case_idx}"
+                    base_dir.mkdir(parents=True, exist_ok=True)
+                                
+                save_path           = base_dir / filename
+                plt.savefig(save_path, dpi=style["dpi"], bbox_inches="tight", pad_inches=0.02)
 
             # Show control
             if show_separately and show:

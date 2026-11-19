@@ -36,7 +36,7 @@ model_name                      = "EB-ASTv2_MBSE_2026-10-23_21-11-07_b58a"
 
 # Get the config path
 config_path = [
-        ROOT / "EBASTv2_MBSE_train" / "EBASTv2_MBSE.yaml",
+        ROOT / "EBASTv2_MBSE_train" / "EBASTv2_MBSE_improved.yaml",
     ]
 
 # Get the trained model
@@ -193,7 +193,7 @@ if simulate:
             plot_inter_wp_proj=False,
             with_labels=True,
             precompute_ship_outlines=True,
-            save_path=saved_animation_path,
+            # save_path=saved_animation_path,
             writer_fps=20,
             palette=None,
             blit=True,
@@ -224,7 +224,7 @@ if simulate:
         plot_time_line_connection=True,
         ship_scale=10.0,
         legend_loc='center right',
-        save_path=saved_figure_path,
+        # save_path=saved_figure_path,
         show=False,
     )
 
@@ -310,7 +310,7 @@ if simulate:
         
         # Plot Time Series
         env.instance.SaveJoinPlotTimeSeries(list(reversed(key_group_list)), 
-                                    save_dir_path=save_dir_path,
+                                    # save_dir_path=save_dir_path,
                                     width=4,
                                     height=2,
                                     case_idx=case_idx,
@@ -318,7 +318,7 @@ if simulate:
                                     legend= True, 
                                     show_instance_name=False,
                                     show_separately=False,
-                                    show=False,
+                                    show=True,
                                     mode="paper")
 
 evaluate_failure    = False    
