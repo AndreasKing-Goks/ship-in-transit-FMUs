@@ -20,7 +20,7 @@ os.add_dll_directory(str(dll_dir))
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from EBASTv2_MBSE_train.env_EBASTv2_MBSE import EBASTv2EnvMBSE
+from EBASTv2_MBSE_train.env_EBASTv2_MBSE_old import EBASTv2EnvMBSE
 from EBASTv2_MBSE_train.MBSE_episode_logger import log_episode_recap, log_training_args
 from EBASTv2_train.evaluate_failure_cases import evaluate_failure_cases
 from EBASTv2_core.path_utils import get_RL_model_path

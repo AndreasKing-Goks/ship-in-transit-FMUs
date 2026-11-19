@@ -340,6 +340,12 @@ class EBASTv2EnvMBSE(gym.Env):
             "max": np.array([sogMax]*self.n_ts, dtype=np.float32)
         }
         
+        # RADAR measurement valid
+        self.own_radar_mea_valid_bound  = {
+            "min": np.array([0.0], dtype=np.float32),
+            "max": np.array([1.0], dtype=np.float32)
+        }
+        
         # Action masks (For all target ships with IW sampler enabled)
         self.action_masks_bound             = {
             "min": np.array([0.0]*self.n_ts_iw, dtype=np.float32),
@@ -371,6 +377,8 @@ class EBASTv2EnvMBSE(gym.Env):
                 "own_ship_rud_ang": Box(-1.0, 1.0, shape=(1,), dtype=np.float32),
                 "own_ship_throttle": Box(-1.0, 1.0, shape=(1,), dtype=np.float32),
                 "own_ship_forward_speed": Box(-1.0, 1.0, shape=(1,), dtype=np.float32),
+                
+                "own_radar_mea_valid": Box(low=0.0, high=1.0, shape=(1,), dtype=np.float32),
 
                 "rel_tar_ships_pos": Box(-1.0, 1.0, shape=(3*self.n_ts,), dtype=np.float32),
                 "tar_ships_forward_speed": Box(-1.0, 1.0, shape=(self.n_ts,), dtype=np.float32),
@@ -446,6 +454,9 @@ class EBASTv2EnvMBSE(gym.Env):
             "own_ship_rud_ang": self._normalize(observation["own_ship_rud_ang"], self.own_ship_rudder_angle_bound["min"], self.own_ship_rudder_angle_bound["max"]),
             "own_ship_throttle": self._normalize(observation["own_ship_throttle"], self.own_ship_throttle_bound["min"], self.own_ship_throttle_bound["max"]),
             "own_ship_forward_speed": self._normalize(observation["own_ship_forward_speed"], self.own_ship_forward_speed_bound["min"], self.own_ship_forward_speed_bound["max"]),
+            
+            "own_radar_mea_valid": (np.asarray(observation["own_radar_mea_valid"], dtype=np.float32) > 0.5).astype(np.float32),
+            
             "rel_tar_ships_pos": self._normalize(observation["rel_tar_ships_pos"], self.tar_ships_pos_bound["min"], self.tar_ships_pos_bound["max"]),
             "tar_ships_forward_speed": self._normalize(observation["tar_ships_forward_speed"], self.tar_ships_forward_speed_bound["min"], self.tar_ships_forward_speed_bound["max"]),
 
@@ -468,6 +479,9 @@ class EBASTv2EnvMBSE(gym.Env):
             "own_ship_rud_ang": self._denormalize(observation_norm["own_ship_rud_ang"], self.own_ship_rudder_angle_bound["min"], self.own_ship_rudder_angle_bound["max"]),
             "own_ship_throttle": self._denormalize(observation_norm["own_ship_throttle"], self.own_ship_throttle_bound["min"], self.own_ship_throttle_bound["max"]),
             "own_ship_forward_speed": self._denormalize(observation_norm["own_ship_forward_speed"], self.own_ship_forward_speed_bound["min"], self.own_ship_forward_speed_bound["max"]),
+            
+            "own_radar_mea_valid": (np.asarray(observation_norm["own_radar_mea_valid"], dtype=np.float32) > 0.5).astype(np.float32),
+            
             "rel_tar_ships_pos": self._denormalize(observation_norm["rel_tar_ships_pos"], self.tar_ships_pos_bound["min"], self.tar_ships_pos_bound["max"]),
             "tar_ships_forward_speed": self._denormalize(observation_norm["tar_ships_forward_speed"], self.tar_ships_forward_speed_bound["min"], self.tar_ships_forward_speed_bound["max"]),
 
@@ -512,7 +526,10 @@ class EBASTv2EnvMBSE(gym.Env):
         own_throttle        = self.instance.GetLastValue(slaveName=f"{own_ship_id}__THROTTLE_CONTROLLER",
                                                          slaveVar="throttle_cmd")
         own_forward_speed   = self.instance.GetLastValue(slaveName=f"{own_ship_id}__SHIP_MODEL",
-                                                         slaveVar="forward_speed")        
+                                                         slaveVar="forward_speed")
+        
+        own_radar_mea       = self.instance.GetLastValue(slaveName=f"{own_ship_id}__TS_TRACKING_EKF_TS1",
+                                                         slaveVar="RADAR_valid_detection")
         
         # Target ship
         tar_ship_pos_list           = []
@@ -576,6 +593,9 @@ class EBASTv2EnvMBSE(gym.Env):
         rel_tar_ships_pos            = np.array(tar_ship_pos_list, dtype=np.float32)
         tar_ships_forward_speed      = np.array(tar_ship_forward_speed_list, dtype=np.float32)
         
+        own_radar_mea_valid          = np.asarray([own_radar_mea], dtype=np.float32)
+        own_radar_mea_valid          = (own_radar_mea_valid > 0.5).astype(np.float32)
+        
         action_masks                 = np.asarray(action_masks_list, dtype=np.float32)
         action_masks                 = (action_masks > 0.5).astype(np.float32)
         
@@ -590,6 +610,7 @@ class EBASTv2EnvMBSE(gym.Env):
                 "own_ship_rud_ang": own_ship_rud_ang,
                 "own_ship_throttle": own_ship_throttle,
                 "own_ship_forward_speed": own_ship_forward_speed,
+                "own_radar_mea_valid": own_radar_mea_valid,
                 "rel_tar_ships_pos": rel_tar_ships_pos,                         # Relative to own ship
                 "tar_ships_forward_speed": tar_ships_forward_speed,
                 "action_masks": action_masks,

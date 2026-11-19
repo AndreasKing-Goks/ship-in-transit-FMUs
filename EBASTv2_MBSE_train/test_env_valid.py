@@ -23,7 +23,7 @@ import numpy as np
 # Load the Configuration
 # =========================
 # Get the config path
-config_path = ROOT / "EBASTv2_MBSE_train" / "EBASTv2_MBSE.yaml",
+config_path = ROOT / "EBASTv2_MBSE_train" / "EBASTv2_MBSE_improved.yaml",
 
 # Get the save path for animation
 save_path = ROOT / "EBASTv2_MBSE_train" /  "saved_animation" / "EBASTv2MBSE_test.mp4"

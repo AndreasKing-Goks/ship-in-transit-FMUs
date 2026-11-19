@@ -1,6 +1,6 @@
 from pathlib import Path
 import numpy as np
-from EBASTv2_MBSE_train.env_EBASTv2_MBSE import EBASTv2EnvMBSE
+from EBASTv2_MBSE_train.env_EBASTv2_MBSE_old import EBASTv2EnvMBSE
 import os
 import shutil
 from datetime import datetime
