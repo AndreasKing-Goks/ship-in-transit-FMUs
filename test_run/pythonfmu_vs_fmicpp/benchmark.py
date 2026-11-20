@@ -22,7 +22,7 @@ import time
 import numpy as np
 
 # Shared helpers and settings from the parity check (same folder)
-from parity import (ROOT, CONFIG_PATH, ENCOUNTER_SETTINGS_PATH, PORTED_FMUS, FMU_TESTS, STEP_SIZE,
+from parity import (ROOT, CONFIG_PATH, ENCOUNTER_SETTINGS_PATH, PORTED_FMUS, FMU_TESTS, NOISE_TESTS, STEP_SIZE,
                     Fmu, with_cpp_fmus,
                     ShipInTransitCoSimulationLibcosimpy, ShipInTransitCoSimulationFmpy,
                     load_base_config, generate_spawn_request_bank, load_spawn_requests_bank_path)
@@ -70,7 +70,10 @@ def benchmark_single_fmus(rows):
     print(f"{'FMU':32s} {'load+init [ms]':>16s} {'doStep median [us]':>20s} {'doStep p95 [us]':>17s} "
           f"{'reset [ms]':>12s} {'step speed-up':>14s}")
     print(f"{'':32s} {'py':>7s} {'cpp':>8s} {'py':>10s} {'cpp':>9s} {'py':>8s} {'cpp':>8s} {'py':>6s} {'cpp':>5s}")
-    for name, fmu, params, inputs_fn in FMU_TESTS:
+    # Also wind and current with noise and gusts, as in the configs (constant inputs)
+    noise_tests = [(f"{name} with noise", fmu, params, lambda k, rng, inputs=inputs: inputs)
+                   for name, fmu, params, inputs, _ in NOISE_TESTS]
+    for name, fmu, params, inputs_fn in FMU_TESTS + noise_tests:
         py  = time_single_fmu(ROOT / "FMUs" / fmu, params, inputs_fn)
         cpp = time_single_fmu(ROOT / "FMUs_cpp" / fmu, params, inputs_fn)
         speed_up = np.median(py[1]) / np.median(cpp[1])

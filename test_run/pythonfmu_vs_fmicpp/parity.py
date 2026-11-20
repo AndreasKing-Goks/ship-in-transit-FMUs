@@ -1,13 +1,16 @@
 """
 Check that the C++ (fmicpp) FMUs in FMUs_cpp/ give the same results as the PythonFMU FMUs in FMUs/.
 
-Part 1: each FMU on its own (fmpy). Checks that the C++ FMU has the same variables as the Python
-        FMU, and gives the same outputs for the same parameters and random inputs. Random inputs
-        also reach cases that a normal scenario never does (e.g. rudder saturation).
-Part 2: the existing simulation loops, as in test_run/fmpy_vs_libcosimpy_test/main_loop.py.
-        A bank of traffic generator scenarios is run with the Python FMUs and with the C++ FMUs.
-        libcosimpy uses a new instance per case. fmpy reuses one instance with RespawnAndReset(),
-        like in training, so this also checks reset.
+Part 1:  each FMU on its own (fmpy). Checks that the C++ FMU has the same variables as the Python
+         FMU, and gives the same outputs for the same parameters and random inputs. Random inputs
+         also reach cases that a normal scenario never does (e.g. rudder saturation).
+Part 1b: the wind and current models use other random numbers than numpy, so with noise on they
+         can only match statistically. This compares mean and standard deviation over a long run.
+Part 2:  the existing simulation loops, as in test_run/fmpy_vs_libcosimpy_test/main_loop.py.
+         A bank of traffic generator scenarios is run with the Python FMUs and with the C++ FMUs,
+         with no wind and current noise so that the results can match exactly.
+         libcosimpy uses a new instance per case. fmpy reuses one instance with RespawnAndReset(),
+         like in training, so this also checks reset.
 """
 
 from pathlib import Path
@@ -67,6 +70,9 @@ PORTED_FMUS = {
     "FMUs/ship/MachinerySystem.fmu":            "FMUs_cpp/ship/MachinerySystem.fmu",
     "FMUs/ship/SimpleCollisionAvoidance.fmu":   "FMUs_cpp/ship/SimpleCollisionAvoidance.fmu",
     "FMUs/ship/SimpleCollisionAvoidanceReversed.fmu": "FMUs_cpp/ship/SimpleCollisionAvoidanceReversed.fmu",
+    # Wind and current (all ships)
+    "FMUs/env_loads/WindModel.fmu":             "FMUs_cpp/env_loads/WindModel.fmu",
+    "FMUs/env_loads/SurfaceCurrentModel.fmu":   "FMUs_cpp/env_loads/SurfaceCurrentModel.fmu",
 }
 
 
@@ -170,6 +176,22 @@ def collision_avoidance_inputs(k, rng):
     return inputs
 
 
+def wind_inputs(k, rng):
+    # Negative and too high mean speeds on purpose (abs() and clipping to the max mean speed)
+    return {"mean_wind_speed": rng.uniform(-15, 45), "mean_wind_direction_deg": rng.uniform(-360, 360)}
+
+
+def current_inputs(k, rng):
+    return {"mean_current_speed": rng.uniform(-2, 2), "mean_current_direction_deg": rng.uniform(-360, 360)}
+
+
+# The C++ wind and current models use other random numbers than numpy. They can only match
+# exactly when there is no noise and no wind gusts (the gust phases are random too).
+NO_NOISE_WIND = {"mean_wind_speed_standard_deviation": 0.0, "wind_direction_deg_standard_deviation": 0.0,
+                 "wind_gust_frequency_discrete_unit_count": 0}
+NO_NOISE_CURRENT = {"current_speed_standard_deviation": 0.0, "current_direction_deg_standard_deviation": 0.0}
+
+
 ship_model_params = ts1_params("SHIP_MODEL")
 ship_model_params.update({"initial_north_position_m": 100.0, "initial_east_position_m": -50.0,
                           "initial_yaw_angle_rad": 0.5, "initial_forward_speed_m_per_s": 4.0})
@@ -189,7 +211,23 @@ FMU_TESTS = [
     ("MachinerySystem PTI",  "ship/MachinerySystem.fmu", {**os0_params("MACHINERY_SYSTEM"), "mso_mode": 2}, machinery_system_inputs),
     ("SimpleCollisionAvoidance",         "ship/SimpleCollisionAvoidance.fmu",         os0_params("COLAV"), collision_avoidance_inputs),
     ("SimpleCollisionAvoidanceReversed", "ship/SimpleCollisionAvoidanceReversed.fmu", os0_params("COLAV"), collision_avoidance_inputs),
+    # Wind and current without noise (see compare_noise_statistics() for the noise)
+    ("WindModel no noise", "env_loads/WindModel.fmu", {**os0_params("WIND"), **NO_NOISE_WIND}, wind_inputs),
+    ("WindModel no noise, log-law mean", "env_loads/WindModel.fmu",
+     {**os0_params("WIND"), **NO_NOISE_WIND, "manual_mean_wind_speed": False}, wind_inputs),
+    ("SurfaceCurrentModel no noise", "env_loads/SurfaceCurrentModel.fmu",
+     {**os0_params("SURFACE_CURRENT"), **NO_NOISE_CURRENT}, current_inputs),
 ]
+
+# Wind and current with noise (and gusts), as in the configs: compare statistics only
+NOISE_TESTS = [
+    # label, FMU, parameters, constant inputs, outputs to compare
+    ("WindModel", "env_loads/WindModel.fmu", os0_params("WIND"),
+     {"mean_wind_speed": 8.0, "mean_wind_direction_deg": 30.0}, ["wind_speed", "wind_direction_deg"]),
+    ("SurfaceCurrentModel", "env_loads/SurfaceCurrentModel.fmu", os0_params("SURFACE_CURRENT"),
+     {"mean_current_speed": 0.5, "mean_current_direction_deg": 45.0}, ["current_speed", "current_direction_deg"]),
+]
+N_NOISE_STEPS = 20000
 
 
 class Fmu:
@@ -253,9 +291,17 @@ def check_interface(py, cpp):
                 notes.append(f"{name}: tunable, but modelDescription.xml says fixed (fmicpp 0.5 bug)")
             else:
                 problems.append(f"{name}: variability {pv.variability} (py) != {cv.variability} (cpp)")
-        if pv.start is not None and cv.start is not None and float(pv.start) != float(cv.start):
+        if pv.start is not None and cv.start is not None and not same_start(pv.start, cv.start):
             problems.append(f"{name}: start {pv.start} (py) != {cv.start} (cpp)")
     return problems, notes
+
+
+def same_start(a, b):
+    """Compare start values: as numbers, or as text for booleans ("true"/"false")."""
+    try:
+        return float(a) == float(b)
+    except ValueError:
+        return str(a).lower() == str(b).lower()
 
 
 def run_and_compare(py, cpp, inputs_fn, outputs):
@@ -320,6 +366,43 @@ def compare_single_fmus():
     return all_ok
 
 
+def compare_noise_statistics():
+    """Wind and current with noise: the values differ, but mean and standard deviation must match."""
+    print()
+    print("=" * 70)
+    print(f"Part 1b: wind and current with noise, statistics over {N_NOISE_STEPS} steps")
+    print("=" * 70)
+    all_ok = True
+    for name, fmu, params, inputs, outputs in NOISE_TESTS:
+        results = {}
+        for kind, folder in (("py", "FMUs"), ("cpp", "FMUs_cpp")):
+            model = Fmu(ROOT / folder / fmu)
+            model.initialize(params)
+            model.set(inputs)
+            values = {n: np.empty(N_NOISE_STEPS) for n in outputs}
+            t = 0.0
+            for k in range(N_NOISE_STEPS):
+                model.fmu.doStep(currentCommunicationPoint=t, communicationStepSize=STEP_SIZE)
+                t += STEP_SIZE
+                for n in outputs:
+                    values[n][k] = model.get(n)
+            model.close()
+            results[kind] = values
+
+        print(f"\n{name}:")
+        for n in outputs:
+            py, cpp = results["py"][n], results["cpp"][n]
+            # Means within 5 standard errors, standard deviations within 5 %
+            std_err = np.sqrt(py.var() / py.size + cpp.var() / cpp.size)
+            mean_ok = abs(py.mean() - cpp.mean()) <= 5 * std_err
+            std_ok  = abs(py.std() - cpp.std()) <= 0.05 * py.std()
+            ok = mean_ok and std_ok
+            all_ok = all_ok and ok
+            print(f"  {n:22s} {'OK' if ok else 'FAILED'}  mean py {py.mean():9.4f} cpp {cpp.mean():9.4f}"
+                  f"  std py {py.std():8.4f} cpp {cpp.std():8.4f}")
+    return all_ok
+
+
 # =========================
 # Part 2: existing simulation loops
 # =========================
@@ -329,6 +412,19 @@ def with_cpp_fmus(config):
     for ship in config["ships"]:
         for block in ship["SHIP_BLOCKS"]:
             block[1] = PORTED_FMUS.get(block[1], block[1])
+    return config
+
+
+def without_env_noise(config):
+    """Copy of the config with no noise and no gusts in the wind and current models, so that the
+    Python and C++ FMUs can match exactly (they use different random numbers)."""
+    config = copy.deepcopy(config)
+    for ship in config["ships"]:
+        params = ship.get("fmu_params", {})
+        if "WIND" in params:
+            params["WIND"].update(NO_NOISE_WIND)
+        if "SURFACE_CURRENT" in params:
+            params["SURFACE_CURRENT"].update(NO_NOISE_CURRENT)
     return config
 
 
@@ -360,9 +456,9 @@ def compare_case(py_series, cpp_series):
 def compare_scenarios():
     print()
     print("=" * 70)
-    print(f"Part 2: {N_CASES} traffic generator scenarios")
+    print(f"Part 2: {N_CASES} traffic generator scenarios (no wind and current noise)")
     print("=" * 70)
-    config     = load_base_config(CONFIG_PATH)
+    config     = without_env_noise(load_base_config(CONFIG_PATH))
     config_cpp = with_cpp_fmus(config)
 
     # New scenarios every run (the bank file is in .gitignore)
@@ -414,8 +510,10 @@ def compare_scenarios():
 
 if __name__ == "__main__":
     single_ok = compare_single_fmus()
+    noise_ok = compare_noise_statistics()
     scenarios_ok = compare_scenarios()
     print()
-    print(f"Part 1 (each FMU on its own):   {'OK' if single_ok else 'FAILED'}")
-    print(f"Part 2 (existing loops, reset): {'OK' if scenarios_ok else 'FAILED'}")
-    sys.exit(0 if single_ok and scenarios_ok else 1)
+    print(f"Part 1  (each FMU on its own):          {'OK' if single_ok else 'FAILED'}")
+    print(f"Part 1b (wind/current noise statistics): {'OK' if noise_ok else 'FAILED'}")
+    print(f"Part 2  (existing loops, reset):        {'OK' if scenarios_ok else 'FAILED'}")
+    sys.exit(0 if single_ok and noise_ok and scenarios_ok else 1)

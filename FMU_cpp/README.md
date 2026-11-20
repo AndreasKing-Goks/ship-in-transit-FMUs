@@ -16,6 +16,8 @@ start values as the Python FMUs, so they can replace them by changing the `.fmu`
 | `ship/MachinerySystem`                  | `FMU_scripts/ship/machinery_system_fmu.py`                     | `ship/`                  |
 | `ship/SimpleCollisionAvoidance`         | `FMU_scripts/ship/simple_collision_avoidance_fmu.py`           | `ship/`                  |
 | `ship/SimpleCollisionAvoidanceReversed` | `FMU_scripts/ship/simple_collision_avoidance_fmu_reversed.py`  | `ship/`                  |
+| `env_loads/WindModel`                   | `FMU_scripts/env_loads/wind_model_fmu.py`                      | `env_loads/`             |
+| `env_loads/SurfaceCurrentModel`         | `FMU_scripts/env_loads/surface_current_model_fmu.py`           | `env_loads/`             |
 
 The Python Autopilot, Rudder, ShipModel and MissionManager in `FMUs/ship/` are built from the same
 scripts as the ones in `FMUs/simplified_ship/`, so the own ship can use the C++ FMUs in
@@ -26,6 +28,12 @@ The FMUs are FMI 2.0 Co-Simulation, Windows (win64) only for now.
 The C++ models copy the Python behaviour exactly, also where it may not be intended:
 `MachinerySystem` gives the fuel consumption per step, not a running total, and
 `ShaftSpeedController` uses `a + floor` as feedforward (the `a * speed + floor` line is commented out).
+
+`WindModel` and `SurfaceCurrentModel` use other random numbers than numpy (`std::mt19937_64`, with a
+written-out normal distribution so that Windows and Linux give the same numbers). With noise or wind
+gusts on, a C++ run gives other values than a Python run with the same seed, but with the same
+statistics. With noise and gusts off they match exactly. The random generator and the gust angles are
+not saved with the FMU state.
 
 ## How the models work
 
