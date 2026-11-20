@@ -1287,7 +1287,12 @@ class ShipInTransitCoSimulation(CoSimInstance):
             fmu_params = compile_ship_params(ship_config)
             fmu_params = self.spawn_ship(ship_id=prefix, spawn=ship_config["spawn"], fmu_params=fmu_params)
             for block, params in fmu_params.items():
-                self.SetInitialValues(slaveName=self.ship_slave(prefix, block), params=params)
+                # Only stage the values. Reset() applies them in initialization mode.
+                # SetInitialValues() would set them on the running FMUs right away, and FMI 2.0
+                # does not allow changing fixed parameters after initialization.
+                slave_name = self.ship_slave(prefix, block)
+                for var_name, value in params.items():
+                    self.initial_values[(slave_name, var_name)] = value
 
         self.Reset()
 
