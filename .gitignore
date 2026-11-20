@@ -38,6 +38,8 @@ MANIFEST
 
 # Folders
 trained_model/
+FMU_cpp/CMakeUserPresets.json
+test_run/pythonfmu_vs_fmicpp/spawn_request_bank.pkl
 00_*/
 .vscode/
 00_paper/

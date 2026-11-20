@@ -17,6 +17,7 @@ dependencies:
   - requests
   - tensorboard
   - fmpy
+  - conan>=2
   - pip:
       - libcosimpy==0.0.5
       - pythonfmu==0.7.0
