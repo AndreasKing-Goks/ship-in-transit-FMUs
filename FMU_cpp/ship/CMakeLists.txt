@@ -1,0 +1,5 @@
+add_subdirectory(MachinerySystem)
+add_subdirectory(ShaftSpeedController)
+add_subdirectory(SimpleCollisionAvoidance)
+add_subdirectory(SimpleCollisionAvoidanceReversed)
+add_subdirectory(ThrottleController)

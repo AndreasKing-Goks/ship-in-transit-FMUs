@@ -8,3 +8,4 @@ fmiCppFmu()
 
 add_subdirectory(simplified_ship)
 add_subdirectory(mission_manager)
+add_subdirectory(ship)

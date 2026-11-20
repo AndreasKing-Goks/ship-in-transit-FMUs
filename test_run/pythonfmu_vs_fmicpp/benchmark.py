@@ -64,17 +64,17 @@ def time_single_fmu(path, params, inputs_fn):
 
 
 def benchmark_single_fmus(rows):
-    print("=" * 90)
+    print("=" * 106)
     print(f"Part 1: each FMU on its own (fmpy, {N_STEPS} steps)")
-    print("=" * 90)
-    print(f"{'FMU':16s} {'load+init [ms]':>16s} {'doStep median [us]':>20s} {'doStep p95 [us]':>17s} "
+    print("=" * 106)
+    print(f"{'FMU':32s} {'load+init [ms]':>16s} {'doStep median [us]':>20s} {'doStep p95 [us]':>17s} "
           f"{'reset [ms]':>12s} {'step speed-up':>14s}")
-    print(f"{'':16s} {'py':>7s} {'cpp':>8s} {'py':>10s} {'cpp':>9s} {'py':>8s} {'cpp':>8s} {'py':>6s} {'cpp':>5s}")
-    for name, params, inputs_fn in FMU_TESTS:
-        py  = time_single_fmu(ROOT / "FMUs" / "simplified_ship" / f"{name}.fmu", params, inputs_fn)
-        cpp = time_single_fmu(ROOT / "FMUs_cpp" / "simplified_ship" / f"{name}.fmu", params, inputs_fn)
+    print(f"{'':32s} {'py':>7s} {'cpp':>8s} {'py':>10s} {'cpp':>9s} {'py':>8s} {'cpp':>8s} {'py':>6s} {'cpp':>5s}")
+    for name, fmu, params, inputs_fn in FMU_TESTS:
+        py  = time_single_fmu(ROOT / "FMUs" / fmu, params, inputs_fn)
+        cpp = time_single_fmu(ROOT / "FMUs_cpp" / fmu, params, inputs_fn)
         speed_up = np.median(py[1]) / np.median(cpp[1])
-        print(f"{name:16s} {py[0]*1e3:7.0f} {cpp[0]*1e3:8.0f} "
+        print(f"{name:32s} {py[0]*1e3:7.0f} {cpp[0]*1e3:8.0f} "
               f"{np.median(py[1])*1e6:10.1f} {np.median(cpp[1])*1e6:9.1f} "
               f"{np.percentile(py[1], 95)*1e6:8.1f} {np.percentile(cpp[1], 95)*1e6:8.1f} "
               f"{py[2]*1e3:6.1f} {cpp[2]*1e3:5.1f} {speed_up:13.1f}x")

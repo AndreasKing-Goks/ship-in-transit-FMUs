@@ -4,15 +4,28 @@ C++ versions of some of the PythonFMU models in `FMU_scripts/`, written with
 SINTEF's fmicpp framework. They have the same variable names, types and
 start values as the Python FMUs, so they can replace them by changing the `.fmu` path in a YAML config.
 
-| C++ model                         | Python original                                       |
-|-----------------------------------|-------------------------------------------------------|
-| `simplified_ship/Autopilot`       | `FMU_scripts/simplified_ship/autopilot_fmu.py`        |
-| `simplified_ship/Rudder`          | `FMU_scripts/simplified_ship/rudder_model_fmu.py`     |
-| `simplified_ship/ShipModel`       | `FMU_scripts/simplified_ship/ship_model_fmu.py`       |
-| `simplified_ship/SpeedController` | `FMU_scripts/simplified_ship/speed_controller_fmu.py` |
-| `mission_manager/MissionManager`  | `FMU_scripts/mission_manager/mission_manager_fmu.py`  |
+| C++ model                               | Python original                                                | Built FMU in `FMUs_cpp/` |
+|-----------------------------------------|----------------------------------------------------------------|--------------------------|
+| `simplified_ship/Autopilot`             | `FMU_scripts/simplified_ship/autopilot_fmu.py`                 | `simplified_ship/`       |
+| `simplified_ship/Rudder`                | `FMU_scripts/simplified_ship/rudder_model_fmu.py`              | `simplified_ship/`       |
+| `simplified_ship/ShipModel`             | `FMU_scripts/simplified_ship/ship_model_fmu.py`                | `simplified_ship/`       |
+| `simplified_ship/SpeedController`       | `FMU_scripts/simplified_ship/speed_controller_fmu.py`          | `simplified_ship/`       |
+| `mission_manager/MissionManager`        | `FMU_scripts/mission_manager/mission_manager_fmu.py`           | `simplified_ship/`       |
+| `ship/ThrottleController`               | `FMU_scripts/ship/throttle_controller_fmu.py`                  | `ship/`                  |
+| `ship/ShaftSpeedController`             | `FMU_scripts/ship/shaft_speed_controller_fmu.py`               | `ship/`                  |
+| `ship/MachinerySystem`                  | `FMU_scripts/ship/machinery_system_fmu.py`                     | `ship/`                  |
+| `ship/SimpleCollisionAvoidance`         | `FMU_scripts/ship/simple_collision_avoidance_fmu.py`           | `ship/`                  |
+| `ship/SimpleCollisionAvoidanceReversed` | `FMU_scripts/ship/simple_collision_avoidance_fmu_reversed.py`  | `ship/`                  |
 
-The built FMUs are in `FMUs_cpp/simplified_ship/`. They are FMI 2.0 Co-Simulation, Windows (win64) only for now.
+The Python Autopilot, Rudder, ShipModel and MissionManager in `FMUs/ship/` are built from the same
+scripts as the ones in `FMUs/simplified_ship/`, so the own ship can use the C++ FMUs in
+`FMUs_cpp/simplified_ship/` for them.
+
+The FMUs are FMI 2.0 Co-Simulation, Windows (win64) only for now.
+
+The C++ models copy the Python behaviour exactly, also where it may not be intended:
+`MachinerySystem` gives the fuel consumption per step, not a running total, and
+`ShaftSpeedController` uses `a + floor` as feedforward (the `a * speed + floor` line is commented out).
 
 ## How the models work
 

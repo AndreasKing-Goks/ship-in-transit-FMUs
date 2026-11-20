@@ -61,17 +61,33 @@ PORTED_FMUS = {
     "FMUs/ship/Autopilot.fmu":                  "FMUs_cpp/simplified_ship/Autopilot.fmu",
     "FMUs/ship/Rudder.fmu":                     "FMUs_cpp/simplified_ship/Rudder.fmu",
     "FMUs/ship/ShipModel.fmu":                  "FMUs_cpp/simplified_ship/ShipModel.fmu",
+    # Own ship only
+    "FMUs/ship/ThrottleController.fmu":         "FMUs_cpp/ship/ThrottleController.fmu",
+    "FMUs/ship/ShaftSpeedController.fmu":       "FMUs_cpp/ship/ShaftSpeedController.fmu",
+    "FMUs/ship/MachinerySystem.fmu":            "FMUs_cpp/ship/MachinerySystem.fmu",
+    "FMUs/ship/SimpleCollisionAvoidance.fmu":   "FMUs_cpp/ship/SimpleCollisionAvoidance.fmu",
+    "FMUs/ship/SimpleCollisionAvoidanceReversed.fmu": "FMUs_cpp/ship/SimpleCollisionAvoidanceReversed.fmu",
 }
 
 
 # =========================
 # Part 1: each FMU on its own
 # =========================
+def ship_params(ship_id, block):
+    """Parameters of a ship block in traffic_gen.yaml."""
+    config = load_base_config(CONFIG_PATH)
+    ship = next(s for s in config["ships"] if s["id"] == ship_id)
+    return dict(ship["fmu_params"][block])
+
+
 def ts1_params(block):
     """Parameters of a target ship block in traffic_gen.yaml."""
-    config = load_base_config(CONFIG_PATH)
-    ts1 = next(s for s in config["ships"] if s["id"] == "TS1")
-    return dict(ts1["fmu_params"][block])
+    return ship_params("TS1", block)
+
+
+def os0_params(block):
+    """Parameters of an own ship block in traffic_gen.yaml."""
+    return ship_params("OS0", block)
 
 
 # Waypoints for the mission manager and a path that follows them
@@ -128,17 +144,51 @@ def speed_controller_inputs(k, rng):
     return {"desired_ship_speed": rng.uniform(0, 8), "measured_ship_speed": rng.uniform(0, 8)}
 
 
+def throttle_controller_inputs(k, rng):
+    return {"desired_shaft_speed_rpm": rng.uniform(0, 700), "measured_shaft_speed_rpm": rng.uniform(0, 700)}
+
+
+def shaft_speed_controller_inputs(k, rng):
+    # Desired speeds below and above the feedforward table (0.18 - 6.2 m/s) on purpose
+    return {"desired_ship_speed": rng.uniform(-1, 8), "measured_ship_speed": rng.uniform(0, 8)}
+
+
+def machinery_system_inputs(k, rng):
+    return {"load_perc": rng.uniform(0, 1)}
+
+
+def collision_avoidance_inputs(k, rng):
+    # Own ship near the origin, three target ships around it (sometimes close enough to collide)
+    inputs = {"own_north": rng.uniform(-100, 100), "own_east": rng.uniform(-100, 100),
+              "own_yaw_angle": rng.uniform(-np.pi, np.pi), "own_measured_speed": rng.uniform(0, 8),
+              "throttle_cmd": rng.uniform(-0.2, 1.2), "rudder_angle_deg": rng.uniform(-30, 30)}
+    for i in range(1, 4):
+        inputs[f"tar_{i}_north"] = rng.uniform(-1500, 1500)
+        inputs[f"tar_{i}_east"] = rng.uniform(-1500, 1500)
+        inputs[f"tar_{i}_yaw_angle"] = rng.uniform(-np.pi, np.pi)
+        inputs[f"tar_{i}_measured_speed"] = rng.uniform(0, 8)
+    return inputs
+
+
 ship_model_params = ts1_params("SHIP_MODEL")
 ship_model_params.update({"initial_north_position_m": 100.0, "initial_east_position_m": -50.0,
                           "initial_yaw_angle_rad": 0.5, "initial_forward_speed_m_per_s": 4.0})
 
 FMU_TESTS = [
-    # name, parameters, input function
-    ("MissionManager",  mission_manager_params(),       mission_manager_inputs),
-    ("Autopilot",       ts1_params("AUTOPILOT"),        autopilot_inputs),
-    ("Rudder",          ts1_params("RUDDER"),           rudder_inputs),
-    ("ShipModel",       ship_model_params,              ship_model_inputs),
-    ("SpeedController", ts1_params("SPEED_CONTROLLER"), speed_controller_inputs),
+    # label, FMU (same path below FMUs/ and FMUs_cpp/), parameters, input function
+    ("MissionManager",  "simplified_ship/MissionManager.fmu",  mission_manager_params(),       mission_manager_inputs),
+    ("Autopilot",       "simplified_ship/Autopilot.fmu",       ts1_params("AUTOPILOT"),        autopilot_inputs),
+    ("Rudder",          "simplified_ship/Rudder.fmu",          ts1_params("RUDDER"),           rudder_inputs),
+    ("ShipModel",       "simplified_ship/ShipModel.fmu",       ship_model_params,              ship_model_inputs),
+    ("SpeedController", "simplified_ship/SpeedController.fmu", ts1_params("SPEED_CONTROLLER"), speed_controller_inputs),
+    ("ThrottleController",   "ship/ThrottleController.fmu",   os0_params("THROTTLE_CONTROLLER"),    throttle_controller_inputs),
+    ("ShaftSpeedController", "ship/ShaftSpeedController.fmu", os0_params("SHAFT_SPEED_CONTROLLER"), shaft_speed_controller_inputs),
+    # MachinerySystem in each operating mode (0: MEC, 1: PTO, 2: PTI)
+    ("MachinerySystem MEC",  "ship/MachinerySystem.fmu", {**os0_params("MACHINERY_SYSTEM"), "mso_mode": 0}, machinery_system_inputs),
+    ("MachinerySystem PTO",  "ship/MachinerySystem.fmu", {**os0_params("MACHINERY_SYSTEM"), "mso_mode": 1}, machinery_system_inputs),
+    ("MachinerySystem PTI",  "ship/MachinerySystem.fmu", {**os0_params("MACHINERY_SYSTEM"), "mso_mode": 2}, machinery_system_inputs),
+    ("SimpleCollisionAvoidance",         "ship/SimpleCollisionAvoidance.fmu",         os0_params("COLAV"), collision_avoidance_inputs),
+    ("SimpleCollisionAvoidanceReversed", "ship/SimpleCollisionAvoidanceReversed.fmu", os0_params("COLAV"), collision_avoidance_inputs),
 ]
 
 
@@ -238,9 +288,9 @@ def compare_single_fmus():
     print("Part 1: each FMU on its own")
     print("=" * 70)
     all_ok = True
-    for name, params, inputs_fn in FMU_TESTS:
-        py  = Fmu(ROOT / "FMUs" / "simplified_ship" / f"{name}.fmu")
-        cpp = Fmu(ROOT / "FMUs_cpp" / "simplified_ship" / f"{name}.fmu")
+    for name, fmu, params, inputs_fn in FMU_TESTS:
+        py  = Fmu(ROOT / "FMUs" / fmu)
+        cpp = Fmu(ROOT / "FMUs_cpp" / fmu)
 
         problems, notes = check_interface(py, cpp)
         outputs = [n for n, v in py.vars.items() if v.causality == "output"]
