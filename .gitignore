@@ -40,6 +40,7 @@ MANIFEST
 trained_model/
 FMU_cpp/CMakeUserPresets.json
 test_run/pythonfmu_vs_fmicpp/spawn_request_bank.pkl
+test_run/pythonfmu_vs_fmicpp/benchmark_results.csv
 00_*/
 .vscode/
 00_paper/
