@@ -240,7 +240,7 @@ FMU_TESTS = [
     ("ShipModel",       "simplified_ship/ShipModel.fmu",       ship_model_params,              ship_model_inputs),
     ("SpeedController", "simplified_ship/SpeedController.fmu", ts1_params("SPEED_CONTROLLER"), speed_controller_inputs),
     # MissionManagerAST: closed loop (see AstShip). Also when the sample limit is reached, and when
-    # the ship reaches the end before the sampler starts (the Python FMU then raises an error every step)
+    # the ship reaches the end before the sampler starts
     ("MissionManagerAST", "simplified_ship/MissionManagerAST.fmu", mission_manager_ast_params(), AstShip),
     ("MissionManagerAST max 2 samples", "simplified_ship/MissionManagerAST.fmu",
      {**mission_manager_ast_params(), "max_sampled_inter_wp": 2}, AstShip),

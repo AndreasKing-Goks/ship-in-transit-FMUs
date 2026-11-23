@@ -354,7 +354,8 @@ void MODEL_IDENTIFIER::do_step(double current_time, double step_size)
 
         // List of triggers
         bool within_sampling_max_count = accepted_sampled_inter_wp < max_sampled_inter_wp;
-        bool iw_sampler_active         = current_time >= time_to_start_iw_sampler;
+        // No sampling after the end waypoint is reached
+        bool iw_sampler_active         = current_time >= time_to_start_iw_sampler && !reach_wp_end;
         bool place_zeroeth_inter_wp    = within_sampling_max_count && iw_sampler_active && !_zeroeth_iw_inserted;
         bool enable_inter_wp_sampling  = within_sampling_max_count && iw_sampler_active && _zeroeth_iw_inserted
                                          && entering_ra && next_wp_is_inter;

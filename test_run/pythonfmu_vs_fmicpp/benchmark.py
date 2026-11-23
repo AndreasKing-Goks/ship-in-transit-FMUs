@@ -78,8 +78,6 @@ def benchmark_single_fmus(rows):
     noise_tests = [(f"{name} with noise", fmu, params, lambda k, rng, inputs=inputs: inputs)
                    for name, fmu, params, inputs, _ in NOISE_TESTS]
     for name, fmu, params, inputs_fn in FMU_TESTS + noise_tests:
-        if name == "MissionManagerAST early end":
-            continue  # both FMUs print an error every step, which is not worth timing
         py  = time_single_fmu(ROOT / "FMUs" / fmu, params, inputs_fn)
         cpp = time_single_fmu(ROOT / "FMUs_cpp" / fmu, params, inputs_fn)
         speed_up = np.median(py[1]) / np.median(cpp[1])

@@ -78,6 +78,11 @@ MODEL_IDENTIFIER::MODEL_IDENTIFIER(std::shared_ptr<LoggerBase> _logger, std::str
     RegisterOutput(fuel_consumption, "fuel_consumption", 0.0);
     RegisterOutput(motor_torque, "motor_torque", 0.0);
     RegisterOutput(hybrid_shaft_generator_torque, "hybrid_shaft_generator_torque", 0.0);
+
+    // Fuel consumption totals, kept between steps
+    RegisterInternal(fuel_consumption_me_temp,  "fuel_consumption_me_temp",  0.0);
+    RegisterInternal(fuel_consumption_hsg_temp, "fuel_consumption_hsg_temp", 0.0);
+    RegisterInternal(fuel_consumption_temp,     "fuel_consumption_temp",     0.0);
 }
 
 // Division that fails like Python (ZeroDivisionError) instead of giving inf or nan
@@ -173,7 +178,7 @@ double MODEL_IDENTIFIER::spec_fuel_cons(double load_perc, double coeff_a, double
     return rate / 3.6e9;
 }
 
-// Fuel consumption rates and (per step, see the _temp members) fuel consumption
+// Fuel consumption rates and total fuel consumption
 void MODEL_IDENTIFIER::get_fuel_consumption(double load_perc, double step_size, double& rate_me, double& rate_hsg,
                                             double& fuel_consumption_me, double& fuel_consumption_hsg, double& fuel_consumption)
 {
@@ -291,6 +296,10 @@ void MODEL_IDENTIFIER::do_step(double current_time, double step_size)
         fuel_consumption_me           = fuel_consumption_me_new;
         fuel_consumption_hsg          = fuel_consumption_hsg_new;
         fuel_consumption              = fuel_consumption_new;
+        // Keep the totals for the next step
+        fuel_consumption_me_temp      = fuel_consumption_me_new;
+        fuel_consumption_hsg_temp     = fuel_consumption_hsg_new;
+        fuel_consumption_temp         = fuel_consumption_new;
         motor_torque                  = main_engine_torque(load_perc);
         hybrid_shaft_generator_torque = hsg_torque(load_perc);
     }

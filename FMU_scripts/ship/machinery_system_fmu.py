@@ -316,6 +316,10 @@ class MachinerySystem(Fmi2Slave):
             self.fuel_consumption_me                = fuel_consumption_me
             self.fuel_consumption_hsg               = fuel_consumption_hsg
             self.fuel_consumption                   = fuel_consumption
+            # Keep the totals for the next step
+            self.fuel_consumption_me_temp           = fuel_consumption_me
+            self.fuel_consumption_hsg_temp          = fuel_consumption_hsg
+            self.fuel_consumption_temp              = fuel_consumption
             self.motor_torque                       = self.main_engine_torque(self.load_perc)
             self.hybrid_shaft_generator_torque      = self.hsg_torque(self.load_perc)
         

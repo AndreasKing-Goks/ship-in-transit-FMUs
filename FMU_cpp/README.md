@@ -28,11 +28,8 @@ The FMUs are FMI 2.0 Co-Simulation, with binaries for Windows (win64) and Linux 
 are built on AlmaLinux 9. They run on other Red Hat 9 based systems (like Rocky Linux 9) and on Linux systems with
 glibc 2.35 or newer.
 
-The C++ models copy the Python behaviour exactly, also where it may not be intended:
-`MachinerySystem` gives the fuel consumption per step, not a running total, and
-`ShaftSpeedController` uses `a + floor` as feedforward (the `a * speed + floor` line is commented out).
-If the ship reaches the end waypoint before the intermediate waypoint sampler starts, `MissionManagerAST`
-gives an error every step from then on and sets `reach_wp_end` back to false.
+The C++ models copy the Python behaviour exactly. `ShaftSpeedController` uses `a + floor` as feedforward on
+purpose (the `a * speed + floor` line is commented out).
 
 `MissionManagerAST` keeps its waypoint lists in `std::vector`s. They are not saved with the FMU state.
 Its `messages` output is the same text as in Python where possible.

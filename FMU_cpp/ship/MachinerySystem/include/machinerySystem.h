@@ -86,9 +86,9 @@ private:
     double available_propulsion_power = 0.0;
     double available_propulsion_power_main_engine = 0.0;
     double available_propulsion_power_electrical = 0.0;
-    double fuel_consumption_me_temp = 0.0;   // never updated, like in the Python FMU
-    double fuel_consumption_hsg_temp = 0.0;  // never updated, like in the Python FMU
-    double fuel_consumption_temp = 0.0;      // never updated, like in the Python FMU
+    double fuel_consumption_me_temp = 0.0;
+    double fuel_consumption_hsg_temp = 0.0;
+    double fuel_consumption_temp = 0.0;
 };
 
 #endif
