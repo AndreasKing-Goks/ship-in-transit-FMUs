@@ -91,3 +91,13 @@ class RewardDesign6():
             reward = self.second_peak * np.exp(-(val - self.target2)**2 /  self.offset_param4)
         
         return reward
+
+
+class RewardDesign7():
+    def __init__(self, collision_zone_radius):
+        self.collision_zone_radius = collision_zone_radius
+
+    def __call__(self, val):
+        if val < self.collision_zone_radius:
+            return 0.0
+        return -np.log1p(val - self.collision_zone_radius)

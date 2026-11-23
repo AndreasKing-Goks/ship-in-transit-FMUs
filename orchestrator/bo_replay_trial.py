@@ -21,6 +21,7 @@ import json
 import argparse
 import os
 import pandas as pd
+import numpy as np
 import copy
 
 # Ensure libcosim DLL is found
@@ -129,7 +130,8 @@ def show_trials(df):
     print("="*100)
     
     # Select key columns for display
-    display_cols = ["trial", "type", "status", "danger_score", "min_dist", 
+    display_cols = ["trial", "type", "status", "objective", "danger_score",
+                    "terminal_reward", "mean_final_dist", "termination_reason", "min_dist",
                     "own_ship_collision", "own_ship_grounding", "own_ship_navigation_failure",
                     "own_ship_reaches_end_waypoint"]
     
@@ -182,6 +184,11 @@ def replay_trial(trial_index, df, data, paths, encounters, os_initial, save_anim
     
     # Print detailed metrics for successful trials
     print(f"Danger Score: {metrics['danger_score']:.4f}")
+    print(f"Objective: {metrics['objective']:.4f}")
+    if "terminal_reward" in metrics:
+        print(f"Terminal Reward: {metrics['terminal_reward']:.4f}")
+        print(f"Mean Final Distance: {metrics['mean_final_dist']:.2f}m")
+        print(f"Termination Reason: {metrics['termination_reason']}")
     print(f"Min Distance: {metrics['min_dist']:.2f}m")
     print(f"Own Ship Collision: {metrics['own_ship_collision']}")
     print(f"Own Ship Grounding: {metrics['own_ship_grounding']}")
@@ -228,7 +235,7 @@ Examples (from root directory):
     )
     parser.add_argument("--scenario", required=True, help="Scenario config file path (absolute or relative)")
     parser.add_argument("--trial", type=int, default=None, help="Trial index to replay")
-    parser.add_argument("--best", action="store_true", help="Replay best trial (lowest danger_score)")
+    parser.add_argument("--best", action="store_true", help="Replay best feasible trial (lowest objective)")
     parser.add_argument("--list", action="store_true", help="List all trials")
     parser.add_argument("--save", action="store_true", help="Save animation to MP4")
     args = parser.parse_args()
@@ -265,9 +272,14 @@ Examples (from root directory):
         
         # Handle --best
         if args.best:
-            best_idx = df["danger_score"].idxmin()
-            args.trial = best_idx
-            print(f"\nBest trial found: Trial {best_idx} (danger_score={df.iloc[best_idx]['danger_score']:.4f})")
+            feasible = df[df["status"].astype(str).str.upper() == "COMPLETED"]
+            feasible = feasible[np.isfinite(feasible["objective"])]
+            if feasible.empty:
+                raise ValueError("No feasible trials available to replay")
+            best_idx = feasible["objective"].idxmin()
+            args.trial = int(df.index.get_loc(best_idx))
+            print(f"\nBest trial found: Trial {df.loc[best_idx, 'trial']} "
+                  f"(objective={df.loc[best_idx, 'objective']:.4f})")
         
         # Validate trial index
         if args.trial is None:

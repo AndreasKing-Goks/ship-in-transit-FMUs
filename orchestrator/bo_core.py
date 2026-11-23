@@ -12,13 +12,10 @@ from ax.generation_strategy.generation_strategy import GenerationStrategy, Gener
 from ax.adapter.registry import Generators
 
 from orchestrator.sit_cosim import ShipInTransitCoSimulation
-from EBASTv2_core.reward_designs import RewardDesign4
+from EBASTv2_core.reward_designs import RewardDesign7
 
-# Nearest-distance shaping function, identical to the one used by the AST reward
-# (RL_env/reward_function.py: nearest_distance_reward_func). Reused here so that
-# the BO/MC danger score and the AST terminal reward share the exact same
-# near-miss shaping curve.
-_nearest_distance_reward_func = RewardDesign4(target=100, offset_param=15_000_000)
+# Matches ast_arsitorus (3ce5ac7); the BO branch's older AST reward is unchanged.
+_final_distance_reward_func = RewardDesign7(collision_zone_radius=100.0)
 
 
 # ═════════════════════════════════════════════════════════════
@@ -49,34 +46,31 @@ def _capped_margin(value, threshold):
 
 
 def compute_trial_metrics(instance, num_target_ships):
-    """AST-aligned danger score used as the BO/MC objective.
+    """Score outcomes using the terminal component of AST at 3ce5ac7.
 
-    Mirrors the terminal reward of the AST adversary
-    (RL_env/reward_function.py): own-ship outcome bonuses
-    (collision/grounding/navigation-failure/reach-end) plus target-ship
-    validity penalties, plus a nearest-distance shaping term computed with the
-    same shape function (``RewardDesign4``) and parameters as the AST reward.
-
-    A higher danger score means a more dangerous scenario. Since Ax minimizes,
-    the reported ``objective`` is the negation of the danger score.
-
-    The same function is used by Monte Carlo sampling so that all three methods
-    (AST, BO, MC) share one definition of "danger".
+    Sequential AST action penalties are deliberately excluded. Time limits and
+    map exits without an AST terminal outcome receive the final-distance penalty
+    instead of tying with an own-ship failure. Minimum distances are diagnostics
+    only. Ax minimizes the negated reward (zero is best).
     """
     # Ship ids in spawn order: own ship is first, the rest are target ships
     ship_ids = [cfg["id"] for cfg in instance.ship_configs]
     os_id = ship_ids[0]
     ts_ids = ship_ids[1:]
+    if num_target_ships < 1 or num_target_ships != len(ts_ids):
+        raise ValueError("num_target_ships must match the nonempty target-ship list")
 
     stop_info = instance.stop_info
 
-    def _last(seq, default=False):
-        return seq[-1] if seq else default
+    def _last(seq):
+        if len(seq) == 0:
+            raise ValueError("Missing terminal ship-condition history")
+        return seq[-1]
 
     # --- Own-ship terminal outcomes ---------------------------------------
     os_info = stop_info[os_id]
     own_ship_collision = bool(_last(os_info["collision"]["status"]))
-    own_ship_grounding = bool(_last(os_info["grounding"]))
+    own_ship_grounding = not instance.skip_map_evaluation and bool(_last(os_info["grounding"]))
     own_ship_navigation_failure = bool(_last(os_info["navigation_failure"]))
     own_ship_reaches_end_waypoint = bool(_last(os_info["reaches_end_waypoint"]))
 
@@ -89,39 +83,87 @@ def compute_trial_metrics(instance, num_target_ships):
     for ts_id in ts_ids:
         ts_info = stop_info[ts_id]
         ts_collision = bool(_last(ts_info["collision"]["status"]))
-        ts_colliders = _last(ts_info["collision"]["colliders"], default=None)
+        ts_colliders = _last(ts_info["collision"]["colliders"])
 
         # Invalid target collision: target ship collides with anything but own ship
-        if ts_collision and (ts_colliders is None or os_id not in ts_colliders):
-            tar_ships_collision = True
-        if _last(ts_info["grounding"]):
+        if ts_collision:
+            if ts_colliders is None:
+                raise ValueError(f"Missing colliders for target collision: {ts_id}")
+            if os_id not in ts_colliders:
+                tar_ships_collision = True
+        if not instance.skip_map_evaluation and _last(ts_info["grounding"]):
             tar_ships_grounding = True
         if _last(ts_info["navigation_failure"]):
             tar_ships_navigation_failure = True
         if _last(ts_info["reaches_end_waypoint"]):
             tar_ships_reaches_end_waypoint = True
 
-    # --- Nearest-distance shaping (worst case across all target ships) -----
+    # Read positions, not COLAV distances, which contain initialization zeros.
+    positions = {}
+    position_times = None
+    final_positions = {}
+    for ship_id in ship_ids:
+        coordinates = []
+        final_coordinates = []
+        for variable in ("north", "east"):
+            times, _, values = instance.get_ship_timeseries(ship_id, variable)
+            times = np.asarray(times, dtype=float)
+            values = np.asarray(values, dtype=float)
+            if (times.ndim != 1 or values.shape != times.shape or not times.size
+                    or not np.all(np.isfinite(times)) or not np.all(np.isfinite(values))):
+                raise ValueError(f"Invalid position history: {ship_id}.{variable}")
+            if position_times is None:
+                position_times = times
+            elif not np.array_equal(times, position_times):
+                raise ValueError("Ship position histories must have matching timestamps")
+            coordinates.append(values)
+            final_coordinates.append(float(instance.GetLastValue(
+                slaveName=instance.ship_slave(ship_id, "SHIP_MODEL"), slaveVar=variable,
+            )))
+        positions[ship_id] = np.column_stack(coordinates)
+        final_positions[ship_id] = np.asarray(final_coordinates)
+        if not np.all(np.isfinite(final_positions[ship_id])):
+            raise ValueError(f"Invalid final position: {ship_id}")
+
     all_min_dist = []
-    for k in range(1, num_target_ships + 1):
-        _, _, dist_k = instance.get_ship_timeseries(os_id, f"dist_own_to_tar_{k}")
-        dist_k = np.asarray(dist_k, dtype=float)
-        all_min_dist.append(float(np.min(dist_k)) if dist_k.size else np.inf)
+    all_final_dist = []
+    spawn_times = {cfg["id"]: cfg.get("spawn", {}).get("start_time", 0.0)
+                   for cfg in instance.ship_configs}
+    for ts_id in ts_ids:
+        active = position_times > max(spawn_times[os_id], spawn_times[ts_id])
+        if not np.any(active):
+            raise ValueError(f"No active position samples for target ship: {ts_id}")
+        delta = positions[ts_id][active] - positions[os_id][active]
+        all_min_dist.append(float(np.min(np.hypot(delta[:, 0], delta[:, 1]))))
+        final_delta = final_positions[ts_id] - final_positions[os_id]
+        all_final_dist.append(float(np.hypot(final_delta[0], final_delta[1])))
 
-    min_dist = min(all_min_dist) if all_min_dist else np.inf
-    nearest_distance_shaping = float(_nearest_distance_reward_func(min_dist))
+    final_distance_reward = float(np.mean([
+        _final_distance_reward_func(distance) for distance in all_final_dist
+    ]))
+    if not np.isfinite(final_distance_reward):
+        raise ValueError("Final-distance reward must be finite")
 
-    # --- Danger score (same weights and signs as AST terminal reward) -----
-    danger_score = 0.0
-    danger_score += 10.0 * own_ship_collision
-    danger_score += 8.0 * own_ship_grounding
-    danger_score += 3.0 * own_ship_navigation_failure
-    danger_score -= 2.0 * own_ship_reaches_end_waypoint
-    danger_score -= 10.0 * tar_ships_collision
-    danger_score -= 8.0 * tar_ships_grounding
-    danger_score -= 3.0 * tar_ships_navigation_failure
-    danger_score -= 1.0 * tar_ships_reaches_end_waypoint
-    danger_score += nearest_distance_shaping
+    positive_termination = own_ship_collision or own_ship_grounding or own_ship_navigation_failure
+    negative_termination = (own_ship_reaches_end_waypoint or tar_ships_collision
+                            or tar_ships_grounding or tar_ships_navigation_failure
+                            or tar_ships_reaches_end_waypoint)
+    # AST checks negative outcomes second, overriding simultaneous own failures.
+    if negative_termination:
+        termination_reason = "negative_termination"
+        terminal_reward = final_distance_reward
+    elif positive_termination:
+        termination_reason = "positive_termination"
+        terminal_reward = 0.0
+    elif not instance.skip_map_evaluation and any(
+            _last(stop_info[ship_id]["outside_horizon"]) for ship_id in ship_ids):
+        termination_reason = "outside_horizon"
+        terminal_reward = final_distance_reward
+    elif instance.time >= instance.stopTime:
+        termination_reason = "time_limit"
+        terminal_reward = final_distance_reward
+    else:
+        raise ValueError("Simulation has no recognized termination or time-limit outcome")
 
     metrics = {
         # Own-ship terminal outcomes
@@ -134,17 +176,23 @@ def compute_trial_metrics(instance, num_target_ships):
         "tar_ships_grounding": tar_ships_grounding,
         "tar_ships_navigation_failure": tar_ships_navigation_failure,
         "tar_ships_reaches_end_waypoint": tar_ships_reaches_end_waypoint,
-        # Near-miss shaping
-        "min_dist": min_dist,
-        "nearest_distance_shaping": nearest_distance_shaping,
+        # Distances and outcome reward
+        "min_dist": min(all_min_dist),
+        "mean_final_dist": float(np.mean(all_final_dist)),
+        "final_distance_reward": final_distance_reward,
+        "terminal_reward": terminal_reward,
+        "termination_reason": termination_reason,
+        "unfinished": not (positive_termination or negative_termination),
+        "objective_version": "ast_terminal_3ce5ac7",
         # Aggregate
-        "danger_score": float(danger_score),
-        "objective": float(-danger_score),
+        "danger_score": terminal_reward,
+        "objective": float(-terminal_reward),
     }
 
     # Per-target nearest-distance detail
     for k in range(num_target_ships):
         metrics[f"min_dist_tar_{k + 1}"] = all_min_dist[k]
+        metrics[f"final_dist_tar_{k + 1}"] = all_final_dist[k]
 
     return metrics
 
@@ -504,10 +552,9 @@ def run_ax_optimization(
     total_trials, num_sobol_trials, random_seed : int
         Standard Ax loop settings.
     infeasible_penalty : float
-        Objective value assigned to an infeasible BoTorch trial (one whose
-        ``evaluate_fn`` raises, e.g. trafficgen cannot place the target ships).
-        Since the objective is minimized, this should be clearly worse than any
-        achievable real objective so the surrogate learns to avoid that region.
+        Positive minimum penalty for infeasible BoTorch trials. The actual
+        penalty stays above all observed feasible objectives; earlier penalties
+        are updated when necessary because the logarithmic objective is unbounded.
 
     How infeasible trials are handled (and why)
     -------------------------------------------
@@ -531,6 +578,8 @@ def run_ax_optimization(
         raise ValueError("num_sobol_trials must be >= 0")
     if num_sobol_trials > total_trials:
         raise ValueError("num_sobol_trials cannot be greater than total_trials")
+    if not np.isfinite(infeasible_penalty) or infeasible_penalty <= 0:
+        raise ValueError("infeasible_penalty must be finite and positive")
 
     num_bo_trials = total_trials - num_sobol_trials
 
@@ -576,6 +625,7 @@ def run_ax_optimization(
     completed = {"Sobol": 0, "BoTorch": 0}
     failed = {"Sobol": 0, "BoTorch": 0}
     penalized = {"Sobol": 0, "BoTorch": 0}
+    current_penalty = float(infeasible_penalty)
 
     # Safety cap so a systematically-failing evaluate_fn cannot loop forever.
     max_attempts = total_trials * 5 + 20
@@ -601,6 +651,8 @@ def run_ax_optimization(
 
         try:
             raw_data, metrics = evaluate_fn(parameters)
+            if not np.isfinite(metrics["objective"]):
+                raise ValueError("Trial objective must be finite")
             ax_client.complete_trial(trial_index=trial_index, raw_data=raw_data)
             completed[phase] += 1
         except Exception as exc:
@@ -611,17 +663,17 @@ def run_ax_optimization(
                 # still reach the target number of *feasible* BoTorch evaluations.
                 ax_client.complete_trial(
                     trial_index=trial_index,
-                    raw_data={"objective": (float(infeasible_penalty), None)},
+                    raw_data={"objective": (current_penalty, None)},
                 )
                 penalized[phase] += 1
                 metrics = {
-                    "objective": float(infeasible_penalty),
+                    "objective": current_penalty,
                     "infeasible": True,
                     "error": str(exc),
                 }
                 print(
                     f"BoTorch trial {trial_index} infeasible — penalized with "
-                    f"objective {infeasible_penalty} and a replacement will be run: {exc}"
+                    f"objective {current_penalty} and a replacement will be run: {exc}"
                 )
             else:
                 # Sobol: mark failed and let the strategy generate a replacement.
@@ -630,6 +682,20 @@ def run_ax_optimization(
                 metrics = {"objective": float("inf"), "error": str(exc)}
                 print(f"Sobol trial {trial_index} failed (a replacement will be run): {exc}")
             print(traceback.format_exc())
+
+        if not metrics.get("infeasible") and "error" not in metrics:
+            objective = float(metrics["objective"])
+            updated_penalty = max(current_penalty, objective + max(1.0, abs(objective) * 0.1))
+            if not np.isfinite(updated_penalty):
+                raise ValueError("Cannot construct a finite infeasible-trial penalty")
+            if updated_penalty > current_penalty:
+                current_penalty = updated_penalty
+                for item in history:
+                    if item["metrics"].get("infeasible"):
+                        ax_client.get_trial(item["trial_index"]).update_trial_data(
+                            raw_data={"objective": (current_penalty, None)},
+                        )
+                        item["metrics"]["objective"] = current_penalty
 
         history.append(
             {
@@ -646,11 +712,19 @@ def run_ax_optimization(
         f"Penalized + replaced BoTorch infeasible trials: {penalized['BoTorch']}."
     )
 
-    best_result = ax_client.get_best_parameters()
+    feasible_indices = [item["trial_index"] for item in history
+                        if not item["metrics"].get("infeasible")
+                        and "error" not in item["metrics"]]
+    if not feasible_indices:
+        print("No feasible trials completed; no best parameters are available.")
+        return ax_client, None, history
+    best_result = ax_client.get_best_trial(
+        trial_indices=feasible_indices, use_model_predictions=False,
+    )
     if best_result is None:
         return ax_client, None, history
 
-    best_parameters, _ = best_result
+    _, best_parameters, _ = best_result
     return ax_client, best_parameters, history
 
 

@@ -1,3 +1,47 @@
+## BO outcome objective
+
+`bo_core.compute_trial_metrics` uses the terminal component of the AST reward
+from `ast_arsitorus` commit `3ce5ac7`, not the older AST reward on the BO branch.
+It excludes sequential scope-angle likelihood and interception shaping because
+BO does not implement those AST decisions.
+
+For distance `d` in metres, `RewardDesign7` returns zero below 100 m and
+`-log(1 + d - 100)` otherwise. The final-distance reward is the mean of the
+shaped **final** own-to-target distances, with coefficient 1.0. Final positions
+come from ship-model last values; minimum-distance diagnostics use matching
+position histories after both ships' spawn times, avoiding COLAV startup zeros.
+Missing, non-finite, or misaligned position data is reported as an evaluation
+error, not a successful outcome.
+
+- Own collision, grounding, or navigation failure: terminal reward zero.
+- Own endpoint or any invalid target collision, grounding, navigation failure,
+  or endpoint: final-distance reward. This overrides simultaneous own failures,
+  matching AST's condition order. A target collision involving the own ship
+  is not an invalid target collision.
+- Grounding and map-exit flags are ignored when map evaluation is disabled.
+- **Intentional BO deviation:** time limits or map exits without an AST terminal
+  outcome receive the final-distance reward and are marked `unfinished`.
+  Otherwise they would tie with successful stress outcomes when action terms
+  are omitted.
+
+`danger_score = terminal_reward` and `objective = -terminal_reward`; zero is
+best and Ax minimizes. Minimum distances are diagnostic only. Saved metrics
+include final distances per target, `mean_final_dist`, `final_distance_reward`,
+`terminal_reward`, `termination_reason`, and `objective_version`.
+
+Infeasible BoTorch penalties are finite and kept above observed feasible
+objectives, including updates to earlier penalized observations. They are
+excluded from best-trial selection and reported as failed in saved results.
+Replay selects the completed trial with the lowest objective. Existing result
+files are not recalculated: regenerate them before comparing methods, and use
+this shared outcome metric for AST evaluation rather than AST's accumulated
+training reward. The legacy CPA/fuel objective and older AST training reward
+remain unchanged.
+
+Focused checks: `python -m unittest discover -s test_run -p test_bo_metrics.py`.
+These tests isolate source functions from simulation and optimizer imports;
+they do not execute FMUs or fit a real Ax model.
+
 # Core Component: `CoSimInstance`
 `CoSimInstance` is the **core interface for managing FMU-based co-simulation**. It wraps functionality from the `libcosimpy` library and simplifies the process of setting up communication between FMUs.
 
