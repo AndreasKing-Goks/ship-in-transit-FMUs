@@ -11,6 +11,7 @@ start values as the Python FMUs, so they can replace them by changing the `.fmu`
 | `simplified_ship/ShipModel`             | `FMU_scripts/simplified_ship/ship_model_fmu.py`                | `simplified_ship/`       |
 | `simplified_ship/SpeedController`       | `FMU_scripts/simplified_ship/speed_controller_fmu.py`          | `simplified_ship/`       |
 | `mission_manager/MissionManager`        | `FMU_scripts/mission_manager/mission_manager_fmu.py`           | `simplified_ship/`       |
+| `mission_manager/MissionManagerAST`     | `FMU_scripts/mission_manager/mission_manager_ast_fmu.py`       | `simplified_ship/`       |
 | `ship/ThrottleController`               | `FMU_scripts/ship/throttle_controller_fmu.py`                  | `ship/`                  |
 | `ship/ShaftSpeedController`             | `FMU_scripts/ship/shaft_speed_controller_fmu.py`               | `ship/`                  |
 | `ship/MachinerySystem`                  | `FMU_scripts/ship/machinery_system_fmu.py`                     | `ship/`                  |
@@ -28,6 +29,12 @@ The FMUs are FMI 2.0 Co-Simulation, Windows (win64) only for now.
 The C++ models copy the Python behaviour exactly, also where it may not be intended:
 `MachinerySystem` gives the fuel consumption per step, not a running total, and
 `ShaftSpeedController` uses `a + floor` as feedforward (the `a * speed + floor` line is commented out).
+If the ship reaches the end waypoint before the intermediate waypoint sampler starts, `MissionManagerAST`
+gives an error every step from then on and sets `reach_wp_end` back to false.
+
+`MissionManagerAST` keeps its waypoint lists in `std::vector`s. They are not saved with the FMU state.
+Its `messages` output is the same text as in Python, with one exception: if `scope_length` is never set,
+Python prints the default as `2500` and C++ as `2500.0`.
 
 `WindModel` and `SurfaceCurrentModel` use other random numbers than numpy (`std::mt19937_64`, with a
 written-out normal distribution so that Windows and Linux give the same numbers). With noise or wind

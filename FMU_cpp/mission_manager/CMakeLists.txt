@@ -1,1 +1,2 @@
 add_subdirectory(MissionManager)
+add_subdirectory(MissionManagerAST)

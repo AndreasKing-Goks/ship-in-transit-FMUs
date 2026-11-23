@@ -23,7 +23,7 @@ import numpy as np
 
 # Shared helpers and settings from the parity check (same folder)
 from parity import (ROOT, CONFIG_PATH, ENCOUNTER_SETTINGS_PATH, PORTED_FMUS, FMU_TESTS, NOISE_TESTS, STEP_SIZE,
-                    Fmu, with_cpp_fmus,
+                    Fmu, AstShip, with_cpp_fmus,
                     ShipInTransitCoSimulationLibcosimpy, ShipInTransitCoSimulationFmpy,
                     load_base_config, generate_spawn_request_bank, load_spawn_requests_bank_path)
 
@@ -43,6 +43,10 @@ def time_single_fmu(path, params, inputs_fn):
     fmu = Fmu(path)
     fmu.initialize(params)
     t_init = time.perf_counter() - t0
+
+    if inputs_fn is AstShip:
+        # Closed loop on this FMU's outputs
+        inputs_fn = AstShip(params, fmu)
 
     rng = np.random.default_rng(1)
     step_times = np.empty(N_STEPS)
@@ -74,6 +78,8 @@ def benchmark_single_fmus(rows):
     noise_tests = [(f"{name} with noise", fmu, params, lambda k, rng, inputs=inputs: inputs)
                    for name, fmu, params, inputs, _ in NOISE_TESTS]
     for name, fmu, params, inputs_fn in FMU_TESTS + noise_tests:
+        if name == "MissionManagerAST early end":
+            continue  # both FMUs print an error every step, which is not worth timing
         py  = time_single_fmu(ROOT / "FMUs" / fmu, params, inputs_fn)
         cpp = time_single_fmu(ROOT / "FMUs_cpp" / fmu, params, inputs_fn)
         speed_up = np.median(py[1]) / np.median(cpp[1])

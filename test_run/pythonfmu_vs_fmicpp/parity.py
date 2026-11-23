@@ -59,6 +59,7 @@ PORTED_FMUS = {
     "FMUs/simplified_ship/Rudder.fmu":          "FMUs_cpp/simplified_ship/Rudder.fmu",
     "FMUs/simplified_ship/ShipModel.fmu":       "FMUs_cpp/simplified_ship/ShipModel.fmu",
     "FMUs/simplified_ship/SpeedController.fmu": "FMUs_cpp/simplified_ship/SpeedController.fmu",
+    "FMUs/simplified_ship/MissionManagerAST.fmu": "FMUs_cpp/simplified_ship/MissionManagerAST.fmu",
     # The own ship uses the same Python scripts, built into FMUs/ship/
     "FMUs/ship/MissionManager.fmu":             "FMUs_cpp/simplified_ship/MissionManager.fmu",
     "FMUs/ship/Autopilot.fmu":                  "FMUs_cpp/simplified_ship/Autopilot.fmu",
@@ -124,6 +125,40 @@ def mission_manager_params():
 def mission_manager_inputs(k, rng):
     n, e = route_position(k)
     return {"north": n + rng.normal(0, 5), "east": e + rng.normal(0, 5)}
+
+
+def mission_manager_ast_params():
+    # As the target ships in EBASTv2_train_2.yaml, with a long route so that several
+    # intermediate waypoints are added
+    return {"ra": 300.0, "time_to_start_iw_sampler": 250.0, "max_sampled_inter_wp": 5, "scope_angle_max_deg": 30.0,
+            "wp_start_north": 1000.0, "wp_start_east": -500.0, "wp_start_speed": 5.0,
+            "wp_end_north": 15000.0, "wp_end_east": 9000.0, "wp_end_speed": 6.0}
+
+
+class AstShip:
+    """Inputs for MissionManagerAST. Its inputs depend on its outputs, so this is a closed loop:
+    a ship moves 20 m per step towards the next waypoint of the given FMU (the Python one in
+    Part 1). When the FMU asks for a captain intent, the ship gets a new random scope angle and
+    length, like in EBASTv2_core/env.py."""
+
+    def __init__(self, params, fmu):
+        self.fmu = fmu
+        self.north, self.east = params["wp_start_north"], params["wp_start_east"]
+        self.max_angle = params["scope_angle_max_deg"]
+        self.scope = {"scope_angle_deg": 0.0, "scope_length": 2500.0}
+
+    def __call__(self, k, rng):
+        d_north = self.fmu.get("next_wp_north") - self.north
+        d_east = self.fmu.get("next_wp_east") - self.east
+        dist = np.hypot(d_north, d_east)
+        if dist > 0:
+            step = min(20.0, dist)
+            self.north += step * d_north / dist
+            self.east += step * d_east / dist
+        if self.fmu.get("request_captain_intent"):
+            self.scope = {"scope_angle_deg": rng.uniform(-self.max_angle, self.max_angle),
+                          "scope_length": rng.uniform(1000, 7500)}
+        return {"north": self.north + rng.normal(0, 5), "east": self.east + rng.normal(0, 5), **self.scope}
 
 
 def autopilot_inputs(k, rng):
@@ -203,6 +238,14 @@ FMU_TESTS = [
     ("Rudder",          "simplified_ship/Rudder.fmu",          ts1_params("RUDDER"),           rudder_inputs),
     ("ShipModel",       "simplified_ship/ShipModel.fmu",       ship_model_params,              ship_model_inputs),
     ("SpeedController", "simplified_ship/SpeedController.fmu", ts1_params("SPEED_CONTROLLER"), speed_controller_inputs),
+    # MissionManagerAST: closed loop (see AstShip). Also when the sample limit is reached, and when
+    # the ship reaches the end before the sampler starts (the Python FMU then raises an error every step)
+    ("MissionManagerAST", "simplified_ship/MissionManagerAST.fmu", mission_manager_ast_params(), AstShip),
+    ("MissionManagerAST max 2 samples", "simplified_ship/MissionManagerAST.fmu",
+     {**mission_manager_ast_params(), "max_sampled_inter_wp": 2}, AstShip),
+    ("MissionManagerAST early end", "simplified_ship/MissionManagerAST.fmu",
+     {**mission_manager_ast_params(), "wp_end_north": 3000.0, "wp_end_east": 1000.0,
+      "time_to_start_iw_sampler": 2000.0}, AstShip),
     ("ThrottleController",   "ship/ThrottleController.fmu",   os0_params("THROTTLE_CONTROLLER"),    throttle_controller_inputs),
     ("ShaftSpeedController", "ship/ShaftSpeedController.fmu", os0_params("SHAFT_SPEED_CONTROLLER"), shaft_speed_controller_inputs),
     # MachinerySystem in each operating mode (0: MEC, 1: PTO, 2: PTI)
@@ -257,6 +300,8 @@ class Fmu:
             return self.fmu.getReal([v.valueReference])[0]
         if v.type == "Integer":
             return self.fmu.getInteger([v.valueReference])[0]
+        if v.type == "String":
+            return self.fmu.getString([v.valueReference])[0].decode()
         return self.fmu.getBoolean([v.valueReference])[0]
 
     def initialize(self, params):
@@ -319,12 +364,19 @@ def run_and_compare(py, cpp, inputs_fn, outputs):
         cpp.fmu.doStep(currentCommunicationPoint=t, communicationStepSize=STEP_SIZE)
         t += STEP_SIZE
         for name in outputs:
-            a, b = float(py.get(name)), float(cpp.get(name))
-            if np.isnan(a) and np.isnan(b):
-                continue
-            diff = abs(a - b) if np.isfinite(a - b) else np.inf
+            a, b = py.get(name), cpp.get(name)
+            if isinstance(a, str):
+                # Text (MissionManagerAST messages): must be the same
+                ok = a == b
+                diff = 0.0 if ok else np.inf
+            else:
+                a, b = float(a), float(b)
+                if np.isnan(a) and np.isnan(b):
+                    continue
+                diff = abs(a - b) if np.isfinite(a - b) else np.inf
+                ok = diff <= ATOL + RTOL * abs(a)
             worst[name] = max(worst[name], diff)
-            if diff > ATOL + RTOL * abs(a):
+            if not ok:
                 n_bad += 1
     return n_bad, worst
 
@@ -339,6 +391,9 @@ def compare_single_fmus():
         cpp = Fmu(ROOT / "FMUs_cpp" / fmu)
 
         problems, notes = check_interface(py, cpp)
+        if inputs_fn is AstShip:
+            # Closed loop on the Python FMU's outputs
+            inputs_fn = AstShip(params, py)
         outputs = [n for n, v in py.vars.items() if v.causality == "output"]
 
         # Outputs after initialization (before the first step)
