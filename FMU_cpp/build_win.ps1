@@ -1,4 +1,5 @@
-# Builds the C++ FMUs on Windows and copies them to FMUs_cpp/, in the same folders as the Python FMUs in FMUs/.
+# Builds the C++ FMUs on Windows and copies them to FMU_cpp/fmus/win64/, in the same folders as the Python FMUs
+# in FMUs/. Then run merge_fmus.py to make the FMUs in FMUs_cpp/.
 
 Set-Location $PSScriptRoot
 
@@ -11,7 +12,7 @@ if ($LASTEXITCODE -ne 0) { throw "cmake configure failed" }
 cmake --build --preset conan-release --target install
 if ($LASTEXITCODE -ne 0) { throw "cmake build failed" }
 
-# Source folder in FMU_cpp/ -> output folder in FMUs_cpp/
+# Source folder in FMU_cpp/ -> output folder in FMU_cpp/fmus/win64/
 $destination = @{
     "simplified_ship" = "simplified_ship"
     "mission_manager" = "simplified_ship"
@@ -19,10 +20,10 @@ $destination = @{
     "env_loads"       = "env_loads"
 }
 foreach ($folder in $destination.Keys) {
-    $out = Join-Path $PSScriptRoot "..\FMUs_cpp\$($destination[$folder])"
+    $out = Join-Path $PSScriptRoot "fmus\win64\$($destination[$folder])"
     New-Item -ItemType Directory -Force $out | Out-Null
     foreach ($model in Get-ChildItem -Directory $folder) {
         Copy-Item "build\dist\fmus\$($model.Name).fmu" $out
-        Write-Output "FMUs_cpp\$($destination[$folder])\$($model.Name).fmu"
+        Write-Output "FMU_cpp\fmus\win64\$($destination[$folder])\$($model.Name).fmu"
     }
 }

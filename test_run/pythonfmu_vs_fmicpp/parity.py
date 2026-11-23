@@ -24,9 +24,10 @@ import numpy as np
 from fmpy import extract, read_model_description
 from fmpy.fmi2 import FMU2Slave
 
-# Ensure libcosim DLL is found (only needed for the libcosimpy backend)
-dll_dir = Path(sys.prefix) / "Lib" / "site-packages" / "libcosimpy" / "libcosimc"
-os.add_dll_directory(str(dll_dir))
+# Ensure libcosim DLL is found (only needed for the libcosimpy backend, and only on Windows)
+if sys.platform.startswith("win"):
+    dll_dir = Path(sys.prefix) / "Lib" / "site-packages" / "libcosimpy" / "libcosimc"
+    os.add_dll_directory(str(dll_dir))
 
 ## PATH HELPER (OBLIGATORY)
 # project root = two levels up from this file

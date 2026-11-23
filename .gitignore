@@ -39,6 +39,7 @@ MANIFEST
 # Folders
 trained_model/
 FMU_cpp/CMakeUserPresets.json
+FMU_cpp/fmus/
 test_run/pythonfmu_vs_fmicpp/spawn_request_bank.pkl
 test_run/pythonfmu_vs_fmicpp/benchmark_results.csv
 00_*/

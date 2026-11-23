@@ -24,7 +24,9 @@ The Python Autopilot, Rudder, ShipModel and MissionManager in `FMUs/ship/` are b
 scripts as the ones in `FMUs/simplified_ship/`, so the own ship can use the C++ FMUs in
 `FMUs_cpp/simplified_ship/` for them.
 
-The FMUs are FMI 2.0 Co-Simulation, Windows (win64) only for now.
+The FMUs are FMI 2.0 Co-Simulation, with binaries for Windows (win64) and Linux (linux64). The Linux binaries
+are built on AlmaLinux 9. They run on other Red Hat 9 based systems (like Rocky Linux 9) and on Linux systems with
+glibc 2.35 or newer.
 
 The C++ models copy the Python behaviour exactly, also where it may not be intended:
 `MachinerySystem` gives the fuel consumption per step, not a running total, and
@@ -33,11 +35,10 @@ If the ship reaches the end waypoint before the intermediate waypoint sampler st
 gives an error every step from then on and sets `reach_wp_end` back to false.
 
 `MissionManagerAST` keeps its waypoint lists in `std::vector`s. They are not saved with the FMU state.
-Its `messages` output is the same text as in Python, with one exception: if `scope_length` is never set,
-Python prints the default as `2500` and C++ as `2500.0`.
+Its `messages` output is the same text as in Python where possible.
 
 `WindModel` and `SurfaceCurrentModel` use other random numbers than numpy (`std::mt19937_64`, with a
-written-out normal distribution so that Windows and Linux give the same numbers). With noise or wind
+written-out normal distribution so that Windows and Linux give the same numbers, up to rounding). With noise or wind
 gusts on, a C++ run gives other values than a Python run with the same seed, but with the same
 statistics. With noise and gusts off they match exactly. The random generator and the gust angles are
 not saved with the FMU state.
@@ -80,3 +81,31 @@ Then build:
 ```powershell
 .\FMU_cpp\build_win.ps1
 ```
+
+The FMUs go in `FMU_cpp/fmus/win64/` (not in git). Then make the FMUs in `FMUs_cpp/` (see below).
+
+## Build (Linux)
+
+You need gcc 11 or newer with the static libstdc++ (`libstdc++-static` on Red Hat based systems), CMake 3.23 or
+newer, Conan 2, and `fmicppcore/0.5@fmicpp/stable` for Linux. Build on a system with an old enough glibc, since
+the FMUs only run on systems with the same or a newer glibc. On Windows, AlmaLinux 9 in WSL works.
+
+```bash
+conan profile detect
+./FMU_cpp/build_linux.sh
+```
+
+The FMUs go in `FMU_cpp/fmus/linux64/` (not in git). libstdc++ and libgcc are linked into them, so they only
+need glibc on the target system. The Linux build uses its own build folder (`FMU_cpp/build/linux/`), so in WSL
+it can run in the same folder as the Windows build (`/mnt/c/...`).
+
+## Make the FMUs in FMUs_cpp/
+
+```
+python FMU_cpp/merge_fmus.py
+```
+
+This combines the builds in `FMU_cpp/fmus/<platform>/` into FMUs with binaries for every platform, in `FMUs_cpp/`.
+Run it after every build. The script stops, without writing anything, if an FMU is missing in one of the builds or
+if the two builds of an FMU do not have the same `modelDescription.xml`. The GUID is made from the model sources,
+so both builds must use the same sources.
