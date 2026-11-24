@@ -1,0 +1,25 @@
+# DRAFT
+#
+# Limits on how a target ship's route may be disturbed with intermediate
+# waypoints.
+# Values come from the AST setup. Units are in [brackets].
+
+# ---------------------------------------------------------------------------
+# Limits
+# Source: EBASTv2_train/EBASTv2_train_2.yaml (TS1, TS2), EBASTv2_core/env.py:141-145
+# ---------------------------------------------------------------------------
+disturbed_ships: [TS1, TS2]
+
+# Each new leg turns by the scope angle from the original route bearing,
+# then runs for the scope length.
+scope_angle_bounds: [-30.0, 30.0]     # [deg]
+scope_length_bounds: [1000.0, 7500.0] # [m]
+
+# The first change is allowed from start_time. Each next change comes when the
+# ship reaches its current waypoint (within acceptance_radius).
+start_time: 250.0                     # [s]
+acceptance_radius: 300.0              # [m]
+max_intermediate_waypoints: 5         # per ship
+
+# How the random angle and length are drawn within the bounds
+random_disturbance_distribution: UNKNOWN

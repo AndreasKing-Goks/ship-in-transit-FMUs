@@ -1,0 +1,29 @@
+# DRAFT
+#
+# Failure events and the shared run score (criticality measure).
+# Values come from the AST setup. Units are in [brackets].
+
+# ---------------------------------------------------------------------------
+# Failure events
+# Source: orchestrator/sit_cosim_fmpy.py, EBASTv2_train/EBASTv2_train_2.yaml
+# ---------------------------------------------------------------------------
+# Collision: own ship closer than this to any target ship
+collision_distance: 100.0             # [m]
+
+# Navigation failure: cross-track error above the threshold for longer than the time limit
+cross_track_error_threshold: 500.0    # [m]
+cross_track_error_time_limit: 600.0   # [s]
+
+grounding: disabled                   # no map in the scenario
+
+# ---------------------------------------------------------------------------
+# Run score (higher = more critical)
+# Source: EBASTv2_core/reward_function.py:221-235, EBASTv2_core/reward_designs.py:96-106
+#
+#   own ship fails  ->  score = 0
+#   otherwise       ->  score = mean over target ships of -ln(1 + d - collision_distance),
+#                       with d the final own ship to target ship distance [m]
+# ---------------------------------------------------------------------------
+own_ship_failure_score: 0.0
+distance_used: final                  # final distance, not closest approach
+score_time_limit_runs: true           # runs that hit stop_time are scored too
