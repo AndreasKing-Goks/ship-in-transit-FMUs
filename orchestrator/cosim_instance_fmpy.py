@@ -259,6 +259,9 @@ class CoSimInstance:
                 vtype = "Integer" if v.type == "Enumeration" else v.type
                 info.setdefault(v.name, (v.valueReference, vtype))
             self.slaves_variable_info[name] = info
+            # The groups hold the FMU objects, so make them again
+            self._observer_groups = None
+            self._connection_groups = None
         except Exception as error:
             print("An error occured while adding a slave: ", name, "-", path, ": ", type(error).__name__, "-", error)
             sys.exit(1)

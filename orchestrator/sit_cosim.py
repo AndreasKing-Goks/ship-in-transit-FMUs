@@ -724,8 +724,8 @@ class ShipInTransitCoSimulation(CoSimInstance):
                 is_delayed              = self.ship_delayed.get(ship_id)[-1]                # Freeze the ship dynamic
                 is_reach_end_waypoint   = self.ship_reach_end_waypoint.get(ship_id)[-1]     # Turn off the ship
 
-                out_vr, out_type = GetVariableInfo(self.slaves_variables[out_slave], out_var)
-                in_vr,  in_type  = GetVariableInfo(self.slaves_variables[in_slave],  in_var)
+                out_vr, out_type = self._get_variable(out_slave, out_var)
+                in_vr,  in_type  = self._get_variable(in_slave, in_var)
 
                 if out_type != in_type:
                     continue  # or raise
