@@ -46,6 +46,12 @@ class CoSimInstance:
 
         self.slaves = {}            # name -> {fmu, unzipdir, model_description}
         self.slaves_variables = {}  # name -> model_description.modelVariables
+        self.slaves_variable_info = {}  # name -> {variable name: (value_reference, type_str)}
+
+        # Observers and connections grouped per FMU, so each FMU is read or set with one call
+        # per step. Made on first use, and made again when observers or connections are added.
+        self._observer_groups = None
+        self._connection_groups = None
 
         self.slave_input_var = []
         self.slave_input_name = []
@@ -71,13 +77,26 @@ class CoSimInstance:
         ``type_str`` is one of 'Real', 'Boolean', 'Integer', 'String'
         ('Enumeration' is treated as 'Integer').
         """
-        for v in self.slaves_variables[slaveName]:
-            if v.name == variable:
-                vtype = v.type
-                if vtype == "Enumeration":
-                    vtype = "Integer"
-                return v.valueReference, vtype
-        raise Exception("Could not locate the variable %s in the model" % (variable))
+        try:
+            return self.slaves_variable_info[slaveName][variable]
+        except KeyError:
+            raise Exception("Could not locate the variable %s in the model" % (variable))
+
+    def _getter(self, slaveName: str, vtype: str):
+        """fmpy function that gets values of type ``vtype`` from an FMU."""
+        fmu = self.slaves[slaveName]["fmu"]
+        return {"Real": fmu.getReal, "Boolean": fmu.getBoolean, "Integer": fmu.getInteger}.get(vtype, fmu.getString)
+
+    def _setter(self, slaveName: str, vtype: str):
+        """fmpy function that sets values of type ``vtype`` on an FMU."""
+        fmu = self.slaves[slaveName]["fmu"]
+        return {"Real": fmu.setReal, "Boolean": fmu.setBoolean, "Integer": fmu.setInteger}.get(vtype, fmu.setString)
+
+    @staticmethod
+    def _convert(values, vtype: str):
+        """Convert values to the Python type fmpy expects for ``vtype`` (as _set_value does)."""
+        convert = {"Real": float, "Boolean": bool, "Integer": int}.get(vtype, str)
+        return [convert(v) for v in values]
 
     def GetVariableInfo(self, slaveName: str, variable: str):
         return self._get_variable(slaveName, variable)
@@ -117,6 +136,7 @@ class CoSimInstance:
             obs.time = []
             obs.value = []
             self.observer_time_series_struct[name] = obs
+            self._observer_groups = None
         except Exception as error:
             print("An error occured while adding an observer: ", name, "-", slaveName, "-", variable, ": ", type(error).__name__, "-", error)
             sys.exit(1)
@@ -131,6 +151,7 @@ class CoSimInstance:
             obs.value = []
             self.observer_time_series_struct[name] = obs
             self.observer_time_series_label[name] = var_label
+            self._observer_groups = None
         except Exception as error:
             print("An error occured while adding an observer: ", name, "-", slaveName, "-", variable, ": ", type(error).__name__, "-", error)
             sys.exit(1)
@@ -233,6 +254,14 @@ class CoSimInstance:
                 "model_description": model_description,
             }
             self.slaves_variables[name] = model_description.modelVariables
+            info = {}
+            for v in model_description.modelVariables:
+                vtype = "Integer" if v.type == "Enumeration" else v.type
+                info.setdefault(v.name, (v.valueReference, vtype))
+            self.slaves_variable_info[name] = info
+            # The groups hold the FMU objects, so make them again
+            self._observer_groups = None
+            self._connection_groups = None
         except Exception as error:
             print("An error occured while adding a slave: ", name, "-", path, ": ", type(error).__name__, "-", error)
             sys.exit(1)
@@ -243,6 +272,7 @@ class CoSimInstance:
             self.slave_input_var.append(slaveInputVar)
             self.slave_output_name.append(slaveOutputName)
             self.slave_output_var.append(slaveOutputVar)
+            self._connection_groups = None
         except Exception as error:
             print("An error occured while adding a connection: ", slaveInputName, ".", slaveInputVar, " = ", slaveOutputName, ".", slaveOutputVar, ": ", type(error).__name__, "-", error)
             sys.exit(1)
@@ -257,6 +287,50 @@ class CoSimInstance:
     # ------------------------------------------------------------------
     # Manipulation
     # ------------------------------------------------------------------
+    def _get_connection_groups(self):
+        """Connections grouped per FMU and type, so all connected outputs of an FMU can be read with
+        one call, and all connected inputs of an FMU can be set with one call.
+
+        Returns ``(n, read_groups, write_groups)``. Connection k (0 <= k < n) gets index k:
+        - read_groups:  list of (getter, output value references, connection indices)
+        - write_groups: list of (setter, input slave, type, input value references, connection indices,
+                                 input variable names)
+        Connections whose output and input types differ are left out, as in CoSimManipulate().
+        """
+        if self._connection_groups is not None:
+            return self._connection_groups
+        reads = {}   # (output slave, type) -> list of (value reference, connection index)
+        writes = {}  # (input slave, type)  -> list of (value reference, connection index, variable name)
+        n = 0
+        for i in range(len(self.slave_input_name)):
+            try:
+                out_vr, out_type = self._get_variable(self.slave_output_name[i], self.slave_output_var[i])
+                in_vr, in_type = self._get_variable(self.slave_input_name[i], self.slave_input_var[i])
+            except Exception as error:
+                print("An error occured during signal manipulation: ", self.slave_input_name[i], ".", self.slave_input_var[i], " = ", self.slave_output_name[i], ".", self.slave_output_var[i], " :", type(error).__name__, "-", error)
+                sys.exit(1)
+            if out_type != in_type:
+                continue
+            reads.setdefault((self.slave_output_name[i], out_type), []).append((out_vr, n))
+            writes.setdefault((self.slave_input_name[i], in_type), []).append((in_vr, n, self.slave_input_var[i]))
+            n += 1
+        read_groups = [(self._getter(slave, vtype), [c[0] for c in conns], [c[1] for c in conns])
+                       for (slave, vtype), conns in reads.items()]
+        write_groups = [(self._setter(slave, vtype), slave, vtype,
+                         [c[0] for c in conns], [c[1] for c in conns], [c[2] for c in conns])
+                        for (slave, vtype), conns in writes.items()]
+        self._connection_groups = (n, read_groups, write_groups)
+        return self._connection_groups
+
+    def _read_connected_outputs(self):
+        """Values of all connected outputs, by connection index (see _get_connection_groups())."""
+        n, read_groups, _ = self._get_connection_groups()
+        values = [None] * n
+        for get, vrs, indices in read_groups:
+            for k, value in zip(indices, get(vrs)):
+                values[k] = value
+        return values
+
     def CoSimManipulate(self):
         for i in range(0, len(self.slave_input_name)):
             try:
@@ -354,9 +428,22 @@ class CoSimInstance:
             )
         
         next_time = self.time + self.stepSize
-        for obs in self.observer_time_series_struct.values():
-            obs.time.append(next_time)
-            obs.value.append(self._get_value(obs.slave, obs.var))
+        for get, vrs, observers, is_boolean in self._get_observer_groups():
+            # One call per FMU and type
+            for obs, value in zip(observers, get(vrs)):
+                obs.time.append(next_time)
+                obs.value.append(bool(value) if is_boolean else value)
+
+    def _get_observer_groups(self):
+        """Observers grouped per FMU and type: list of (getter, value references, observers, is_boolean)."""
+        if self._observer_groups is None:
+            groups = {}
+            for obs in self.observer_time_series_struct.values():
+                groups.setdefault((obs.slave, obs.var_type), []).append(obs)
+            self._observer_groups = [(self._getter(slave, vtype), [obs.var_vr for obs in observers],
+                                      observers, vtype == "Boolean")
+                                     for (slave, vtype), observers in groups.items()]
+        return self._observer_groups
 
     def Simulate(self):
         self._initialize()
