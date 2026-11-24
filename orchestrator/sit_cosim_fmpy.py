@@ -701,38 +701,38 @@ class ShipInTransitCoSimulation(CoSimInstance):
             stayed still until the simulation time reach delayed start marker.
             
             This is achievable through protocol explained in get_masked_input_val_for_inactive_ship()
-        """
-        for i in range(len(self.slave_input_name)):
-            try:
-                in_slave = self.slave_input_name[i]
-                in_var   = self.slave_input_var[i]
-                out_slave= self.slave_output_name[i]
-                out_var  = self.slave_output_var[i]
 
+            For speed, all connected outputs are read first, with one call per FMU, and then all
+            inputs of each FMU are set with one call (see CoSimInstance._get_connection_groups()).
+        """
+        # Read all connected outputs
+        try:
+            values = self._read_connected_outputs()
+        except Exception as error:
+            print("An error occured during signal manipulation (reading outputs): ", type(error).__name__, "-", error)
+            sys.exit(1)
+
+        # Set the inputs of each FMU
+        _, _, write_groups = self._get_connection_groups()
+        for set_values, in_slave, vtype, in_vrs, indices, in_vars in write_groups:
+            try:
                 ship_id                 = in_slave[:3]
                 is_delayed              = self.ship_delayed.get(ship_id)[-1]                # Freeze the ship dynamic
                 is_reach_end_waypoint   = self.ship_reach_end_waypoint.get(ship_id)[-1]     # Turn off the ship
 
-                out_vr, out_type = self.GetVariableInfo(out_slave, out_var)
-                in_vr,  in_type  = self.GetVariableInfo(in_slave,  in_var)
-
-                if out_type != in_type:
-                    continue  # or raise
-
                 if is_delayed or is_reach_end_waypoint:
-                    out_val = self.get_masked_input_val_for_inactive_ship(ship_id=ship_id,
-                                                                           in_slave=in_slave,
-                                                                           in_var=in_var)
+                    in_values = [self.get_masked_input_val_for_inactive_ship(ship_id=ship_id,
+                                                                             in_slave=in_slave,
+                                                                             in_var=in_var)
+                                 for in_var in in_vars]
                 else:
-                    out_val = self.GetLastValue(slaveName=out_slave, slaveVar=out_var)
+                    in_values = [values[k] for k in indices]
 
-                self.SingleVariableManipulation(slaveName=in_slave, slaveVar=in_var, value=out_val)
+                set_values(in_vrs, self._convert(in_values, vtype))
 
             except Exception as error:
-                print("An error occured during signal manipulation: ",
-                    self.slave_input_name[i], ".", self.slave_input_var[i], " = ",
-                    self.slave_output_name[i], ".", self.slave_output_var[i], " :",
-                    type(error).__name__, "-", error)
+                print("An error occured during signal manipulation: ", in_slave, " (", ", ".join(in_vars), "): ",
+                      type(error).__name__, "-", error)
                 sys.exit(1)
     
     
