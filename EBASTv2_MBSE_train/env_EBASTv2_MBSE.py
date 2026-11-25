@@ -897,7 +897,7 @@ class EBASTv2EnvMBSE(gym.Env):
         super().close()
         
     
-    def reset(self, seed: Optional[int] = None, options: Optional[dict] = None, specific_case_idx=None, specific_config_idx=None):
+    def reset(self, seed: Optional[int]=None, options: Optional[dict]=None, specific_case_idx=None, specific_config_idx=None, custom_fault:dict=None):
         """
             Reset the environment all together
         """
@@ -1086,21 +1086,37 @@ class EBASTv2EnvMBSE(gym.Env):
                 print("[RESET] searching event ...", flush=True)
                 
             # Set the fault scheduler if exists
-            if self.fault_scheduler_exists:
+            if self.fault_scheduler_exists:                
                 # For each ship asset
-                for _, sensor_fault_scheduler in self.fault_scheduler_dict.items():
+                for sid, sensor_fault_scheduler in self.fault_scheduler_dict.items():
                     # For each enabled sensor in the ship asset
-                    for _, fault_scheduler in sensor_fault_scheduler.items():
+                    for sensor, fault_scheduler in sensor_fault_scheduler.items():
                         # If using scheduler, sample the time_start and time_end
                         # Else, leave it as it is
                         if fault_scheduler["time_start"] is None and fault_scheduler["time_end"] is None:
                             # Sample fault injection time from the scheduler
                             fault_time_start, fault_time_end = fault_scheduler["scheduler"].sample()
                             
+                            if custom_fault is not None:
+                                f_sid       = custom_fault["ship_id"]
+                                f_sensor    = custom_fault["sensor"]
+                                f_var       = custom_fault["fault"]["var"]
+                                f_val       = custom_fault["fault"]["val"]
+                                f_start     = custom_fault["fault_start"]
+                                f_duration  = custom_fault.get("fault_duration", None)
+                                
+                                if (sid == f_sid) and (sensor == f_sensor):
+                                    fault_time_start = f_start
+                                    if f_duration is None:
+                                        fault_time_end   = f_start + fault_scheduler["scheduler"].fault_duration 
+                                    else:
+                                        fault_time_end   = f_start + f_duration
+                            
                             # Update the time start and time end plus the current time after
                             # an event is found
                             fault_scheduler["time_start"] = fault_time_start + self.instance.time
                             fault_scheduler["time_end"]   = fault_time_end + self.instance.time
+                                
             
             # Advance the simulation until an event is found
             found_event = self._advance_until_next_event()

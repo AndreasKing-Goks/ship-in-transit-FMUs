@@ -20,7 +20,7 @@ os.add_dll_directory(str(dll_dir))
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from EBASTv2_MBSE_train.env_EBASTv2_MBSE_old import EBASTv2EnvMBSE
+from EBASTv2_MBSE_train.env_EBASTv2_MBSE import EBASTv2EnvMBSE
 from EBASTv2_MBSE_train.MBSE_episode_logger import log_episode_recap, log_training_args
 from EBASTv2_train.evaluate_failure_cases import evaluate_failure_cases
 from EBASTv2_core.path_utils import get_RL_model_path
@@ -32,7 +32,8 @@ from itertools import product
 # Handle paths
 # =========================
 # Trained Model Name
-model_name                      = "EB-ASTv2_MBSE_2026-10-23_21-11-07_b58a"
+model_name                      = "EB-ASTv2_MBSE_2026-10-23_21-11-07_b58a" # Use old env
+model_name                      = "EB-ASTv2_MBSE_2026-11-21_09-14-38_e8e7"
 
 # Get the config path
 config_path = [
@@ -40,7 +41,8 @@ config_path = [
     ]
 
 # Get the trained model
-model_path                      = ROOT / "EBASTv2_MBSE_train" / "trained_model" / model_name / "model" / "model.zip"
+model_path                      = ROOT / "EBASTv2_MBSE_train" / "trained_model" / model_name / "model" / "model.zip" # Use old env
+model_path                      = ROOT / "EBASTv2_MBSE_train" / "trained_model" / model_name / "checkpoints" / "EB-ASTv2_MBSE_2000000_steps.zip"
 
 # Evaluation recap
 recap_path                      = ROOT / "EBASTv2_MBSE_train" / "simulated_trained_model" / "evaluation_recap_EBASTv2_MBSE.txt"
@@ -126,11 +128,25 @@ if simulate:
     # Set the environment to evaluation mode
     # env.set_for_evaluation()
     
+    # Custom fault
+    custom_fault = {
+        "ship_id": "OS0",
+        "sensor": "RADAR",
+        "fault": {
+            "var": "measurement_valid",
+            "val": False
+        },
+        "fault_start": 1700,
+        "fault_duration": 100
+    }
+    
     # Reset the trained model
-    case_idx    = 2
+    case_idx    = 3
     config_idx  = 0
     seed        = None
-    obs, _      = env.reset(seed=seed, specific_case_idx=case_idx, specific_config_idx=config_idx)
+    obs, _      = env.reset(seed=seed, specific_case_idx=case_idx, specific_config_idx=config_idx, custom_fault=custom_fault)
+    
+    print(env.fault_scheduler_dict)
 
     # Cell and hidden state of the LSTM
     lstm_states = None

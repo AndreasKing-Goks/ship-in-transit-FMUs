@@ -750,8 +750,10 @@ if test_score_plot:
         # Wide and short for horizontal comparison
         # ---------------------------------------------------------
         fig, ax = plt.subplots(
-            figsize=(6.8, 2.2),
-            dpi=150,
+            # figsize=(6.8, 2.2),
+            # dpi=150,
+            figsize=(3.5, 1.7),
+            dpi=300,
         )
 
         summary_rows = []
@@ -823,7 +825,8 @@ if test_score_plot:
             scatter = ax.scatter(
                 values,
                 y + jitter,
-                s=32,
+                # s=32,
+                s=22,             # Two column
                 alpha=0.85,
                 linewidth=0.6,
                 zorder=3,
@@ -841,11 +844,16 @@ if test_score_plot:
                 y,
                 xerr=std,
                 fmt="D",
-                markersize=6.0,
-                capsize=4,
-                capthick=1.2,
-                elinewidth=1.3,
-                linewidth=1.2,
+                # markersize=6.0,
+                # capsize=4,
+                # capthick=1.2,
+                # elinewidth=1.3,
+                # linewidth=1.2,
+                markersize=4.5,   # Diamond marker size
+                capsize=3,
+                capthick=0.9,
+                elinewidth=1.0,
+                linewidth=0.9,
                 color=colors[method],
                 zorder=4,
             )
@@ -870,7 +878,8 @@ if test_score_plot:
 
         ax.set_xlabel(
             xlabel,
-            fontsize=10,
+            # fontsize=10,
+            fontsize=9,
             labelpad=2,
         )
 
@@ -903,7 +912,8 @@ if test_score_plot:
         ax.tick_params(
             axis="both",
             which="major",
-            labelsize=9,
+            # labelsize=9,
+            labelsize=8,    # One column
             direction="in",
             length=3,
             width=0.8,
@@ -990,9 +1000,9 @@ if test_score_plot:
     
     save_path = (
             save_dir
-            / "score_variability_tests.pdf"
+            / "score_variability_tests_one_column.pdf"
         )
-
+    
     summary_df = plot_testing_scores(save_path=save_path, scores=test_scores)
     
     print(summary_df)
@@ -1057,8 +1067,10 @@ if test_eps_len_plot:
         # Wide and short for horizontal comparison
         # ---------------------------------------------------------
         fig, ax = plt.subplots(
-            figsize=(6.8, 2.2),
-            dpi=150,
+            # figsize=(6.8, 2.2),
+            # dpi=150,
+            figsize=(3.5, 1.7),
+            dpi=300,
         )
 
         summary_rows = []
@@ -1132,7 +1144,8 @@ if test_eps_len_plot:
                 scatter = ax.scatter(
                     values,
                     y + jitter + tag_offset[tag],
-                    s=32,
+                    # s=32,
+                    s=22,
                     alpha=0.85,
                     linewidth=0.6,
                     zorder=3,
@@ -1151,11 +1164,16 @@ if test_eps_len_plot:
                     y + tag_offset[tag],
                     xerr=std,
                     fmt="D",
-                    markersize=6.0,
-                    capsize=4,
-                    capthick=1.2,
-                    elinewidth=1.3,
-                    linewidth=1.2,
+                    # markersize=6.0,
+                    # capsize=4,
+                    # capthick=1.2,
+                    # elinewidth=1.3,
+                    # linewidth=1.2,
+                    markersize=4.5,   # Diamond marker size
+                    capsize=3,
+                    capthick=0.9,
+                    elinewidth=1.0,
+                    linewidth=0.9,
                     color=colors[method],
                     zorder=4,
                 )
@@ -1180,7 +1198,8 @@ if test_eps_len_plot:
 
         ax.set_xlabel(
             xlabel,
-            fontsize=10,
+            # fontsize=10,
+            fontsize=9,
             labelpad=2,
         )
 
@@ -1213,7 +1232,8 @@ if test_eps_len_plot:
         ax.tick_params(
             axis="both",
             which="major",
-            labelsize=9,
+            # labelsize=9,
+            labelsize=8,
             direction="in",
             length=3,
             width=0.8,
@@ -1342,7 +1362,7 @@ if test_eps_len_plot:
     
     save_path = (
             save_dir
-            / "episode_length_variability_tests.pdf"
+            / "episode_length_variability_tests_one_column.pdf"
         )
 
     summary_df = plot_test_eps_len(save_path=save_path, eps_lens=eps_lens)
