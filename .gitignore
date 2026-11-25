@@ -38,11 +38,20 @@ MANIFEST
 
 # Folders
 trained_model/
+FMU_cpp/CMakeUserPresets.json
+FMU_cpp/fmus/
+test_run/pythonfmu_vs_fmicpp/spawn_request_bank.pkl
+test_run/pythonfmu_vs_fmicpp/benchmark_results.csv
 00_*/
 .vscode/
 00_paper/
 pre_generated_spawn_requests_bank/animation/
 slurm_jobs/logs/
+
+# Generated animations
+saved_animation/*.mp4
+saved_animation/*.gif
+
 
 # PyInstaller
 #  Usually these files are written by a python script from a template

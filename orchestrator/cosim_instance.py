@@ -28,8 +28,9 @@ from libcosimpy.CosimLogging import log_output_level, CosimLogLevel
 def GetVariableIndex(variables, name):
     try:
         index = 0
+        encoded_name = str.encode(name)
         for var in variables:
-            if var.name == str.encode(name):
+            if var.name == encoded_name:
                 return index
             index +=1
     except:
@@ -75,6 +76,7 @@ class CoSimInstance:
         self.slaves = {}
         self.slaves_index = {}
         self.slaves_variables = {}
+        self.slaves_variable_info = {}  # name -> {variable name: (value reference, CosimVariableType)}
 
         self.slave_input_var = []
         self.slave_input_name = []
@@ -99,13 +101,20 @@ class CoSimInstance:
         self.fromExternalSlaveFunc = []
     
 
+    def _get_variable(self, slaveName: str, variable: str):
+        """Return (value reference, CosimVariableType) of a variable. Same as GetVariableInfo(), but a dict lookup."""
+        try:
+            return self.slaves_variable_info[slaveName][variable]
+        except KeyError:
+            raise Exception("Could not locate the variable %s in the model" %(variable))
+
+
     def AddObserverTimeSeries(self, name: str, slaveName: str, variable: str):
         try:
             self.observer_time_series_struct[name]             = ObserverStruct()
             self.observer_time_series_struct[name].slave       = slaveName
             self.observer_time_series_struct[name].var         = variable
-            self.observer_time_series_struct[name].var_vr, self.observer_time_series_struct[name].var_type = GetVariableInfo(self.slaves_variables[slaveName],
-                                                                                                               variable)
+            self.observer_time_series_struct[name].var_vr, self.observer_time_series_struct[name].var_type = self._get_variable(slaveName, variable)
             self.observer_time_series.start_time_series(self.slaves_index[slaveName],
                                                                    value_reference=self.observer_time_series_struct[name].var_vr,
                                                                    variable_type=self.observer_time_series_struct[name].var_type)
@@ -119,8 +128,7 @@ class CoSimInstance:
             self.observer_time_series_struct[name]             = ObserverStruct()
             self.observer_time_series_struct[name].slave       = slaveName
             self.observer_time_series_struct[name].var         = variable
-            self.observer_time_series_struct[name].var_vr, self.observer_time_series_struct[name].var_type = GetVariableInfo(self.slaves_variables[slaveName],
-                                                                                                               variable)
+            self.observer_time_series_struct[name].var_vr, self.observer_time_series_struct[name].var_type = self._get_variable(slaveName, variable)
             self.observer_time_series.start_time_series(self.slaves_index[slaveName],
                                                                    value_reference=self.observer_time_series_struct[name].var_vr,
                                                                    variable_type=self.observer_time_series_struct[name].var_type)
@@ -245,6 +253,10 @@ class CoSimInstance:
             self.slaves[name] = CosimLocalSlave(fmu_path=path, instance_name = name)
             self.slaves_index[name] = self.execution.add_local_slave(local_slave = self.slaves[name])
             self.slaves_variables[name] = self.execution.slave_variables(slave_index = self.slaves_index[name])
+            info = {}
+            for var in self.slaves_variables[name]:
+                info.setdefault(var.name.decode(), (var.reference, CosimVariableType(var.type)))
+            self.slaves_variable_info[name] = info
         except Exception as error:
             print("An error occured while adding a slave: ", name, "-",path,": ", type(error).__name__, "-", error)
             sys.exit(1)
@@ -263,7 +275,7 @@ class CoSimInstance:
 
     def GetLastValue(self, slaveName: str, slaveVar: str):
         try:
-            out_vr, out_type = GetVariableInfo(self.slaves_variables[slaveName], slaveVar)
+            out_vr, out_type = self._get_variable(slaveName, slaveVar)
             if out_type == CosimVariableType.REAL:
                 return self.observer_last_value.last_real_values(slave_index = self.slaves_index[slaveName], 
                                                                  variable_references = [out_vr])[0]
@@ -284,24 +296,24 @@ class CoSimInstance:
     def CoSimManipulate(self):
         for i in range(0,len(self.slave_input_name)):
             try:
-                out_vr, out_type = GetVariableInfo(self.slaves_variables[self.slave_output_name[i]], self.slave_output_var[i])
+                out_vr, out_type = self._get_variable(self.slave_output_name[i], self.slave_output_var[i])
                 out_val = [self.GetLastValue(slaveName = self.slave_output_name[i],
                                             slaveVar = self.slave_output_var[i])]
 
                 if out_type == CosimVariableType.REAL:
-                    in_vr, in_type = GetVariableInfo(self.slaves_variables[self.slave_input_name[i]], self.slave_input_var[i])
+                    in_vr, in_type = self._get_variable(self.slave_input_name[i], self.slave_input_var[i])
                     if out_type == in_type:
                         self.manipulator.slave_real_values(self.slaves_index[self.slave_input_name[i]], [in_vr], out_val)
                 elif out_type == CosimVariableType.BOOLEAN:
-                    in_vr, in_type = GetVariableInfo(self.slaves_variables[self.slave_input_name[i]], self.slave_input_var[i])
+                    in_vr, in_type = self._get_variable(self.slave_input_name[i], self.slave_input_var[i])
                     if out_type == in_type:
                         self.manipulator.slave_boolean_values(self.slaves_index[self.slave_input_name[i]], [in_vr], out_val)
                 elif out_type == CosimVariableType.INTEGER:
-                    in_vr, in_type = GetVariableInfo(self.slaves_variables[self.slave_input_name[i]], self.slave_input_var[i])
+                    in_vr, in_type = self._get_variable(self.slave_input_name[i], self.slave_input_var[i])
                     if out_type == in_type:
                         self.manipulator.slave_integer_values(self.slaves_index[self.slave_input_name[i]], [in_vr], out_val)
                 else:
-                    in_vr, in_type = GetVariableInfo(self.slaves_variables[self.slave_input_name[i]], self.slave_input_var[i])
+                    in_vr, in_type = self._get_variable(self.slave_input_name[i], self.slave_input_var[i])
                     if out_type == in_type:
                         self.manipulator.slave_string_values(self.slaves_index[self.slave_input_name[i]], [in_vr], out_val)
             except Exception as error:
@@ -311,7 +323,7 @@ class CoSimInstance:
     
     def SingleVariableManipulation(self, slaveName: str, slaveVar: str, value):    
         try:
-            var_vr, var_type = GetVariableInfo(self.slaves_variables[slaveName], slaveVar)
+            var_vr, var_type = self._get_variable(slaveName, slaveVar)
             if var_type == CosimVariableType.REAL:
                 self.manipulator.slave_real_values(slave_index=self.slaves_index[slaveName], 
                                                    variable_references=[var_vr], values=[value])
@@ -346,7 +358,7 @@ class CoSimInstance:
     def SetInputFromExternal(self):    
         for i in range(0,len(self.fromExternalSlaveName)):
             try:
-                var_vr, var_type = GetVariableInfo(self.slaves_variables[self.fromExternalSlaveName[i]], self.fromExternalSlaveVar[i])
+                var_vr, var_type = self._get_variable(self.fromExternalSlaveName[i], self.fromExternalSlaveVar[i])
                 val =[self.fromExternalSlaveFunc[i]()]
                 if var_type == CosimVariableType.REAL:
                     self.manipulator.slave_real_values(self.slaves_index[self.fromExternalSlaveName[i]], [var_vr], val)
@@ -366,7 +378,7 @@ class CoSimInstance:
 
     def SetInitialValue(self, slaveName: str, slaveVar: str, initValue):
         try:
-            var_vr, var_type = GetVariableInfo(self.slaves_variables[slaveName], slaveVar)
+            var_vr, var_type = self._get_variable(slaveName, slaveVar)
             if var_type == CosimVariableType.REAL:
                 self.execution.real_initial_value(slave_index = self.slaves_index[slaveName],
                                                   variable_reference = var_vr, value = initValue)

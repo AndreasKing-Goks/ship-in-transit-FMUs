@@ -360,7 +360,8 @@ class MissionManagerAST(Fmi2Slave):
             
             # List of triggers
             within_sampling_max_count   = self.accepted_sampled_inter_wp < self.max_sampled_inter_wp
-            iw_sampler_active           = current_time >= self.time_to_start_iw_sampler
+            # No sampling after the end waypoint is reached
+            iw_sampler_active           = current_time >= self.time_to_start_iw_sampler and not self.reach_wp_end
             place_zeroeth_inter_wp      = (within_sampling_max_count 
                                            and iw_sampler_active
                                            and not self._zeroeth_iw_inserted)
