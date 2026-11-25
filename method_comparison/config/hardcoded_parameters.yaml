@@ -1,0 +1,40 @@
+# Parameters that the simulation setup uses but that are hard-coded in Python.
+# Values that are already in simulation.yaml or encounter_settings.json are not repeated here.
+# Units are in [brackets].
+
+# ---------------------------------------------------------------------------
+# Case sampling
+# Source: orchestrator/scenario_config.py
+# ---------------------------------------------------------------------------
+encounter_types: [head-on, overtaking-give-way, overtaking-stand-on, crossing-give-way, crossing-stand-on]  # one drawn per target ship
+beta_margin: 2.0                       # [deg] cut from each edge of the COLREG bearing ranges
+overtaking_stand_on_side_split: 0.5    # [-] chance of port vs starboard side
+vector_time_bounds: [40, 80]           # [min]
+own_ship_heading_grid: [0.0, 360.0, 15.0]  # [deg] start, stop (excluded), step
+own_ship_start: [0.0, 0.0]             # [m] north, east
+own_ship_sog_lower: 5.0                # [m/s] upper bound is sogMax of OS0 in simulation.yaml
+own_ship_nav_status: Under way using engine
+
+# ---------------------------------------------------------------------------
+# Calling trafficgen and building the routes
+# Source: orchestrator/scenario_config.py
+# ---------------------------------------------------------------------------
+trafficgen_max_retries: 50
+spawn_start_time: 0.0                  # [s]
+route_speed_setpoints_first: 0.0       # [m/s] route speeds are [0.0, trafficgen speed]
+
+# ---------------------------------------------------------------------------
+# Run score
+# Source: EBASTv2_core/reward_function.py
+# ---------------------------------------------------------------------------
+own_ship_failure_score: 0.0            #
+score_ship_aggregation: mean           # mean over target ships of the final distance score
+
+# ---------------------------------------------------------------------------
+# AST route disturbances
+# Source: EBASTv2_core/env.py
+# Scope angle limit, start time, acceptance radius and the max number of
+# waypoints are in simulation.yaml (MISSION_MANAGER of TS1, TS2).
+# Scope length bounds are in simulation.yaml (IW_sampling of TS1, TS2).
+# ---------------------------------------------------------------------------
+reset_max_attempts: 20                 # cases tried at reset until a target ship asks for a waypoint
