@@ -6,19 +6,19 @@ simulation:
 ships:
   - id: OS0
 
-    # fault_scheduler:
-    #   RADAR:
-    #     type: "StratifiedFaultScheduler"
-    #     fault:
-    #       var: "measurement_valid" # "radar_degradation"
-    #       val: False # True
-    #     min_episode_time: 3000.0
-    #     step_size: 5.0
-    #     fault_duration: 600.0
-    #     n_strata: 10
-    #     timing_resolution: 30.0
-    #     jitter_slots: 1
-    #     seed: 44
+    fault_scheduler:
+      RADAR:
+        type: "StratifiedFaultScheduler"
+        fault:
+          var: "measurement_valid" # "radar_degradation"
+          val: False # True
+        min_episode_time: 3000.0
+        step_size: 5.0
+        fault_duration: 600.0
+        n_strata: 10
+        timing_resolution: 30.0
+        jitter_slots: 1
+        seed: 44
       # RADAR:
       #   fault:
       #     var: "measurement_valid" # "radar_degradation"
@@ -352,7 +352,7 @@ ships:
         give_way_medium_risk_score: 0.75
         give_way_high_risk_score: 0.85
         give_way_danger_risk_score: 0.95
-        stand_on_danger_risk_score: 0.95
+        stand_on_danger_risk_score: 0.85
 
       SHIP_MODEL:
         dead_weight_tonnage: 3850000
