@@ -21,7 +21,7 @@ from EBASTv2_core.reward_designs import (
 
 # === Customizable boundaries for X axis ===
 x_min = 0
-x_max = 200
+x_max = 60
 
 # x_min = -60
 # x_max = 60

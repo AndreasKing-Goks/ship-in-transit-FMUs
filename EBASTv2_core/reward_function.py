@@ -329,7 +329,7 @@ def compute_reward(observation, args):
             desired_angle_deg               = sc + r_cog
             
             # Compute the error between the desired and the interception angle
-            error           = wrap_angle(desired_angle_deg - interception_angle_deg)
+            error           = np.rad2deg(wrap_angle(np.deg2rad(desired_angle_deg - interception_angle_deg)))
             
             # Compute the dynamic reward coefficient
             rew_isa_coeff   = ((1.0 + ri) - umr) * rew_isa_coeff_multiplier
