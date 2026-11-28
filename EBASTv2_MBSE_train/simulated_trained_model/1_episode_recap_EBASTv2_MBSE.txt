@@ -38,9 +38,9 @@ Simulation time before action            : 255.0 s
 Simulation time after action             : 885.0 s
 Terminated                               : False
 Truncated                                : False
-Total Reward                             : -0.0628160097858178
+Total Reward                             : -0.6897304135362584
   > Termination Rewards                  : None
-  > Non-termination Rewards              : -0.0628160097858178
+  > Non-termination Rewards              : -0.6897304135362584
 
 [OBSERVATION BEFORE ACTION - DENORMALIZED]
 
@@ -103,9 +103,9 @@ Simulation time before action            : 885.0 s
 Simulation time after action             : 1110.0 s
 Terminated                               : False
 Truncated                                : False
-Total Reward                             : -0.005525358596709447
+Total Reward                             : -0.6137240754632222
   > Termination Rewards                  : None
-  > Non-termination Rewards              : -0.005525358596709447
+  > Non-termination Rewards              : -0.6137240754632222
 
 [OBSERVATION BEFORE ACTION - DENORMALIZED]
 
@@ -168,9 +168,9 @@ Simulation time before action            : 1110.0 s
 Simulation time after action             : 1315.0 s
 Terminated                               : False
 Truncated                                : False
-Total Reward                             : -6.312878870396695e-05
+Total Reward                             : -0.5190298996695544
   > Termination Rewards                  : None
-  > Non-termination Rewards              : -6.312878870396695e-05
+  > Non-termination Rewards              : -0.5190298996695544
 
 [OBSERVATION BEFORE ACTION - DENORMALIZED]
 
@@ -233,9 +233,9 @@ Simulation time before action            : 1315.0 s
 Simulation time after action             : 1415.0 s
 Terminated                               : False
 Truncated                                : False
-Total Reward                             : -0.0033643451050671454
+Total Reward                             : -0.3684849652690287
   > Termination Rewards                  : None
-  > Non-termination Rewards              : -0.0033643451050671454
+  > Non-termination Rewards              : -0.3684849652690287
 
 [OBSERVATION BEFORE ACTION - DENORMALIZED]
 
@@ -295,12 +295,12 @@ Target ships
 TRANSITION 5
 ----------------------------------------------------------------------------------------------------
 Simulation time before action            : 1415.0 s
-Simulation time after action             : 3025.0 s
+Simulation time after action             : 2970.0 s
 Terminated                               : True
 Truncated                                : False
-Total Reward                             : -11.403761368809004
-  > Termination Rewards                  : -8.947885513305664
-  > Non-termination Rewards              : -2.455875855503339
+Total Reward                             : -11.092231117854759
+  > Termination Rewards                  : -8.916617393493652
+  > Non-termination Rewards              : -2.1756137243611056
 
 [OBSERVATION BEFORE ACTION - DENORMALIZED]
 
@@ -342,16 +342,16 @@ Own COLAV risk                           : [0.0] [%]
 Action masks                             : [0]
 
 Own ship [OS0]
-  Position/state vector                  : [9876.0, 9842.4, 0.8] [m, m, deg]
-  Cross-track error                      : -23.6 [m]
-  Rudder angle                           : -0.2 [deg]
-  Throttle                               : 0.242058 [%]
-  Forward speed                          : 5.009389 [m/s]
+  Position/state vector                  : [9852.8, 9832.4, 0.8] [m, m, deg]
+  Cross-track error                      : -15.1 [m]
+  Rudder angle                           : -0.4 [deg]
+  Throttle                               : 0.241077 [%]
+  Forward speed                          : 5.002222 [m/s]
 
 Target ships
   Target ship [TS1]
-    Position/state vector                : [8890.4, 2114.4, -1.1] [m, m, deg]
-    Forward speed                        : 5.004882 [m/s]
+    Position/state vector                : [8761.6, 2357.8, -1.1] [m, m, deg]
+    Forward speed                        : 5.002387 [m/s]
     IW-enabled                           : True
     Action mask                          : 0
     Remaining requests                   : 0
@@ -359,5 +359,5 @@ Target ships
 ----------------------------------------------------------------------------------------------------
 ACCUMULATED REWARD RECAPITULATION
 ----------------------------------------------------------------------------------------------------
-Episodic accumulated total rewards       : -11.475530211085303
-Mean rewards per state-action transition : -2.2951060422170606
+Episodic accumulated total rewards       : -13.283200471792822
+Mean rewards per state-action transition : -2.6566400943585644

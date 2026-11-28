@@ -348,10 +348,10 @@ ships:
         T_lookahead: 900.0
         own_ship_sog_max: 6.0
         turning_direction: "STARBOARD"
-        give_way_low_risk_score: 0.5
-        give_way_medium_risk_score: 0.65
-        give_way_high_risk_score: 0.75
-        give_way_danger_risk_score: 0.85
+        give_way_low_risk_score: 0.6
+        give_way_medium_risk_score: 0.75
+        give_way_high_risk_score: 0.85
+        give_way_danger_risk_score: 0.95
         stand_on_danger_risk_score: 0.85
 
       SHIP_MODEL:

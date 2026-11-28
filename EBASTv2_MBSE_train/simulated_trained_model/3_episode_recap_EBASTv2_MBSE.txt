@@ -13,7 +13,7 @@ SENSOR FAULT SCHEDULER
       > fault type  : measurement_valid
       > fault value : False
       > time start  : 1700.0
-      > time end    : 1800.0
+      > time end    : 2600.0
 
 SPAWN REQUEST BANK
 Split 6 cases into 6 training cases and 0 evaluation cases
@@ -38,9 +38,9 @@ Simulation time before action            : 255.0 s
 Simulation time after action             : 780.0 s
 Terminated                               : False
 Truncated                                : False
-Total Reward                             : -0.05252332820539618
+Total Reward                             : -0.8904196912488834
   > Termination Rewards                  : None
-  > Non-termination Rewards              : -0.05252332820539618
+  > Non-termination Rewards              : -0.8904196912488834
 
 [OBSERVATION BEFORE ACTION - DENORMALIZED]
 
@@ -103,9 +103,9 @@ Simulation time before action            : 780.0 s
 Simulation time after action             : 1005.0 s
 Terminated                               : False
 Truncated                                : False
-Total Reward                             : -0.008233611716811601
+Total Reward                             : -0.7349742515814491
   > Termination Rewards                  : None
-  > Non-termination Rewards              : -0.008233611716811601
+  > Non-termination Rewards              : -0.7349742515814491
 
 [OBSERVATION BEFORE ACTION - DENORMALIZED]
 
@@ -168,9 +168,9 @@ Simulation time before action            : 1005.0 s
 Simulation time after action             : 1205.0 s
 Terminated                               : False
 Truncated                                : False
-Total Reward                             : -0.007583167427089114
+Total Reward                             : -0.5807999455896837
   > Termination Rewards                  : None
-  > Non-termination Rewards              : -0.007583167427089114
+  > Non-termination Rewards              : -0.5807999455896837
 
 [OBSERVATION BEFORE ACTION - DENORMALIZED]
 
@@ -233,9 +233,9 @@ Simulation time before action            : 1205.0 s
 Simulation time after action             : 1325.0 s
 Terminated                               : False
 Truncated                                : False
-Total Reward                             : -0.006909710488485484
+Total Reward                             : -0.3951611375485416
   > Termination Rewards                  : None
-  > Non-termination Rewards              : -0.006909710488485484
+  > Non-termination Rewards              : -0.3951611375485416
 
 [OBSERVATION BEFORE ACTION - DENORMALIZED]
 
@@ -298,9 +298,9 @@ Simulation time before action            : 1325.0 s
 Simulation time after action             : 1920.0 s
 Terminated                               : True
 Truncated                                : False
-Total Reward                             : -0.003477023911527812
+Total Reward                             : -0.2003084260279785
   > Termination Rewards                  : 0.0
-  > Non-termination Rewards              : -0.003477023911527812
+  > Non-termination Rewards              : -0.2003084260279785
 
 [OBSERVATION BEFORE ACTION - DENORMALIZED]
 
@@ -338,7 +338,7 @@ IW action for target ship [TS1]
 
 [OBSERVATION AFTER ACTION - DENORMALIZED]
 
-Own COLAV risk                           : [0.965555] [%]
+Own COLAV risk                           : [0.95932454] [%]
 Action masks                             : [0]
 
 Own ship [OS0]
@@ -359,5 +359,5 @@ Target ships
 ----------------------------------------------------------------------------------------------------
 ACCUMULATED REWARD RECAPITULATION
 ----------------------------------------------------------------------------------------------------
-Episodic accumulated total rewards       : -0.07872684174931019
-Mean rewards per state-action transition : -0.015745368349862038
+Episodic accumulated total rewards       : -2.8016634519965367
+Mean rewards per state-action transition : -0.5603326903993073

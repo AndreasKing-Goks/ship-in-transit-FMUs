@@ -12,8 +12,8 @@ SENSOR FAULT SCHEDULER
     - Sensor      : RADAR
       > fault type  : measurement_valid
       > fault value : False
-      > time start  : 1560.0
-      > time end    : 2460.0
+      > time start  : 1700.0
+      > time end    : 2600.0
 
 SPAWN REQUEST BANK
 Split 6 cases into 6 training cases and 0 evaluation cases
@@ -38,9 +38,9 @@ Simulation time before action            : 255.0 s
 Simulation time after action             : 1030.0 s
 Terminated                               : False
 Truncated                                : False
-Total Reward                             : -0.05178857313806062
+Total Reward                             : -0.28666770325409185
   > Termination Rewards                  : None
-  > Non-termination Rewards              : -0.05178857313806062
+  > Non-termination Rewards              : -0.28666770325409185
 
 [OBSERVATION BEFORE ACTION - DENORMALIZED]
 
@@ -103,9 +103,9 @@ Simulation time before action            : 1030.0 s
 Simulation time after action             : 1150.0 s
 Terminated                               : False
 Truncated                                : False
-Total Reward                             : -0.002254510455100729
+Total Reward                             : -0.2520122763942509
   > Termination Rewards                  : None
-  > Non-termination Rewards              : -0.002254510455100729
+  > Non-termination Rewards              : -0.2520122763942509
 
 [OBSERVATION BEFORE ACTION - DENORMALIZED]
 
@@ -168,9 +168,9 @@ Simulation time before action            : 1150.0 s
 Simulation time after action             : 1380.0 s
 Terminated                               : False
 Truncated                                : False
-Total Reward                             : -0.007501600767533033
+Total Reward                             : -0.24827642856541168
   > Termination Rewards                  : None
-  > Non-termination Rewards              : -0.007501600767533033
+  > Non-termination Rewards              : -0.24827642856541168
 
 [OBSERVATION BEFORE ACTION - DENORMALIZED]
 
@@ -233,9 +233,9 @@ Simulation time before action            : 1380.0 s
 Simulation time after action             : 1540.0 s
 Terminated                               : False
 Truncated                                : False
-Total Reward                             : -0.0077791183949676565
+Total Reward                             : -0.22051991074857852
   > Termination Rewards                  : None
-  > Non-termination Rewards              : -0.0077791183949676565
+  > Non-termination Rewards              : -0.22051991074857852
 
 [OBSERVATION BEFORE ACTION - DENORMALIZED]
 
@@ -273,15 +273,15 @@ IW action for target ship [TS1]
 
 [OBSERVATION AFTER ACTION - DENORMALIZED]
 
-Own COLAV risk                           : [0.3587228] [%]
+Own COLAV risk                           : [0.4155925] [%]
 Action masks                             : [1]
 
 Own ship [OS0]
-  Position/state vector                  : [5073.0, 5080.5, 0.8] [m, m, deg]
-  Cross-track error                      : 4.5 [m]
-  Rudder angle                           : 3.8 [deg]
-  Throttle                               : 0.240374 [%]
-  Forward speed                          : 4.983144 [m/s]
+  Position/state vector                  : [5076.4, 5077.2, 0.8] [m, m, deg]
+  Cross-track error                      : 1.5 [m]
+  Rudder angle                           : 1.5 [deg]
+  Throttle                               : 0.240354 [%]
+  Forward speed                          : 4.984003 [m/s]
 
 Target ships
   Target ship [TS1]
@@ -295,24 +295,24 @@ Target ships
 TRANSITION 5
 ----------------------------------------------------------------------------------------------------
 Simulation time before action            : 1540.0 s
-Simulation time after action             : 3060.0 s
+Simulation time after action             : 2910.0 s
 Terminated                               : True
 Truncated                                : False
-Total Reward                             : -11.154079152852098
-  > Termination Rewards                  : -8.890803337097168
-  > Non-termination Rewards              : -2.2632758157549304
+Total Reward                             : -11.487041702171691
+  > Termination Rewards                  : -8.806131362915039
+  > Non-termination Rewards              : -2.680910339256651
 
 [OBSERVATION BEFORE ACTION - DENORMALIZED]
 
-Own COLAV risk                           : [0.3587228] [%]
+Own COLAV risk                           : [0.4155925] [%]
 Action masks                             : [1]
 
 Own ship [OS0]
-  Position/state vector                  : [5073.0, 5080.5, 0.8] [m, m, deg]
-  Cross-track error                      : 4.5 [m]
-  Rudder angle                           : 3.8 [deg]
-  Throttle                               : 0.240374 [%]
-  Forward speed                          : 4.983144 [m/s]
+  Position/state vector                  : [5076.4, 5077.2, 0.8] [m, m, deg]
+  Cross-track error                      : 1.5 [m]
+  Rudder angle                           : 1.5 [deg]
+  Throttle                               : 0.240354 [%]
+  Forward speed                          : 4.984003 [m/s]
 
 Target ships
   Target ship [TS1]
@@ -325,14 +325,14 @@ Target ships
 [ACTION]
 A single action consists of [scope angle, scope length] * number of target ships with IW sampler enabled.
 
-Raw normalized action vector             : [1.0, -1.0]
-Denormalized action vector               : [30.0, 500.0]
+Raw normalized action vector             : [1.0, -0.9949890375137329]
+Denormalized action vector               : [30.0, 505.0109558105469]
 
 IW action for target ship [TS1]
   Normalized scope angle                 : 1.0
-  Normalized scope length                : -1.0
+  Normalized scope length                : -0.9949890375137329
   Scope angle deg                        : 30.0
-  Scope length m                         : 500.0
+  Scope length m                         : 505.0109558105469
   Scope angle bounds deg                 : [-30, 30]
   Scope length bounds m                  : [500, 2500]
 
@@ -342,16 +342,16 @@ Own COLAV risk                           : [0.0] [%]
 Action masks                             : [0]
 
 Own ship [OS0]
-  Position/state vector                  : [9872.0, 9842.3, 0.8] [m, m, deg]
-  Cross-track error                      : -18.2 [m]
-  Rudder angle                           : -0.5 [deg]
-  Throttle                               : 0.241456 [%]
-  Forward speed                          : 5.002372 [m/s]
+  Position/state vector                  : [9834.0, 9856.9, 0.8] [m, m, deg]
+  Cross-track error                      : 19.9 [m]
+  Rudder angle                           : -1.2 [deg]
+  Throttle                               : 0.239904 [%]
+  Forward speed                          : 4.991769 [m/s]
 
 Target ships
   Target ship [TS1]
-    Position/state vector                : [8621.0, 2585.5, -1.1] [m, m, deg]
-    Forward speed                        : 5.002005 [m/s]
+    Position/state vector                : [8273.6, 3265.0, -1.1] [m, m, deg]
+    Forward speed                        : 5.000082 [m/s]
     IW-enabled                           : True
     Action mask                          : 0
     Remaining requests                   : 0
@@ -359,5 +359,5 @@ Target ships
 ----------------------------------------------------------------------------------------------------
 ACCUMULATED REWARD RECAPITULATION
 ----------------------------------------------------------------------------------------------------
-Episodic accumulated total rewards       : -11.22340295560776
-Mean rewards per state-action transition : -2.244680591121552
+Episodic accumulated total rewards       : -12.494518021134024
+Mean rewards per state-action transition : -2.498903604226805

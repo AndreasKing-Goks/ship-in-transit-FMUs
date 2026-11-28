@@ -129,6 +129,7 @@ if simulate:
     # env.set_for_evaluation()
     
     # Custom fault
+    custom_fault = None
     custom_fault = {
         "ship_id": "OS0",
         "sensor": "RADAR",
@@ -136,17 +137,15 @@ if simulate:
             "var": "measurement_valid",
             "val": False
         },
-        "fault_start": 1700,
-        "fault_duration": 100
+        "fault_start": 100,
+        "fault_duration": 900
     }
     
     # Reset the trained model
-    case_idx    = 3
+    case_idx    = 2
     config_idx  = 0
     seed        = None
     obs, _      = env.reset(seed=seed, specific_case_idx=case_idx, specific_config_idx=config_idx, custom_fault=custom_fault)
-    
-    print(env.fault_scheduler_dict)
 
     # Cell and hidden state of the LSTM
     lstm_states = None
@@ -172,9 +171,9 @@ if simulate:
     # Log path
     log_path                        = ROOT / "EBASTv2_MBSE_train" / "simulated_trained_model" / f"{case_idx}_episode_recap_EBASTv2_MBSE.txt"
     
-    # Log the episodes
-    log_episode_recap(env=env, log_path=log_path)
-    print(f"Episode recap saved to: {log_path}")
+    # # Log the episodes
+    # log_episode_recap(env=env, log_path=log_path)
+    # print(f"Episode recap saved to: {log_path}")
 
     # =========================
     # Animation and Plot
@@ -225,24 +224,24 @@ if simulate:
     # # | 'lower left' |'lower center'| 'lower right' |
     # # +--------------+--------------+---------------+
     
-    # Plot Trajectory
-    saved_figure_path = ROOT / "EBASTv2_MBSE_train" / "simulated_trained_model" / "paper_results" / f"{case_idx}_EBASTv2_MBSE.jpg"
-    # saved_figure_path = None
-    # fig_width = 5.0 for 'quick', 3.4 for 'paper'
-    env.instance.PlotFleetTrajectory(
-        mode="paper",
-        every_n=100, 
-        fig_width=3.4,
-        exclude_target_ships_route=True,
-        disable_title=True,
-        plot_IWs=True,
-        plot_IW_names=False,
-        plot_time_line_connection=True,
-        ship_scale=10.0,
-        legend_loc='center right',
-        # save_path=saved_figure_path,
-        show=False,
-    )
+    # # Plot Trajectory
+    # saved_figure_path = ROOT / "EBASTv2_MBSE_train" / "simulated_trained_model" / "paper_results" / f"{case_idx}_EBASTv2_MBSE.jpg"
+    # # saved_figure_path = None
+    # # fig_width = 5.0 for 'quick', 3.4 for 'paper'
+    # env.instance.PlotFleetTrajectory(
+    #     mode="paper",
+    #     every_n=100, 
+    #     fig_width=3.4,
+    #     exclude_target_ships_route=True,
+    #     disable_title=True,
+    #     plot_IWs=True,
+    #     plot_IW_names=False,
+    #     plot_time_line_connection=True,
+    #     ship_scale=10.0,
+    #     legend_loc='center right',
+    #     # save_path=saved_figure_path,
+    #     show=False,
+    # )
 
     plot_simulation_results = False
     plot_simulation_results = True
